@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.AcrylicNavigationBar
+import com.churchdrive.app.ui.navBarItemColors
 import com.churchdrive.app.ui.acrylicBehind
 import com.churchdrive.app.ui.rememberToTop
 import com.churchdrive.app.ui.withoutBottom
@@ -147,6 +148,7 @@ fun TodoApp(vm: TodoModel) {
                 TodoTab.entries.forEach { t ->
                     val open = vm.openCount(t)
                     NavigationBarItem(
+                        colors = navBarItemColors(),
                         selected = t == tab,
                         onClick = { vm.openTab(t); toTop() },
                         icon = {

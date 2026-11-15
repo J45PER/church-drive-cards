@@ -329,21 +329,25 @@ fun RowScope.AssistantBarItems(model: AssistModel, ui: AssistantTyping, onClose:
     val chatting = model.messages.isNotEmpty()
     val keyboardUp = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     NavigationBarItem(
+        colors = navBarItemColors(),
         selected = false, onClick = onClose,
         icon = { HaIcon("mdi:close", CdVectors.Info, scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Close", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
+        colors = navBarItemColors(),
         selected = false, enabled = chatting, onClick = { ui.typed = ""; model.newChat() },
         icon = { HaIcon("mdi:chat-plus-outline", CdVectors.Info, scheme.onSurfaceVariant.copy(alpha = if (chatting) 1f else 0.4f), 24.dp) },
         label = { Text("New chat", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
+        colors = navBarItemColors(),
         selected = keyboardUp, onClick = { ui.showKeyboard() },
         icon = { HaIcon("mdi:keyboard-outline", CdVectors.Info, if (keyboardUp) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
+        colors = navBarItemColors(),
         selected = false,
         onClick = {
             AssistVoiceSetting.set(context, !AssistVoiceSetting.on)
@@ -353,6 +357,7 @@ fun RowScope.AssistantBarItems(model: AssistModel, ui: AssistantTyping, onClose:
         label = { Text(if (AssistVoiceSetting.on) "Voice" else "Muted", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
+        colors = navBarItemColors(),
         selected = false, onClick = onSettings,
         icon = { HaIcon("mdi:cog-outline", CdVectors.Info, scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Settings", fontSize = 11.sp, maxLines = 1) },

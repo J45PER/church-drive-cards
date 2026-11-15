@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import com.churchdrive.app.ui.AcrylicNavigationBar
+import com.churchdrive.app.ui.navBarItemColors
 import com.churchdrive.app.ui.acrylicBehind
 import com.churchdrive.app.ui.rememberToTop
 import com.churchdrive.app.ui.withoutBottom
@@ -141,8 +142,8 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
         },
         bottomBar = {
             AcrylicNavigationBar(acrylic) {
-                NavigationBarItem(selected = tab == 0, onClick = { tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
-                NavigationBarItem(selected = tab == 1, onClick = { tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
+                NavigationBarItem(colors = navBarItemColors(), selected = tab == 0, onClick = { tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
+                NavigationBarItem(colors = navBarItemColors(), selected = tab == 1, onClick = { tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
             }
         },
     ) { padding ->
