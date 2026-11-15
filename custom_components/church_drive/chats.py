@@ -60,15 +60,20 @@ class Chats:
         """A chat log was created, changed or deleted: take its turns (a deleted one keeps what was recorded)."""
         if str(getattr(event_type, "value", event_type)).lower() == "deleted":
             return
-        log = (data or {}).get("chat_log") if isinstance(data, dict) else None
-        if isinstance(log, dict) and "conversation_id" not in log:
-            log = {**log, "conversation_id": conversation_id}
-        changed = False
-        for turn in turns_from_chat_log(log):
-            changed |= upsert(self.entries, turn, who=self._who_near(turn["ts"]))
-        if changed:
-            self.entries = prune(self.entries, time.time())
-            self._store.async_delay_save(lambda: self.entries, SAVE_S)
+        # Home Assistant calls this from inside Clive's own request and does not catch an error here: a failure would turn the answer into
+        # "Sorry, I didn't understand that" for every turn of that chat. Recording a chat must never be able to do that.
+        try:
+            log = (data or {}).get("chat_log") if isinstance(data, dict) else None
+            if isinstance(log, dict) and "conversation_id" not in log:
+                log = {**log, "conversation_id": conversation_id}
+            changed = False
+            for turn in turns_from_chat_log(log):
+                changed |= upsert(self.entries, turn, who=self._who_near(turn["ts"]))
+            if changed:
+                self.entries = prune(self.entries, time.time())
+                self._store.async_delay_save(lambda: self.entries, SAVE_S)
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning("A chat with Clive could not be recorded", exc_info=True)
 
     async def async_query(self, **filters: Any) -> dict[str, Any]:
         out = select(self.entries, **filters)

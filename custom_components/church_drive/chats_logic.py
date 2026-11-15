@@ -32,6 +32,13 @@ def _ts(value: Any) -> float | None:
     return None
 
 
+def _get(obj: Any, key: str, default: Any = None) -> Any:
+    """A field of a dict or of an object: Home Assistant's chat log gives its tool calls as `ToolInput` objects, not dicts."""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
 def _text(value: Any) -> str:
     return " ".join(str(value or "").split())[:MAX_TEXT]
 
@@ -68,14 +75,15 @@ def turns_from_chat_log(chat_log: Any) -> list[dict[str, Any]]:
                 turn["answer"] = _text(line["content"])
                 turn["answered"] = at
             for call in line.get("tool_calls") or []:
-                tool = str((call or {}).get("tool_name") or "")
+                tool = str(_get(call, "tool_name") or "")
                 if not tool:
                     continue
                 label = ability_name(tool)
                 if label not in turn["abilities"]:
                     turn["abilities"].append(label)
                 if tool in CARD_TOOLS and turn["card"] is None:
-                    args = (call or {}).get("tool_args") or {}
+                    args = _get(call, "tool_args") or {}
+                    args = args if isinstance(args, dict) else {}
                     turn["card"] = str(args.get("kind") or args.get("type") or "card")[:40]
     out = []
     for turn in turns:

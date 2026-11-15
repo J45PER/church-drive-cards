@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.157.1
+
+- No app change (Home Assistant: Clive no longer fails follow-up questions after he has used a tool).
+
 ## 0.157.0
 
 - The sidebar and the bottom bar are now the same piece as in the phone app. Back from Settings and About returns to the sidebar list (it used to close the sidebar), and the list runs down to the bottom bar.
