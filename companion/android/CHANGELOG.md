@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.160.1
+
+- **Device health no longer lists cars.** A car's charge level (the Astra at 6%, the ID.5) was shown as a flat battery to replace, and its service battery with it. A car is now left out, the same way the Cars card finds one (a device of a car integration with a charge level).
+- **A device can be hidden from Device health.** Put the Home Assistant label "Hide from Device health" on any one of its entities. Ring comes through both its own integration and the Ring-MQTT add-on, so the Front Doorbell and the Driveway and Garden cameras showed twice; the Ring-MQTT copies now carry the label and only the Ring ones are listed.
+
 ## 0.160.0
 
 - An administrator can press and hold a blind's card (the Bedroom Blind) for a menu with Device page and Schedule. Schedule opens an editor like the purifier schedule's: a switch, a block per schedule with its days and a time to open and a time to close (either can be left out), Add schedule, Cancel and Save. The card says when the blind next moves. The house runs the schedules, so they work with the apps closed. Needs Home Assistant 0.160.0 or newer; with an older house the card is as before.
