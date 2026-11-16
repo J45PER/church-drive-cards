@@ -11,7 +11,7 @@ export function buildRegistry(entityReg, deviceReg, areaReg) {
   const entities = new Map(); const byDevice = new Map();
   for (const e of entityReg?.entities || []) {
     const id = e.ei; if (!id) continue;
-    entities.set(id, { device: e.di || null, area: e.ai || null, platform: e.pl || null });
+    entities.set(id, { device: e.di || null, area: e.ai || null, platform: e.pl || null, labels: e.lb || [] });
     if (e.di) { if (!byDevice.has(e.di)) byDevice.set(e.di, []); byDevice.get(e.di).push(id); }
   }
   const devices = new Map((deviceReg || []).map((d) => [d.id, { name: d.name_by_user || d.name || null, area: d.area_id || null }]));
@@ -61,11 +61,29 @@ export function healthOfDevice(deviceId, states, reg, stale) {
   };
 }
 
-/** Devices worth listing, those needing attention first and then by name; phones are left out. */
+/** The label (its id in Home Assistant) that keeps a device out of the list: put it on any one of the device's entities (a Ring device that shows twice, say). */
+export const HIDE_FROM_HEALTH_LABEL = 'hide_from_device_health';
+
+// The integrations that make cars, and the charge sensors that are not the car's main battery (the same rule as the Cars card).
+const CAR_PLATFORMS = ['stellantis_vehicles', 'vag_connect', 'volkswagencarnet', 'volkswagen_we_connect_id', 'octopus_energy'];
+const NOT_MAIN_BATTERY = /_(service|12v|aux|soh|key)/i;
+
+/** A car: a device of a car integration that gives a charge level. Its charge is how far it can go, not a battery to replace, and it sleeps, so it is not a device to keep healthy. */
+export function isCarDevice(ids, states, reg) {
+  return ids.some((i) => CAR_PLATFORMS.includes(reg.entities.get(i)?.platform)) &&
+    ids.some((i) => { const e = states[i]; return i.startsWith('sensor.') && e && e.attributes?.device_class === 'battery' && e.attributes?.unit_of_measurement === '%' && !NOT_MAIN_BATTERY.test(i); });
+}
+
+/** Whether a device is left out of the list: a phone, a car, or one labelled to be hidden. */
+function leftOut(ids, states, reg) {
+  return ids.some((i) => reg.entities.get(i)?.platform === 'mobile_app' || reg.entities.get(i)?.labels?.includes(HIDE_FROM_HEALTH_LABEL)) || isCarDevice(ids, states, reg);
+}
+
+/** Devices worth listing, those needing attention first and then by name; phones, cars and hidden devices are left out. */
 export function deviceHealthList(states, reg) {
   const stale = staleDevices(states, reg);
   return [...reg.byDevice.keys()]
-    .filter((d) => !reg.byDevice.get(d).some((i) => reg.entities.get(i)?.platform === 'mobile_app'))
+    .filter((d) => !leftOut(reg.byDevice.get(d), states, reg))
     .map((d) => healthOfDevice(d, states, reg, stale)).filter((x) => x && x.tracked)
     .sort((a, b) => b.level - a.level || a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 }

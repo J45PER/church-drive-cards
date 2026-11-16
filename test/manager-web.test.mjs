@@ -72,6 +72,19 @@ test('device health lists batteries and filters, worst first, leaves out phones 
   assert.equal(list[1].level, 1); assert.equal(list[1].area, 'Hall');
 });
 
+test('cars and devices labelled to be hidden stay out of device health, their twins and a car integration\'s other devices (one not answering) stay in', () => {
+  const garage = buildRegistry({ entities: [
+    { ei: 'sensor.astra_battery', di: 'astra', pl: 'stellantis_vehicles' }, { ei: 'sensor.astra_service_battery', di: 'astra', pl: 'stellantis_vehicles' },
+    { ei: 'sensor.octopus_id5_soc', di: 'id5', pl: 'octopus_energy' }, { ei: 'sensor.octopus_meter_rate', di: 'meter', pl: 'octopus_energy' },
+    { ei: 'sensor.front_door_battery', di: 'ring', pl: 'ring' }, { ei: 'sensor.front_door_battery_3', di: 'mqtt', pl: 'mqtt', lb: ['hide_from_device_health'] },
+    { ei: 'sensor.hall_sensor_battery', di: 'alarm', pl: 'mqtt' },
+  ] }, [{ id: 'astra', name: 'Vauxhall Astra' }, { id: 'id5', name: 'Volkswagen ID.5' }, { id: 'meter', name: 'Smart meter' }, { id: 'ring', name: 'Front Doorbell' }, { id: 'mqtt', name: 'Front Door' }, { id: 'alarm', name: 'Hall sensor' }], []);
+  const bat = (id, v) => st(id, v, { device_class: 'battery', unit_of_measurement: '%' });
+  const states = Object.fromEntries([bat('sensor.astra_battery', '6'), bat('sensor.astra_service_battery', '98'), bat('sensor.octopus_id5_soc', '12'), st('sensor.octopus_meter_rate', 'unavailable'),
+    bat('sensor.front_door_battery', '34'), bat('sensor.front_door_battery_3', '34'), bat('sensor.hall_sensor_battery', '67')].map((e) => [e.entity_id, e]));
+  assert.deepEqual(deviceHealthList(states, garage).map((d) => d.name).sort(), ['Front Doorbell', 'Hall sensor', 'Smart meter']);
+});
+
 test('a device whose entities are all unavailable is offline, and the watch can mark one not responding', () => {
   const states = Object.fromEntries([st('sensor.lamp_x', 'unavailable'), st('sensor.door_state', 'on'), st('sensor.church_drive_device_health', 'ok', { devices: { 'sensor.door_state': { status: 'stale', reason: 'Quiet for 3 days' } } })].map((e) => [e.entity_id, e]));
   const list = deviceHealthList(states, reg);
