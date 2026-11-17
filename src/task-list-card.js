@@ -11,7 +11,7 @@
 
 import { clive } from './clive-colours.js';
 import { createFormEditor } from './form-editor.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
@@ -32,7 +32,7 @@ export function choreIcon(name) {
   if (/toilet|loo/.test(n)) return 'mdi:toilet';
   if (/sheet|bed/.test(n)) return 'mdi:bed-outline';
   if (/mop|floor/.test(n)) return 'mdi:spray-bottle';
-  if (/dust|polish/.test(n)) return 'mdi:feather';
+  if (/dust|polish/.test(n)) return 'cd:broom';
   if (/kitchen|oven|hob|fridge/.test(n)) return 'mdi:countertop-outline';
   if (/window|glass|mirror/.test(n)) return 'mdi:window-closed-variant';
   if (/bin|rubbish|recycl/.test(n)) return 'mdi:trash-can-outline';
@@ -434,7 +434,7 @@ export class TaskListCard extends HTMLElement {
     this._doneList.hidden = !(showDone && this._showDone);
     this._doneList.innerHTML =
       showDone && this._showDone
-        ? done.map((t) => row({ t, p: parseTask(t.description) }, true)).join('') + `<button type="button" class="tl-link" data-clear style="align-self:flex-start;">Clear done tasks</button>`
+        ? done.map((t) => row({ t, p: parseTask(t.description) }, true)).join('') + `<button type="button" class="tl-link" data-clear style="align-self:flex-start;">${iconLabel('cd:bin', 'Clear done tasks')}</button>`
         : '';
     hydrateIcons(this);
   }
@@ -574,9 +574,9 @@ export class TaskListCard extends HTMLElement {
       <label class="tl-l">Notes<input type="text" class="tl-f-notes tl-wide" maxlength="200" placeholder="Optional" value="${kitEsc(e.notes)}"></label>
       <div class="tl-msg" role="status"></div>
       <div class="tl-buttons">
-        <button type="button" class="tl-save" style="${on} color:#fff;">${e.uid ? 'Save' : 'Add task'}</button>
-        <button type="button" class="tl-cancel" style="background:rgba(127,127,127,0.18); color:var(--primary-text-color);">Cancel</button>
-        ${e.uid ? `<button type="button" class="tl-delete" style="margin-left:auto; background:color-mix(in srgb, #ff6b6b 20%, transparent); color:#ffb5b5;">Delete</button>` : ''}
+        <button type="button" class="tl-save" style="${on} color:#fff;">${e.uid ? iconLabel('cd:check', 'Save') : iconLabel('cd:plus', 'Add task')}</button>
+        <button type="button" class="tl-cancel" style="background:rgba(127,127,127,0.18); color:var(--primary-text-color);">${iconLabel('cd:close', 'Cancel')}</button>
+        ${e.uid ? `<button type="button" class="tl-delete" style="margin-left:auto; background:color-mix(in srgb, #ff6b6b 20%, transparent); color:#ffb5b5;">${iconLabel('cd:bin', 'Delete')}</button>` : ''}
       </div>`;
     const f = this._form;
     const bind = (sel, ev, fn) => f.querySelectorAll(sel).forEach((el) => el.addEventListener(ev, () => fn(el)));

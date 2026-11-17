@@ -16,7 +16,7 @@
 import * as L from 'leaflet/dist/leaflet-src.esm.js';
 import LEAFLET_CSS from 'leaflet/dist/leaflet.css';
 import { createFormEditor } from './form-editor.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc } from './card-kit.js';
 import { MAP_LAYERS, mapStyle, setMapStyle, googleTiles, useGoogle } from './map-style.js';
@@ -123,7 +123,7 @@ export class ZoneMapCard extends HTMLElement {
         <div class="zm-search"><span class="zm-glass">${iconHtml('mdi:magnify', { size: '18px' })}</span><input placeholder="Search an address, postcode or place…" aria-label="Search the map"><div class="zm-results"></div></div>
         <div class="zm-layers"><button data-style="satellite">Satellite</button><button data-style="street">Street</button></div>
         <div class="zm-zoom"><button data-zoom="in" aria-label="Zoom in">+</button><button data-zoom="out" aria-label="Zoom out">−</button><button data-zoom="fit" aria-label="Show all zones">${iconHtml('mdi:crosshairs-gps', { size: '18px' })}</button></div>
-        ${this._admin() ? '<button class="zm-add">+ Add zone</button>' : ''}
+        ${this._admin() ? `<button class="zm-add">${iconLabel('cd:plus', 'Add zone')}</button>` : ''}
       </div>
       <div class="zm-edit" style="display:none;"></div>
       <div class="zm-hint">${this._admin() ? 'Tap a zone to rename, move (drag its centre) or resize (drag the white dot) it.' : ''}</div>`;
@@ -351,9 +351,9 @@ export class ZoneMapCard extends HTMLElement {
     edit.style.display = '';
     edit.innerHTML = `<input class="zm-name" value="${kitEsc(z.name)}" placeholder="Name (e.g. Frasers Group)" ${z.home ? 'disabled' : ''} aria-label="Zone name">
       <span class="zm-size"></span>
-      ${z.home || z.isNew ? '' : '<button class="zm-btn del" data-act="delete">Delete</button>'}
-      <button class="zm-btn" data-act="cancel">Cancel</button>
-      <button class="zm-btn save" data-act="save">Save</button>`;
+      ${z.home || z.isNew ? '' : `<button class="zm-btn del" data-act="delete">${iconLabel('cd:bin', 'Delete')}</button>`}
+      <button class="zm-btn" data-act="cancel">${iconLabel('cd:close', 'Cancel')}</button>
+      <button class="zm-btn save" data-act="save">${iconLabel('cd:check', 'Save')}</button>`;
     edit.querySelector('.zm-name').addEventListener('input', () => (this._sel.dirty = true));
     this._changed(false);
     if (z.isNew) edit.querySelector('.zm-name').focus();

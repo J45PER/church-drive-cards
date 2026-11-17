@@ -118,7 +118,7 @@ export class SceneStylesCard extends HTMLElement {
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
         ${iconHtml(sceneIcon(n.name, n.dynamic), { size: '40cqw', cls: 'ssc-icon', style: 'position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));' })}
-        ${styled.has(n.key) ? '<ha-icon icon="mdi:pencil" title="Custom style" style="position:absolute; top:6px; right:6px; --mdc-icon-size:clamp(12px, 18cqw, 18px); color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
+        ${styled.has(n.key) ? `<span title="Custom style" style="position:absolute; top:6px; right:6px; display:flex; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));">${iconHtml('cd:pencil', { size: 'clamp(12px, 18cqw, 18px)' })}</span>` : ''}
         <div class="ssc-name"></div>`;
       tile.querySelector('.ssc-name').textContent = n.name;
       grid.appendChild(tile);

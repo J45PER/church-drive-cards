@@ -687,7 +687,7 @@ export class LightControlCard extends HTMLElement {
       ${iconHtml(icon, { size: '24px', cls: 'lcc-row-icon', style: `color:${on ? color : 'var(--secondary-text-color)'}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? 'var(--primary-text-color)' : 'var(--secondary-text-color)'}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
       <div class="lcc-state" style="flex-shrink:0; font-size:0.85rem; font-variant-numeric:tabular-nums; color:${on ? 'var(--primary-text-color)' : 'var(--secondary-text-color)'}; opacity:${on ? 0.9 : 0.7}; pointer-events:none;">${stateText}</div>
-      ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ''}
+      ${withMoreInfo && !this.config.demo ? iconHtml('cd:sliders', { size: '20px', cls: 'lcc-more', style: 'color:var(--secondary-text-color); cursor:pointer; flex-shrink:0;' }) : ''}
     `;
 
     if (withMoreInfo && !this.config.demo) {
@@ -801,15 +801,15 @@ export class LightControlCard extends HTMLElement {
         s.active ? ` box-shadow:0 0 12px 2px ${glow}; transform:scale(1.03); z-index:1;` : ''
       }`;
       const badge = (cls, icon, title) =>
-        `<ha-icon class="${cls}" icon="${icon}" title="${title}" style="position:absolute; top:50%; right:5px; transform:translateY(-50%); --mdc-icon-size:16px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>`;
+        `<span title="${title}" style="position:absolute; top:50%; right:5px; transform:translateY(-50%); display:flex; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));">${iconHtml(icon, { size: '16px', cls })}</span>`;
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:rgba(0,0,0,0.18);"></div>
         <div class="lcc-scene-body" style="position:relative; display:flex; align-items:center; justify-content:center; gap:6px; height:100%; padding:0 8px; color:#fff;">
           ${iconHtml(s.icon, { size: '22px', cls: 'lcc-scene-icon', style: 'flex-shrink:0; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));' })}
           <span class="lcc-scene-name" style="min-width:0; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
         </div>
-        ${s.paused ? badge('lcc-paused', 'mdi:pause', 'Paused') : ''}
-        ${s.playing ? badge('lcc-playing', 'mdi:play', 'Playing') : ''}`;
+        ${s.paused ? badge('lcc-paused', 'cd:pause', 'Paused') : ''}
+        ${s.playing ? badge('lcc-playing', 'cd:play', 'Playing') : ''}`;
       tile.querySelector('.lcc-scene-name').textContent = s.name;
       this._bindSceneTile(tile, s);
       rows[rowIndex].appendChild(tile);

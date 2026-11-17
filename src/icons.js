@@ -79,7 +79,11 @@ export function iconHtml(icon, { size = '24px', style = '', cls = '' } = {}) {
   // An mdi icon the house set has under the same name (cog, fan, fire, lock…) is drawn with the house's own.
   const sameName = /^mdi:(.+)$/.exec(icon || '');
   const house = sameName && SHAPES[MDI_TO_HOUSE[sameName[1]] || sameName[1]];
-  const own = CLIVE_ICONS[icon] || (house && { path: house.path, viewBox: house.viewBox, evenodd: house.evenodd });
+  // A house icon named directly (cd:shield-home) is drawn at once from the built-in set, with no wait for the pack lookup.
+  const cdName = /^cd:(.+)$/.exec(icon || '');
+  const cd = cdName && SHAPES[cdName[1]];
+  const shape = house || cd;
+  const own = CLIVE_ICONS[icon] || (shape && { path: shape.path, viewBox: shape.viewBox, evenodd: shape.evenodd });
   if (own) {
     return `<span class="${cls}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${svg(own, '100%')}</span>`;
   }
@@ -89,6 +93,12 @@ export function iconHtml(icon, { size = '24px', style = '', cls = '' } = {}) {
   const def = cache.get(icon);
   const inner = def ? svg(def, '100%') : '';
   return `<span class="${cls} cdc-icon" data-icon="${escapeAttr(icon)}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${inner}</span>`;
+}
+
+// A button's icon beside its word, as the apps' tiles (Save gets a tick, Cancel a cross, Delete a bin...). It sits in its own inline-flex box,
+// so it lines up in any button whatever that button's own layout. With no text it is just the icon, centred.
+export function iconLabel(icon, text = '', size = '18px') {
+  return `<span style="display:inline-flex; align-items:center; justify-content:center; gap:6px; vertical-align:middle;">${iconHtml(icon, { size, style: 'flex:none;' })}${text ? `<span>${text}</span>` : ''}</span>`;
 }
 
 function resolve(icon) {

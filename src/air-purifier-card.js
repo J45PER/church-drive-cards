@@ -47,7 +47,7 @@ const AP_MODE_ICONS = {
   'auto (general)': 'mdi:autorenew',
   allergen: 'mdi:flower',
   medium: 'mdi:fan',
-  turbo: 'mdi:rocket-launch',
+  turbo: 'cd:speedometer',
   sleep: 'mdi:power-sleep',
   night: 'mdi:power-sleep',
   low: 'mdi:fan-speed-1',

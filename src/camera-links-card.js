@@ -15,7 +15,7 @@
 // always rings.
 
 import { createFormEditor } from './form-editor.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc } from './card-kit.js';
 
@@ -266,7 +266,7 @@ export class CameraLinksCard extends HTMLElement {
             .sort((a, b) => a[1].localeCompare(b[1]));
       const label = MODES.find((m) => m[0] === tab)[1];
       foot.innerHTML = `<select class="cl-add" aria-label="Add a trigger"><option value="">+ Add a trigger (any motion sensor, door or doorbell)</option>${choices.map(([id, n]) => `<option value="${kitEsc(id)}">${kitEsc(n)}</option>`).join('')}</select>
-        <button class="cl-copy" data-copy="1">Use these for all modes</button>
+        <button class="cl-copy" data-copy="1">${iconLabel('cd:copy', 'Use these for all modes')}</button>
         <span>Each camera at most once every <select class="cl-cool">${COOLDOWNS.map(([v, t]) => `<option value="${v}"${v === Number(d.cooldown) ? ' selected' : ''}>${t}</option>`).join('')}</select></span>`;
       foot.dataset.label = label;
     } else {
