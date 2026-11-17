@@ -109,6 +109,8 @@ Decided:
 - **What the Server does with snapshots:** name known people, flag packages and deliveries, and give a short label for everything else (for example "car on the drive"). Alerts are sent for people and packages, not every label.
 - **Who is recognised:** the household, plus named friends and family who have each agreed to be enrolled.
 - **Where it runs:** on the house's own hardware. Face data is never sent to a cloud service.
+- **What people are doing:** a short written description for each event, like Ring's, such as "a person carrying a box walking up the driveway". Runs locally, so it's less polished than Ring's cloud descriptions, and it can be wrong. Treat it as a summary, not a record.
+- **Descriptions are kept as long as their clip,** and deleted when the clip is.
 
 Required before going live (not yet done):
 - A consent record for each enrolled friend or family member.
