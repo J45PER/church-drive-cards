@@ -98,7 +98,7 @@ The camera PoE switch goes on the UPS.
 | Frigate recording mode | Events only (recommended), continuous with short retention, continuous with long retention | Not answered yet. Affects drive wear and storage size. |
 | Storage pool layout on the NAS | To decide before buying drives | Recordings do not need redundancy, but a drive failure loses them. |
 | Ring Alarm sensors | Test one sensor with the Sonoff stick first | Confirm the sensor can pair with a third-party controller, and remove it from Ring's app only after the test passes. |
-| Clive's model | Sonnet 5.5 or Haiku 4.5 | `HANDOFF.md` says Sonnet 5.5 since 2026-10-23, and `ha/clive.md` still says Haiku 4.5. Check the live integration and update the doc that is wrong. |
+| Clive's model | Decided: Sonnet 5.5 (see below) | Sonnet 5.5 is the balance for Clive: it handles the answers Haiku 4.5 drifted on, at a higher per-answer cost. Haiku 5.5 is the cheap option for simple jobs. Opus 5.5 is too slow and dear for voice. Still to measure: speech-to-answer timings in the app's Settings. |
 | 5G backup | Paused | See above. |
 
 ## Order of work
