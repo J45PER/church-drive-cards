@@ -91,6 +91,18 @@ The camera PoE switch goes on the UPS.
 | UPS | New | Covers the Green, Beelink, NAS, router, the camera PoE switch, and the modem or ONT. Size for 15–30 minutes with the NAS, Green, router and cameras running. |
 | 5G internet backup | **Paused** | Eero's Hotspot Backup and eero Signal both need an eero Plus subscription. The alternative is a failover router with a 5G SIM, placed in front of the Eero. Both need a check: the Talk-over-5G port forward will not work on 5G (CGNAT), and Nabu Casa remote access still will. Resume when ready. |
 
+## Server monitoring (planned)
+
+The Beelink is called **Server** in the apps and docs. Decided so far:
+
+- **Clive Admin app, a Server page in the sidebar:** status and issues only. Whether the box is up, CPU, memory and disk use, containers that have stopped, and recent problems.
+- **Website, a Server detail page:** more history and logs than the app shows.
+- **No live shell in the browser.** Anyone who got into the website could run commands on the box, including with the Anthropic key and the HA token. Commands stay in Remote Control, where you approve each session.
+
+Open:
+- The website isn't on the list of website pages in CLAUDE.md for this kind of thing. Confirm the detail page belongs on the website, or move it into the Admin app.
+- Which metrics and how far back the history goes.
+
 ## Open decisions
 
 | Decision | Options | Notes |
