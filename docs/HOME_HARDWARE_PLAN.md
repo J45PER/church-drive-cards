@@ -59,7 +59,7 @@ Disk note: the Green has a 28 GB disk with 16.6 GB used at the last check. Movin
 
 | Item | Status | Notes |
 |---|---|---|
-| Linux replacing Windows 11 Home | New | Ubuntu Server or Debian with Docker, or Proxmox if you want VMs. |
+| Ubuntu Server LTS replacing Windows 11 Home | New | Decided. Docker on the host. One named admin account with passwordless sudo, password logins off, Remote Control for access (no inbound ports). Only power and Ethernet connected. Secrets in a root-only env file, not the repo. Unattended security updates on. |
 | Clive's agent service | New | HA's Assist pipeline calls this instead of Claude directly. Calls Claude in the cloud for conversation. Uses HA's API for device control. |
 | Small local fallback model (3–4B, quantised) | New | Answers simple commands when the internet or the API is down. One model loaded at a time. |
 | Camera event analysis (snapshots only) | New | Describes what Frigate detected, using snapshots, not the real-time video path. |
