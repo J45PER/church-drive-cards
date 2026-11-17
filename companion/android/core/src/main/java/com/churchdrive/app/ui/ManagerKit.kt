@@ -570,12 +570,13 @@ fun Tile(item: TileItem, tone: ToneColors, content: Color, enabled: Boolean, col
     ) {
         if (column) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
+                if (item.icon.isNotBlank()) HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
                 if (item.showLabel) CentredText(item.label, ink, Ui.TileTextStacked, Modifier.padding(horizontal = 4.dp))
             }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
+                // A tile with no icon (words only, such as Weekdays) shows just its words, not the stand-in icon.
+                if (item.icon.isNotBlank()) HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
                 if (item.showLabel) CentredText(item.label, ink, Ui.TileText, Modifier.padding(end = 2.dp))
             }
         }

@@ -153,6 +153,12 @@ private fun HealthRow(item: DeviceHealthItem, onClick: () -> Unit) {
     }
 }
 
+/**
+ * What an app adds to the foot of a device's page (the phone app: a blind's Schedule row). Nothing by default, so Clive Admin's
+ * Device health shows only the device's health.
+ */
+val LocalDeviceExtras = compositionLocalOf<@Composable (DeviceHealthItem) -> Unit> { {} }
+
 /** A device's page: just what a person needs, its battery and filter with bars, whether it is answering, and when it was last heard. */
 @Composable
 private fun DevicePage(item: DeviceHealthItem, onBack: () -> Unit, embedded: Boolean = false) {
@@ -175,6 +181,7 @@ private fun DevicePage(item: DeviceHealthItem, onBack: () -> Unit, embedded: Boo
             }
             Text("Heard ${heardAgo(item.heard)}", style = MaterialTheme.typography.bodySmall)
         }
+        LocalDeviceExtras.current(item)
     }
 }
 

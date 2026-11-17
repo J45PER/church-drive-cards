@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.161.0
+
+- **Schedules open on a page of their own.** The blind's and the purifier's schedules used to be edited inside the card, which was cramped. Now a page opens over the app: the switch, then a row per schedule ("Mon-Fri · Open 07:30 · Close 20:00"). Tap a row to change it on its own, with large M T W T F S S day buttons, Weekdays, Weekend and Every day picks, and the two times as big tiles. Back from a schedule returns to the list; leaving with unsaved changes asks first. Save sends it all to the house.
+- **Holding a blind's card goes straight to its device page**, as every other card does: no menu. An administrator finds a Schedule row on that page, with when the blind next moves; it opens the schedule page. The purifier schedule card's Edit opens the same page.
+- Day buttons no longer show a stray ⓘ and "…" in place of the day.
+
 ## 0.160.1
 
 - **Device health no longer lists cars.** A car's charge level (the Astra at 6%, the ID.5) was shown as a flat battery to replace, and its service battery with it. A car is now left out, the same way the Cars card finds one (a device of a car integration with a charge level).

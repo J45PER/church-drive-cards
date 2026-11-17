@@ -233,7 +233,13 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 if (deviceHealthOpen && statesLoaded) {
-                                    com.churchdrive.app.ui.DeviceHealthOverlay(openDevice, entities, registry, areaNames) { deviceHealthOpen = false; openDevice = null }
+                                    // A device's page in the phone app also has its schedules (a blind's), for an administrator.
+                                    CompositionLocalProvider(
+                                        com.churchdrive.app.ui.LocalIsAdmin provides isAdmin,
+                                        com.churchdrive.app.ui.LocalDeviceExtras provides { item -> com.churchdrive.app.ui.DeviceScheduleRows(item) },
+                                    ) {
+                                        com.churchdrive.app.ui.DeviceHealthOverlay(openDevice, entities, registry, areaNames) { deviceHealthOpen = false; openDevice = null }
+                                    }
                                 }
                                 openShopping?.let { com.churchdrive.app.ui.ShoppingScreen(it) { openShopping = null } }
                                 if (chargePrompt) {
