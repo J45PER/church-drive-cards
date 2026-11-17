@@ -183,8 +183,9 @@ export function kitTiles(box, list, onTap, { column = false, hideNames = false }
     b.setAttribute('aria-label', b.title);
     b.setAttribute('aria-pressed', String(!!t.on));
     if (t.on) b.style.background = t.color;
-    b.innerHTML = `${t.hold ? '<i class="ck-hold"></i>' : ''}${iconHtml(t.icon, { size: '20px', style: 'flex-shrink:0; position:relative;' })}<span class="${hideNames ? 'ck-hide' : ''}" style="position:relative;"></span>`;
-    b.querySelector('span').textContent = t.name;
+    b.innerHTML = `${t.hold ? '<i class="ck-hold"></i>' : ''}${iconHtml(t.icon, { size: '20px', style: 'flex-shrink:0; position:relative;' })}<span class="ck-label${hideNames ? ' ck-hide' : ''}" style="position:relative;"></span>`;
+    // The label by its class: a Clive icon is drawn in a <span> too, so "the first span" would be the icon.
+    b.querySelector('.ck-label').textContent = t.name;
     if (t.hold) kitHold(b, () => onTap(t));
     else b.addEventListener('click', () => onTap(t));
     box.appendChild(b);
@@ -724,8 +725,8 @@ export function kitCompact(root, spec) {
   (spec.chips || []).forEach((c) => {
     const el = document.createElement('span');
     el.className = 'ck-cpt-chip';
-    el.innerHTML = `<i style="background:${c.color || 'var(--secondary-text-color)'};"></i><span></span>`;
-    el.querySelector('span').textContent = c.label;
+    el.innerHTML = `<i style="background:${c.color || 'var(--secondary-text-color)'};"></i><span class="ck-label"></span>`;
+    el.querySelector('.ck-label').textContent = c.label;
     chips.appendChild(el);
   });
   hydrateIcons(root);

@@ -501,8 +501,8 @@ export class ClimateCard extends HTMLElement {
     e.style.display = 'flex';
     if (sig !== this._cliveSig) {
       this._cliveSig = sig;
-      e.innerHTML = `${iconHtml(zone.controlled ? 'mdi:check-circle-outline' : 'mdi:hand-back-right-outline', { size: '20px' })}<span style="flex:1; min-width:0;"></span><span>Settings ›</span>`;
-      e.querySelector('span').textContent = text;
+      e.innerHTML = `${iconHtml(zone.controlled ? 'mdi:check-circle-outline' : 'mdi:hand-back-right-outline', { size: '20px' })}<span class="cc-label" style="flex:1; min-width:0;"></span><span>Settings ›</span>`;
+      e.querySelector('.cc-label').textContent = text;
     }
     if (this._pop) this._pop.update(this._hass);
   }
@@ -767,8 +767,8 @@ export class ClimateCard extends HTMLElement {
           opt.className = `cc-opt${o.value === d.value ? ' cc-on' : ''}`;
           opt.setAttribute('role', 'option');
           opt.setAttribute('aria-selected', String(o.value === d.value));
-          opt.innerHTML = `${iconHtml(o.icon, { size: '20px', style: `color:${o.color || 'var(--primary-text-color)'}; flex:none;` })}<span></span>`;
-          opt.querySelector('span').textContent = o.name;
+          opt.innerHTML = `${iconHtml(o.icon, { size: '20px', style: `color:${o.color || 'var(--primary-text-color)'}; flex:none;` })}<span class="cc-label"></span>`;
+          opt.querySelector('.cc-label').textContent = o.name;
           opt.addEventListener('click', (ev) => {
             ev.stopPropagation();
             this._closeMenu();
@@ -864,8 +864,8 @@ export class ClimateCard extends HTMLElement {
       chip.style.cssText = 'border:none; color:var(--primary-text-color); font:inherit; font-size:0.8rem; cursor:pointer;';
       const text = this._hass.formatEntityState ? this._hass.formatEntityState(s) : `${s.state}${s.attributes.unit_of_measurement ? ' ' + s.attributes.unit_of_measurement : ''}`;
       const icon = s.attributes.icon || (s.attributes.device_class === 'battery' ? 'mdi:battery' : s.attributes.device_class === 'temperature' ? 'mdi:thermometer' : 'mdi:information-outline');
-      chip.innerHTML = `${iconHtml(icon, { size: '16px', style: 'color:var(--secondary-text-color);' })}<span></span>`;
-      chip.querySelector('span').textContent = `${s.attributes.friendly_name || s.entity_id} ${text}`;
+      chip.innerHTML = `${iconHtml(icon, { size: '16px', style: 'color:var(--secondary-text-color);' })}<span class="cc-label"></span>`;
+      chip.querySelector('.cc-label').textContent = `${s.attributes.friendly_name || s.entity_id} ${text}`;
       chip.addEventListener('click', () => this._moreInfo(s.entity_id));
       box.appendChild(chip);
     });
