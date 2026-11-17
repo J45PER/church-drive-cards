@@ -251,12 +251,12 @@ sequence:
       target:
         entity_id: '{{ z.note }}'
       data:
-        value: '{{ now().strftime(''%H:%M'') }}: Put {{ z.name }} heating on Eco because {{ away_reason }}. It stays on Eco until somebody asks Clive to take over again.'
+        value: '{{ now().strftime(''%H:%M'') }}: Put {{ z.name }} heating on Eco because {{ away_reason }}. Clive takes it off Eco again when somebody gets home.'
     - action: church_drive.notify
       data:
         kind: clive_actions
         title: 🌡️ {{ z.name }} heating on Eco
-        message: 'Nobody is home ({{ away_reason }}), so Clive put the {{ z.name }} heating on Eco. It stays on Eco until somebody asks him to take over again.'
+        message: 'Nobody is home ({{ away_reason }}), so Clive put the {{ z.name }} heating on Eco. Clive takes it off Eco again when somebody gets home.'
         tag: church-drive-clive-away-{{ zone }}
         link: /dashboard-mobile/climate
     - action: logbook.log
