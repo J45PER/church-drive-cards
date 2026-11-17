@@ -103,6 +103,15 @@ Open:
 - The website isn't on the list of website pages in CLAUDE.md for this kind of thing. Confirm the detail page belongs on the website, or move it into the Admin app.
 - Which metrics and how far back the history goes.
 
+## Footage stays local (rule)
+
+- **No cloud processing of footage.** Video, snapshots, clips and event images are processed and kept on the house's own hardware. Nothing from the cameras goes to a cloud AI service, including Claude. Clive's cloud model only ever gets text.
+- **To check before going live:**
+  - The D260's on-camera detection and face recognition keep their data on the camera, and don't sync images to Tapo's servers.
+  - Remote viewing through Nabu Casa doesn't route video through their relay. If it does, either make remote viewing local-only or record the exception.
+  - Talk through go2rtc connects to the camera over the LAN, which it does per the README's examples.
+  - Notifications contain no footage, or only what you accept leaves the house.
+
 ## Camera streams and talk (decided)
 
 - **Frigate runs on the NAS**, with recordings on its own drives. Not on the Beelink.
