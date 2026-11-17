@@ -62,7 +62,7 @@ Disk note: the Green has a 28 GB disk with 16.6 GB used at the last check. Movin
 | Ubuntu Server LTS replacing Windows 11 Home | New | Decided. Docker on the host. One named admin account with passwordless sudo, password logins off, Remote Control for access (no inbound ports). Only power and Ethernet connected. Secrets in a root-only env file, not the repo. Unattended security updates on. |
 | Clive's agent service | New | HA's Assist pipeline calls this instead of Claude directly. Calls Claude in the cloud for conversation. Uses HA's API for device control. |
 | Small local fallback model (3–4B, quantised) | New | Answers simple commands when the internet or the API is down. One model loaded at a time. |
-| Camera event analysis (snapshots only) | New | Describes what Frigate detected, using snapshots, not the real-time video path. |
+| Camera event analysis (snapshots only) | New | Describes what Frigate detected, using snapshots, not the real-time video path. Decided: a local vision model on the Server, so camera images never leave the house. Slower than a cloud model, so the CPU matters (see the S13 vs EQR6 choice). Frigate on the NAS still does the detection, recording and storage. |
 | Other smart home services (light only) | Later | Examples: an energy history database with Grafana, an uptime monitor, DNS filtering. About 8 GB of RAM is the budget. |
 | RAM upgrade to 32 GB | Later | Only after one week of real usage shows it's needed. Check the maximum supported RAM first. |
 
