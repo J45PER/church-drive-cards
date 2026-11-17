@@ -93,7 +93,7 @@ The camera PoE switch goes on the UPS.
 
 ## Server monitoring (planned)
 
-The Beelink is called **Server** in the apps and docs. Decided so far:
+The Beelink is called **Server** in code and docs. On screen, in the Admin app and on the website, its label is built from the assistant-name setting (`assistantName`), so it reads **Clive Server** now and follows any rename without a code change. Code and identifiers never hard-code the name. Decided so far:
 
 - **Clive Admin app, a Server page in the sidebar:** status and issues only. Whether the box is up, CPU, memory and disk use, containers that have stopped, and recent problems.
 - **Website, a Server detail page:** more history and logs than the app shows.
