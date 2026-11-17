@@ -822,6 +822,40 @@ fun HeaderLines(config: JSONObject) {
     }
 }
 
+/**
+ * The status lines on a Details page (the alarm's): the same lines as a page header's ([HeaderLine]), but they stay where they
+ * are, with no fading away or swiping. Who's home is for administrators only.
+ */
+@Composable
+fun StatusLines(config: JSONObject) {
+    val lines = config.optJSONArray("header_lines") ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (i in 0 until lines.length()) {
+            val line = lines.optJSONObject(i) ?: continue
+            StatusLine(line)
+        }
+    }
+}
+
+@Composable
+private fun StatusLine(line: JSONObject) {
+    val key = line.optString("text")
+    val text = rememberTemplate(key)
+    val alert = rememberTemplate(line.optString("alert_when"))?.trim()?.lowercase() == "true"
+    val tone = toneColors(toneFromColour(if (alert) line.optString("alert_color") else line.optString("color")) ?: Tone.Green)
+    val icon = if (alert) line.optString("alert_icon").ifBlank { line.optString("icon") } else line.optString("icon")
+    if (text.isNullOrBlank()) return
+    if (isPeopleLine(key) && !LocalIsAdmin.current) return
+    Row(
+        modifier = Modifier.fillMaxWidth().background(tone.container, RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ToneIconName(icon, CdVectors.Info, tone, 32)
+        Text(styledLine(text), color = tone.onContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+    }
+}
+
 /** The pause between one line leaving and the next. */
 const val LEAVE_STAGGER_MS = 180
 

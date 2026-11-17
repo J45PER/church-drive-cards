@@ -121,6 +121,8 @@ WS_PURIFIER_SCHEDULE = "church_drive/purifier_schedule"
 WS_PURIFIER_SCHEDULE_SET = "church_drive/purifier_schedule/set"
 WS_BLIND_SCHEDULE = "church_drive/blind_schedule"
 WS_BLIND_SCHEDULE_SET = "church_drive/blind_schedule/set"
+WS_ALARM_TESTS = "church_drive/alarm_tests"
+WS_ALARM_TESTS_SET = "church_drive/alarm_tests/set"
 
 # Who did what in the house, for administrators (activity.py).
 WS_ACTIVITY = "church_drive/activity"

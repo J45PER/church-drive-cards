@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.164.0
+
+- **The Security page is calmer.** The status lines at the top (doors, last movement, who's home, smoke and CO, batteries) are gone from the page; press and hold the alarm card for its Details page, where they stay.
+- **Who's home** is on the alarm card on the Home page too, for administrators, as on the Security page.
+- **Smoke & CO alarms have a Details page.** Press and hold the card: each alarm with its state, battery, last check-in, end of life and whether it's silenced, then the base station's Security Mode and Alarm Volume (moved off the Security page).
+- **Monthly alarm tests.** Administrators can schedule three tests, each on a day of the month at a time: the house alarm (its indoor siren, the Ring Chime, sounds for about 10 seconds; on the alarm's Details page), the smoke and heat alarms and the CO alarm (each one's own test; on the Smoke & CO Details page). Everyone who's home is told 15 and 5 minutes before. Needs Home Assistant 0.164.0.
+
 ## 0.163.0
 
 - **Schedules open in place.** On a device's page, tapping Schedule opens the schedules right there under it, instead of on another page. Tap a schedule to change its days and times; Save or Cancel closes it again.

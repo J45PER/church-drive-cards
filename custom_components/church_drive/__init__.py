@@ -63,6 +63,7 @@ from .alarm_lights import AlarmLights
 from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
 from .blind_schedule import BlindSchedule
+from .alarm_tests import AlarmTests
 from .purifier_schedule import PurifierSchedule
 from .const import (
     CONF_ASSISTANT_NAME,
@@ -132,6 +133,8 @@ from .const import (
     WS_ALARM_LIGHTS_TEST,
     WS_BLIND_SCHEDULE,
     WS_BLIND_SCHEDULE_SET,
+    WS_ALARM_TESTS,
+    WS_ALARM_TESTS_SET,
     WS_PURIFIER_SCHEDULE,
     WS_PURIFIER_SCHEDULE_SET,
     WS_REMINDER_SET,
@@ -1202,6 +1205,45 @@ async def ws_blind_schedule_set(hass: HomeAssistant, connection: websocket_api.A
         connection.send_error(msg["id"], "invalid_format", str(err))
 
 
+def _alarm_tests(hass: HomeAssistant) -> AlarmTests | None:
+    return hass.data.get(DOMAIN, {}).get("alarm_tests")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_ALARM_TESTS})
+@callback
+def ws_alarm_tests(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The monthly tests (house alarm, smoke and heat alarms, CO alarm): each one's day, time, whether it's on, what's next and what it tests."""
+    tests = _alarm_tests(hass)
+    if tests is None:
+        connection.send_error(msg["id"], "not_ready", "The alarm tests aren't running")
+        return
+    connection.send_result(msg["id"], tests.status())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_ALARM_TESTS_SET,
+        vol.Required("kind"): vol.In(["alarm", "smoke", "co"]),
+        vol.Optional("enabled"): bool,
+        vol.Optional("day"): vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
+        vol.Optional("time"): cv.string,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_alarm_tests_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Change one test's schedule (only what's sent changes)."""
+    tests = _alarm_tests(hass)
+    if tests is None:
+        connection.send_error(msg["id"], "not_ready", "The alarm tests aren't running")
+        return
+    change = {k: v for k, v in msg.items() if k not in ("id", "type", "kind")}
+    try:
+        connection.send_result(msg["id"], await tests.async_set(msg["kind"], change))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+
+
 def _alarm_lights(hass: HomeAssistant) -> AlarmLights | None:
     return hass.data.get(DOMAIN, {}).get("alarm_lights")
 
@@ -1612,7 +1654,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
-            ws_purifier_schedule, ws_purifier_schedule_set, ws_blind_schedule, ws_blind_schedule_set,
+            ws_purifier_schedule, ws_purifier_schedule_set, ws_blind_schedule, ws_blind_schedule_set, ws_alarm_tests, ws_alarm_tests_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -1826,6 +1868,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("The blind schedule couldn't start; everything else still works")
         data["blind_schedule"] = None
+
+    # Nor must the monthly alarm tests (they tell everyone home before each one, through People).
+    alarm_tests = AlarmTests(hass, data.get("people"))
+    try:
+        await alarm_tests.async_start()
+        entry.async_on_unload(alarm_tests.async_stop)
+        data["alarm_tests"] = alarm_tests
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The alarm tests couldn't start; everything else still works")
+        data["alarm_tests"] = None
 
     async def shopping_add(call: ServiceCall) -> ServiceResponse:
         shop = data.get("shopping")

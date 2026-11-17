@@ -177,7 +177,7 @@ fun ScheduleEditor(
 
 /** A time as a wide tile: its label, the time large, a tap opens the clock; a cross clears it when it can be left out. */
 @Composable
-private fun ScheduleTime(label: String, time: String?, optional: Boolean, ink: Color, onPick: (String?) -> Unit) {
+internal fun ScheduleTime(label: String, time: String?, optional: Boolean, ink: Color, onPick: (String?) -> Unit) {
     val context = LocalContext.current
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f)).clickable(onClickLabel = "Change $label") {

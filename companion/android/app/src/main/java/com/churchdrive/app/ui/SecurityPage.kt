@@ -16,6 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -111,7 +117,7 @@ private fun CardContent(card: CardSpec, entities: Map<String, EntityState>, regi
             val id = card.config.optString("entity").ifBlank { ALARM_ENTITY }
             AlarmCard(entities[id], call, id, entities[ALARM_ACTOR_ENTITY], people = if (LocalIsAdmin.current) peopleRows(entities, registry) else emptyList())
         }
-        "custom:safety-card" -> SafetyCard(card.config, entities, registry)
+        "custom:safety-card" -> SafetyCard(card.config, entities, registry, call)
         "tile" -> TileCard(card.config, entities, call)
         "custom:camera-card" -> CameraCard(card.config, entities, registry, call)
         "custom:security-zone-card" -> ZoneCard(card.config, entities, call)
@@ -154,7 +160,7 @@ private fun CardContent(card: CardSpec, entities: Map<String, EntityState>, regi
 
 // ---- Safety ----
 
-private val SAFETY_ICONS = mapOf(
+internal val SAFETY_ICONS = mapOf(
     "smoke" to "mdi:smoke-detector-variant",
     "heat" to "mdi:fire",
     "carbon_monoxide" to "mdi:molecule-co",
@@ -162,7 +168,17 @@ private val SAFETY_ICONS = mapOf(
 
 /** Every smoke, heat and CO alarm: all clear or ALARM, battery, last check-in and the CO reading. */
 @Composable
-fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry) {
+fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+    // Press and hold for the Details page: each alarm's details, the base station, and the monthly tests.
+    var details by remember { mutableStateOf(false) }
+    if (details) SafetyDetailsPage(entities, registry, call) { details = false }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val hold = Modifier.pointerInput(Unit) {
+        detectTapGestures(onLongPress = {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+            details = true
+        })
+    }
     val chosen = config.optJSONArray("entities")?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } } }.orEmpty()
     val items = safetyItems(entities, registry, chosen)
     // Green while everything is clear, red while one is sounding.
@@ -180,7 +196,7 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     if (fold.value) {
         // Folded: the icons on one row in their status colour, each with its name and battery under it.
         val lines = items.chunked(5)
-        GridCard(cardTone.container, ink, 1f + 1.75f * lines.size + 0.25f, "Smoke & CO Alarms", fold = fold) {
+        GridCard(cardTone.container, ink, 1f + 1.75f * lines.size + 0.25f, "Smoke & CO Alarms", hold, fold = fold) {
             lines.forEachIndexed { r, line ->
                 line.forEachIndexed { c, item ->
                     val tone = itemTone(item)
@@ -196,7 +212,7 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
         }
         return
     }
-    GridCard(cardTone.container, ink, 1.5f * items.size + 1.5f, "Smoke & CO Alarms", fold = fold) {
+    GridCard(cardTone.container, ink, 1.5f * items.size + 1.5f, "Smoke & CO Alarms", hold, fold = fold) {
         items.forEachIndexed { k, item ->
             val tone = itemTone(item)
             val y = 1f + 1.5f * k

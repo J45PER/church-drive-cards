@@ -179,6 +179,8 @@ class MainActivity : ComponentActivity() {
                         val assistantCtl = remember { com.churchdrive.app.ui.AssistantController() }
                         CompositionLocalProvider(
                             com.churchdrive.app.ui.LocalAssistant provides assistantCtl,
+                            // The Security page's status lines and base station tiles, shown on its Details pages.
+                            com.churchdrive.app.ui.LocalSecurityDetails provides panels[com.churchdrive.app.ui.DashboardPanels.SECURITY_DETAILS].orEmpty(),
                             LocalSceneLooks provides sceneLooks,
                             LocalTemplates provides vm.templates,
                             LocalBaseUrl provides vm.baseUrl,
@@ -236,7 +238,10 @@ class MainActivity : ComponentActivity() {
                                     // A device's page in the phone app also has its schedules (a blind's), for an administrator.
                                     CompositionLocalProvider(
                                         com.churchdrive.app.ui.LocalIsAdmin provides isAdmin,
-                                        com.churchdrive.app.ui.LocalDeviceExtras provides { item -> com.churchdrive.app.ui.DeviceScheduleRows(item, entities) },
+                                        com.churchdrive.app.ui.LocalDeviceExtras provides { item ->
+                                            com.churchdrive.app.ui.AlarmDetailsExtras(item)
+                                            com.churchdrive.app.ui.DeviceScheduleRows(item, entities)
+                                        },
                                     ) {
                                         com.churchdrive.app.ui.DeviceHealthOverlay(openDevice, entities, registry, areaNames) { deviceHealthOpen = false; openDevice = null }
                                     }
