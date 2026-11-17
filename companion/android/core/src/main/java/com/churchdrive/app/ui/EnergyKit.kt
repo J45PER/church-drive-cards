@@ -845,12 +845,12 @@ fun GridButton(item: TileItem, tone: ToneColors, content: Color, enabled: Boolea
     ) {
         if (stacked) {
             androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
-                HaIcon(item.icon, CdVectors.Info, ink, 24.dp)
+                if (item.icon.isNotBlank()) HaIcon(item.icon, CdVectors.Info, ink, 24.dp)
                 if (item.showLabel) CentredText(item.label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
             }
         } else {
             androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
+                if (item.icon.isNotBlank()) HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
                 if (item.showLabel) CentredText(item.label, ink, Ui.TileText, Modifier.padding(end = 2.dp))
             }
         }
@@ -869,8 +869,6 @@ fun GridCard(
     title: String,
     modifier: Modifier = Modifier,
     deviceEntity: String? = null,
-    /** What pressing and holding the card does, in place of opening the [deviceEntity]'s device page (a blind's menu, with Schedule). */
-    onHold: (() -> Unit)? = null,
     titleColor: Color = content,
     fold: androidx.compose.runtime.MutableState<Boolean>? = null,
     /** Where the fold arrow's cell starts, in cells from the top (0 for the title row). */
@@ -881,10 +879,10 @@ fun GridCard(
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Card(
         modifier = modifier.fillMaxWidth().then(
-            if (deviceEntity == null && onHold == null) Modifier
+            if (deviceEntity == null) Modifier
             else Modifier.androidxLongPress {
                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                if (onHold != null) onHold() else if (deviceEntity != null) openDevice(deviceEntity)
+                deviceEntity?.let { openDevice(it) }
             },
         ),
         shape = RoundedCornerShape(28.dp),
