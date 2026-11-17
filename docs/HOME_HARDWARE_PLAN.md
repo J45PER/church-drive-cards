@@ -108,7 +108,7 @@ Open:
 - **No cloud processing of footage.** Video, snapshots, clips and event images are processed and kept on the house's own hardware. Nothing from the cameras goes to a cloud AI service, including Claude. Clive's cloud model only ever gets text.
 - **To check before going live:**
   - The D260's on-camera detection and face recognition keep their data on the camera, and don't sync images to Tapo's servers.
-  - Remote viewing through Nabu Casa doesn't route video through their relay. If it does, either make remote viewing local-only or record the exception.
+  - Remote viewing through Nabu Casa may route live video through their relay. **Accepted exception:** remote viewing via Nabu Casa can pass through their cloud. Footage is still processed and stored only on the house's hardware, and local viewing is unaffected. Nothing else is exempt.
   - Talk through go2rtc connects to the camera over the LAN, which it does per the README's examples.
   - Notifications contain no footage, or only what you accept leaves the house.
 
