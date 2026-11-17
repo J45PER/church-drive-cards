@@ -7,7 +7,7 @@
 // integration (purifier_schedule.py); this card only sets them. Only administrators can edit.
 
 import { createFormEditor } from './form-editor.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc, KIT_COLOR } from './card-kit.js';
 import { DAY_NAMES, DAY_LETTERS, summary, toggleDay, newSchedule, problem, overlaps } from './purifier-schedule-logic.js';
@@ -219,7 +219,7 @@ export class PurifierScheduleCard extends HTMLElement {
           <div class="ps-times">
             <label>Auto from <input class="ps-in" type="time" data-field="auto" data-i="${i}" value="${kitEsc(s.auto)}"></label>
             <label>Sleep from <input class="ps-in" type="time" data-field="sleep" data-i="${i}" value="${kitEsc(s.sleep)}"></label>
-            <button type="button" class="ps-btn ps-remove" data-act="remove" data-i="${i}" aria-label="Remove this schedule">${iconHtml('mdi:delete', { size: '18px' })}</button>
+            <button type="button" class="ps-btn ps-remove" data-act="remove" data-i="${i}" aria-label="Remove this schedule">${iconHtml('cd:bin', { size: '18px' })}</button>
           </div>
         </div>`
       )
@@ -232,8 +232,8 @@ export class PurifierScheduleCard extends HTMLElement {
       <div class="ps-actions">
         <button type="button" class="ps-btn" data-act="add">${iconHtml('mdi:plus', { size: '18px' })}Add schedule</button>
         <span style="flex:1"></span>
-        <button type="button" class="ps-btn" data-act="cancel">Cancel</button>
-        <button type="button" class="ps-btn ps-primary" data-act="save">Save</button>
+        <button type="button" class="ps-btn" data-act="cancel">${iconLabel('cd:close', 'Cancel')}</button>
+        <button type="button" class="ps-btn ps-primary" data-act="save">${iconLabel('cd:check', 'Save')}</button>
       </div>`;
     hydrateIcons(this);
   }

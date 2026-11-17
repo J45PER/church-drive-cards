@@ -380,7 +380,7 @@ export class ClimateZoneCard extends HTMLElement {
               <div class="cz-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
               <div class="cz-note ck-sub" style="font-size:0.72rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
             </div>
-            ${r.lowId && r.highId ? `<button type="button" class="cz-set" data-i="${i}" aria-label="Comfort range" title="Comfort range" style="flex:none; width:36px; height:36px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:tune-variant', { size: '20px' })}</button>` : ''}
+            ${r.lowId && r.highId ? `<button type="button" class="cz-set" data-i="${i}" aria-label="Comfort range" title="Comfort range" style="flex:none; width:36px; height:36px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('cd:sliders', { size: '20px' })}</button>` : ''}
             ${r.h != null ? `<span style="font-size:0.85rem; color:${humColour}; font-weight:${humWarn ? 700 : 400}; font-variant-numeric:tabular-nums;" title="${humWarn ? (r.h > hHigh ? 'Humid: mould risk' : 'Too dry') : 'Humidity'}">${Math.round(r.h * 10) / 10}%</span>` : ''}
             <b style="min-width:54px; text-align:right; font-size:1.15rem; font-variant-numeric:tabular-nums; color:${colour};">${r.t != null ? `${r.t.toFixed(1)}°` : '–'}</b>
           </div>

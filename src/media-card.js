@@ -183,7 +183,7 @@ export class MediaCard extends HTMLElement {
     const dc = st.attributes.device_class;
     const id = st.entity_id;
     if (dc === 'tv' || /tv|streamer|chromecast/i.test(id)) return 'mdi:television';
-    if (/radio|_rb$/i.test(id)) return 'mdi:radio';
+    if (/radio|_rb$/i.test(id)) return 'cd:music-note';
     return 'mdi:speaker';
   }
 

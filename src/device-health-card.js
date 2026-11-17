@@ -5,7 +5,7 @@
 // The title turns amber while anything needs attention.
 
 import { createFormEditor } from './form-editor.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitRealText, HEALTH_SENSOR, kitCompact, kitCompactable } from './card-kit.js';
 
@@ -121,7 +121,7 @@ export class DeviceHealthCard extends HTMLElement {
           </div>
           ${ok ? '' : `<div class="dh-fixes ck-sub" style="font-size:0.74rem; padding-left:32px;"></div>
           <div style="display:flex; gap:6px; padding-left:32px;">
-            <button class="dh-fix" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#f0b13a; color:#2a1700; cursor:pointer;">Fix now</button>
+            <button class="dh-fix" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#f0b13a; color:#2a1700; cursor:pointer;">${iconLabel('cd:check-circle', 'Fix now', '16px')}</button>
           </div>`}
         </div>`;
       })

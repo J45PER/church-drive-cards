@@ -398,7 +398,7 @@ export class PeopleManagerCard extends HTMLElement {
       )
       .join('');
     return this._sec(
-      'mdi:car-outline',
+      'cd:car',
       '#3fd0cf',
       'Cars',
       'Their Car card and car alerts',
@@ -454,7 +454,7 @@ export class PeopleManagerCard extends HTMLElement {
           .join('')
       : '';
     return this._sec(
-      'mdi:home-account',
+      'cd:home',
       PURPLE,
       'Arrivals',
       `Told when ${kitEsc(p.first)} gets home or leaves`,

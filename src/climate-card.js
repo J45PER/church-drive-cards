@@ -16,7 +16,7 @@
 
 import { zoneControl, zoneStatusText, openComfortSettings } from './comfort-settings.js';
 import { createFormEditor } from './form-editor.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { cvar } from './clive-colours.js';
 import { SUFFIX, LABEL } from './suffix.js';
@@ -42,7 +42,7 @@ const CC_MODES = {
 const CC_PRESETS = {
   none: { name: 'None', icon: 'mdi:circle-off-outline', color: cvar('neutral') },
   eco: { name: 'Eco', icon: 'mdi:leaf', color: cvar('eco'), colors: [cvar('eco'), `color-mix(in srgb, ${cvar('eco')} 62%, #000)`] },
-  boost: { name: 'Boost', icon: 'mdi:rocket-launch', color: cvar('bad'), colors: [cvar('bad'), `color-mix(in srgb, ${cvar('bad')} 62%, #000)`] },
+  boost: { name: 'Boost', icon: 'cd:speedometer', color: cvar('bad'), colors: [cvar('bad'), `color-mix(in srgb, ${cvar('bad')} 62%, #000)`] },
   away: { name: 'Away', icon: 'mdi:home-export-outline', color: cvar('neutral'), colors: [cvar('neutral'), `color-mix(in srgb, ${cvar('neutral')} 62%, #000)`] },
   sleep: { name: 'Sleep', icon: 'mdi:power-sleep', color: cvar('night'), colors: [cvar('night'), `color-mix(in srgb, ${cvar('night')} 62%, #000)`] },
   comfort: { name: 'Comfort', icon: 'mdi:sofa', color: cvar('warn'), colors: [cvar('warn'), `color-mix(in srgb, ${cvar('warn')} 62%, #000)`] },
@@ -51,7 +51,7 @@ const CC_PRESETS = {
 
 // The icons for modes and presets: Home Assistant's choice (icon-library.js), else the built-in one.
 const ccModeIcon = (m) => iconFor('climate_mode', m, (CC_MODES[m] || {}).icon || 'mdi:thermostat');
-const ccPresetIcon = (p) => iconFor('climate_preset', p, (CC_PRESETS[p] || {}).icon || 'mdi:tune-variant');
+const ccPresetIcon = (p) => iconFor('climate_preset', p, (CC_PRESETS[p] || {}).icon || 'cd:sliders');
 // A quick setting's icon: its own, else its preset's or its mode's.
 function ccQuickIcon(q, look) {
   if (q.icon) return q.icon;
@@ -362,8 +362,8 @@ export class ClimateCard extends HTMLElement {
         <div class="cc-window"></div>
         <div class="cc-history"></div>
         <div class="cc-controls ck-dim" style="display:flex; gap:6px;">
-          <button class="cc-btn cc-down" aria-label="Lower the temperature">−</button>
-          <button class="cc-btn cc-up" aria-label="Raise the temperature">+</button>
+          <button class="cc-btn cc-down" aria-label="Lower the temperature">${iconLabel('cd:minus', '', '22px')}</button>
+          <button class="cc-btn cc-up" aria-label="Raise the temperature">${iconLabel('cd:plus', '', '22px')}</button>
         </div>
         <div class="cc-dropdowns" style="display:flex; flex-direction:column; gap:6px;"></div>
         <div class="cc-quick ck-dim" style="display:flex; gap:6px;"></div>
@@ -749,7 +749,7 @@ export class ClimateCard extends HTMLElement {
       btn.setAttribute('aria-expanded', String(this._open === d.key));
       btn.innerHTML = `${iconHtml(cur.icon, { size: '22px', style: `color:${cur.color || 'var(--primary-text-color)'}; flex:none;` })}
         <span class="cc-dd-text"><small>${d.label}</small><b>${esc(cur.name)}</b></span>
-        <ha-icon icon="mdi:menu-down" style="--mdc-icon-size:22px; color:var(--secondary-text-color); flex:none;"></ha-icon>`;
+        ${iconHtml('cd:chevron', { size: '22px', style: 'color:var(--secondary-text-color); flex:none;' })}`;
       btn.addEventListener('click', (ev) => {
         ev.stopPropagation();
         this._open = this._open === d.key ? null : d.key;

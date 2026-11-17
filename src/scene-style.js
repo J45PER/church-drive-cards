@@ -43,16 +43,17 @@ const PALETTES = {
   'witching hour': ['#240046', '#5a189a', '#ff7900'],
 };
 
+// The house's own icons, as the phone app's scene tiles (Lights.kt, sceneIcon): sun for bright, half sun for dimmed, a flower for relax,
+// the moon for nightlight, the bolt for energise, and the palette for any other look (the play mark for a moving one).
 const ICONS = [
-  [/night/, 'mdi:weather-night'],
-  [/read/, 'mdi:book-open-variant'],
-  [/concentrat/, 'mdi:head-lightbulb-outline'],
-  [/energi/, 'mdi:lightning-bolt'],
-  [/relax|unwind/, 'mdi:sofa-outline'],
-  [/rest/, 'mdi:bed-outline'],
-  [/dim/, 'mdi:brightness-5'],
-  [/bright|shine|arise/, 'mdi:white-balance-sunny'],
-  [/natural/, 'mdi:weather-sunset'],
+  [/night/, 'cd:moon'],
+  [/concentrat/, 'cd:bulb-lit'],
+  [/energi/, 'cd:bolt'],
+  [/relax|unwind/, 'cd:flower'],
+  [/rest/, 'cd:room-bed-double'],
+  [/dim/, 'cd:sun-half'],
+  [/bright|shine|arise/, 'cd:sun'],
+  [/natural/, 'cd:weather-sunset'],
 ];
 
 export function sceneKey(name) {
@@ -166,5 +167,5 @@ export function sceneIcon(name, isDynamic) {
   if (style && style.icon) return style.icon;
   const key = sceneKey(name);
   for (const [re, icon] of ICONS) if (re.test(key)) return icon;
-  return isDynamic ? 'mdi:animation-play-outline' : 'mdi:palette-outline';
+  return isDynamic ? 'cd:animation-play' : 'cd:palette';
 }

@@ -4,7 +4,7 @@
 // grey 48px tiles where the selected one fills with its colour, and small
 // 24-hour graphs read from Home Assistant's history.
 
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { clive } from './clive-colours.js';
 
 // Acrylic ("Deep frost"): a mostly solid dark tint over a heavy blur of
@@ -654,7 +654,7 @@ export function kitHealthBanner(root, hass, entityId, demo) {
   box.innerHTML = `${iconHtml('mdi:lan-disconnect', { size: '22px', style: 'flex:none;' })}
     <div style="flex:1; min-width:0; line-height:1.35;">Not responding since ${kitClock(d.since)}
       <small></small></div>
-    <button type="button">Fix now</button>`;
+    <button type="button">${iconLabel('cd:check-circle', 'Fix now', '16px')}</button>`;
   box.querySelector('small').textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : '', last ? `Fixing: ${last.replace(/^\d\d:\d\d /, '')}` : ''].filter(Boolean).join(' · ');
   box.querySelector('button').addEventListener('click', () => hass.callService('church_drive', 'health_fix', { entity_id: entityId, action: entityId.startsWith('fan.') ? 'nudge' : 'resync' }));
   return d;

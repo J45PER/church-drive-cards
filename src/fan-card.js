@@ -20,8 +20,8 @@ const FAN_PRESET_ICONS = {
   sleep: 'mdi:power-sleep',
   auto: 'mdi:fan-auto',
   smart: 'mdi:fan-auto',
-  turbo: 'mdi:rocket-launch',
-  boost: 'mdi:rocket-launch',
+  turbo: 'cd:speedometer',
+  boost: 'cd:speedometer',
   eco: 'mdi:leaf',
 };
 const speedOf = (preset) => {

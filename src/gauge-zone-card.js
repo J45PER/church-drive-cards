@@ -5,6 +5,7 @@
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_CARD_BG } from './card-kit.js';
+import { iconHtml, hydrateIcons } from './icons.js';
 
 export const GaugeZoneCardEditor = createFormEditor({
   schema: (config) => [
@@ -243,13 +244,14 @@ export class GaugeZoneCard extends HTMLElement {
       const row = document.createElement('div');
       row.style.cssText = `display:flex; align-items:center; box-sizing:border-box; width:100%; padding:10px 16px; margin:${isFirst ? '0' : '4px'} 0 0 0; border:none; border-radius:${radius}; ${maskCss} background: linear-gradient(to right, ${color} 0%, transparent ${widthPct}%);`;
       row.innerHTML = `
-        <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
+        ${useStateIcon ? `<ha-icon style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>` : iconHtml(icon, { size: '26px', style: `color:${iconColor}; margin-right:14px; flex-shrink:0;` })}
         <div style="flex:1; min-width:0;">
           <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || (e.st && e.st.attributes.friendly_name) || e.entity || ''}</div>
           ${secondaryText ? `<div style="font-size:0.85rem; color:rgba(255,255,255,0.65);">${secondaryText}</div>` : ''}
         </div>
         <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : 'n/a'}</div>
       `;
+      hydrateIcons(row);
       if (useStateIcon) {
         const placeholder = row.querySelector('ha-icon');
         const stateIcon = document.createElement('ha-state-icon');

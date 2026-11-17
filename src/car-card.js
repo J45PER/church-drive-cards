@@ -11,7 +11,7 @@
 // (asks it to send them now).
 
 import { createFormEditor } from './form-editor.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { clive } from './clive-colours.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { octopusCar } from './car-octopus.js';
@@ -265,7 +265,7 @@ export class CarCard extends HTMLElement {
             const asking = this._asking && this._asking[x.wake] && Date.now() - this._asking[x.wake] < 3 * 60000;
             const fresh = old
               ? `<div class="cc-sub cc-old"><span>${iconHtml('mdi:clock-alert-outline', { size: '14px' })} Car last reported ${kitEsc(carTime(x.asOf))} · ${kitEsc(carAgo(x.asOf))}</span>${
-                  x.wake ? `<button type="button" class="cc-wake" data-wake="${kitEsc(x.wake)}"${asking ? ' disabled' : ''}>${asking ? 'Asking the car…' : 'Refresh'}</button>` : ''
+                  x.wake ? `<button type="button" class="cc-wake" data-wake="${kitEsc(x.wake)}"${asking ? ' disabled' : ''}>${iconLabel('cd:sync', asking ? 'Asking the car…' : 'Refresh')}</button>` : ''
                 }</div>`
               : '';
             return `<div class="cc-car" data-id="${kitEsc(x.entity || '')}" role="button" tabindex="0" aria-label="${kitEsc(x.name)}">

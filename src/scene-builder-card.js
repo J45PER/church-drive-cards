@@ -10,7 +10,7 @@
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { loadUniversalScenes } from './universal-scenes.js';
-import { iconHtml, hydrateIcons } from './icons.js';
+import { iconHtml, hydrateIcons, iconLabel } from './icons.js';
 import { KIT_CARD_BG } from './card-kit.js';
 
 const BLANK = { name: '', kind: 'colour', kelvin: 2700, brightness: 80, colors: ['#ff8a4c', '#7b2cbf'], dynamic: true, speed: 0.63, icon: '' };
@@ -157,7 +157,7 @@ export class SceneBuilderCard extends HTMLElement {
       row.className = 'sbc-row';
       row.innerHTML = `<div class="sbc-sw">${scene.icon ? iconHtml(scene.icon, { size: '24px' }) : ''}</div>
         <div class="sbc-name"><div></div><div class="sbc-sub"></div></div>
-        <button class="sbc-btn" data-act="edit">Edit</button><button class="sbc-btn" data-act="delete">Delete</button>`;
+        <button class="sbc-btn" data-act="edit">${iconLabel('cd:pencil', 'Edit')}</button><button class="sbc-btn" data-act="delete">${iconLabel('cd:bin', 'Delete')}</button>`;
       row.querySelector('.sbc-sw').style.background = swatch(scene);
       row.querySelector('.sbc-name div').textContent = scene.name;
       row.querySelector('.sbc-name .sbc-sub').textContent =
@@ -173,7 +173,7 @@ export class SceneBuilderCard extends HTMLElement {
     hydrateIcons(list);
     const body = this.querySelector('.sbc-body');
     if (!d) {
-      body.innerHTML = `<div class="sbc-actions"><button class="sbc-btn sbc-primary" data-act="new">New scene</button></div>`;
+      body.innerHTML = `<div class="sbc-actions"><button class="sbc-btn sbc-primary" data-act="new">${iconLabel('cd:plus', 'New scene')}</button></div>`;
       body.querySelector('[data-act=new]').addEventListener('click', () => {
         this._draft = { ...BLANK, colors: [...BLANK.colors] };
         this._status = '';
@@ -190,9 +190,9 @@ export class SceneBuilderCard extends HTMLElement {
         <label><input type="checkbox" class="sbc-f-dynamic"> Animated (colours drift between the lights, like Hue's dynamic scenes)</label>
         <label class="sbc-speed">Speed<input type="range" class="sbc-f-speed" min="0" max="1" step="0.05"></label></div>
       <label>Brightness: <span class="sbc-b"></span>%<input type="range" class="sbc-f-brightness" min="1" max="100"></label>
-      <label>Icon (optional, e.g. mdi:movie-open)<input type="text" class="sbc-f-icon" placeholder="mdi:…"></label>
+      <label>Icon (optional, e.g. cd:television-play)<input type="text" class="sbc-f-icon" placeholder="cd:…"></label>
       <label>Try it in<select class="sbc-room"><option value="">Choose a room or zone…</option></select></label>
-      <div class="sbc-actions"><button class="sbc-btn" data-act="try">Try</button><button class="sbc-btn sbc-primary" data-act="save">Save</button><button class="sbc-btn" data-act="cancel">Cancel</button></div>
+      <div class="sbc-actions"><button class="sbc-btn" data-act="try">${iconLabel('cd:play', 'Try')}</button><button class="sbc-btn sbc-primary" data-act="save">${iconLabel('cd:check', 'Save')}</button><button class="sbc-btn" data-act="cancel">${iconLabel('cd:close', 'Cancel')}</button></div>
     </div>`;
     const $ = (sel) => body.querySelector(sel);
     const refresh = () => {

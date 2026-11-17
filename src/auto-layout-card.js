@@ -950,7 +950,7 @@ export class AutoLayoutCard extends HTMLElement {
         auto: !!task,
         // A shopping list has no tick: it is finished by finishing its items, and tapping it opens the list.
         shop: shoppingIdOf(t.description),
-        icon: task ? task.icon : shoppingIdOf(t.description) ? 'mdi:cart-outline' : list === shared ? 'mdi:account-group' : 'mdi:flag',
+        icon: task ? task.icon : shoppingIdOf(t.description) ? 'mdi:cart-outline' : list === shared ? 'mdi:account-group' : 'cd:pin',
       }));
     return { items };
   }

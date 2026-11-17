@@ -6,6 +6,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { alarmWho } from './alarm-actor.js';
 import { cvar } from './clive-colours.js';
 import { kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
+import { iconHtml } from './icons.js';
 
 const APC_STATE_OPTIONS = [
   { value: 'disarmed', label: 'Disarmed' },
@@ -55,13 +56,13 @@ export const AlarmPanelCardEditor = createFormEditor({
 // purple. Exit delay (arming) amber; entry delay (pending, someone's come in
 // while armed, the urgent one) deep orange.
 const APC_STATES = {
-  disarmed: { label: 'Disarmed', icon: 'mdi:shield-off-outline', color: cvar('alarm_off') },
-  armed_home: { label: 'Armed Home', icon: 'mdi:shield-home', color: cvar('alarm_home') },
-  armed_away: { label: 'Armed Away', icon: 'mdi:shield-lock', color: cvar('alarm_away') },
-  armed_night: { label: 'Armed Night', icon: 'mdi:shield-moon', color: cvar('night') },
-  arming: { label: 'Arming', icon: 'mdi:shield-sync', color: cvar('arming_home') },
-  pending: { label: 'Entry Delay', icon: 'mdi:shield-sync', color: cvar('arming_away') },
-  triggered: { label: 'Triggered!', icon: 'mdi:shield-alert', color: cvar('bad') },
+  disarmed: { label: 'Disarmed', icon: 'cd:shield-off', color: cvar('alarm_off') },
+  armed_home: { label: 'Armed Home', icon: 'cd:shield-home', color: cvar('alarm_home') },
+  armed_away: { label: 'Armed Away', icon: 'cd:shield-lock', color: cvar('alarm_away') },
+  armed_night: { label: 'Armed Night', icon: 'cd:shield-moon', color: cvar('night') },
+  arming: { label: 'Arming', icon: 'cd:shield-sync', color: cvar('arming_home') },
+  pending: { label: 'Entry Delay', icon: 'cd:shield-sync', color: cvar('arming_away') },
+  triggered: { label: 'Triggered!', icon: 'cd:shield-alert', color: cvar('bad') },
 };
 const APC_MODE_NAMES = { armed_home: 'Home', armed_away: 'Away', armed_night: 'Night' };
 const APC_RING_R = 38; // an 84px ring, the same size as the other cards' dials
@@ -118,7 +119,7 @@ export class AlarmPanelCard extends HTMLElement {
             background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:11px; font-weight:600; }
           .apc-btn.apc-on { color:#fff; }
           .apc-btn span { position:relative; z-index:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-          .apc-btn ha-icon { position:relative; z-index:1; --mdc-icon-size:22px; }
+          .apc-btn .apc-bi { position:relative; z-index:1; }
           .apc-btn::after { content:''; position:absolute; inset:0; background:var(--btn-tint, #fff); opacity:0; transition:opacity .15s ease; pointer-events:none; }
           .apc-btn:hover::after { opacity:0.18; }
           .apc-btn:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
@@ -131,7 +132,7 @@ export class AlarmPanelCard extends HTMLElement {
               <circle class="apc-ring" cx="42" cy="42" r="${APC_RING_R}" fill="none" stroke-width="6" stroke-linecap="round"
                 stroke-dasharray="${APC_RING_LEN}" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"></circle>
             </svg>
-            <ha-icon class="apc-icon" style="position:absolute; inset:0; margin:auto; width:38px; height:38px; --mdc-icon-size:38px;"></ha-icon>
+            <span class="apc-icon" style="position:absolute; inset:0; margin:auto; width:38px; height:38px; display:block;"></span>
           </div>
           <div style="flex:1; min-width:0;">
             <div class="apc-line1" style="font-size:0.95rem; color:var(--primary-text-color);"></div>
@@ -160,7 +161,7 @@ export class AlarmPanelCard extends HTMLElement {
     if (this._compact) return kitCompact(this, this._compactSpec(st));
     if (!this._built) this._build();
 
-    const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: cvar('neutral') };
+    const info = APC_STATES[st.state] || { label: st.state, icon: 'cd:shield-outline', color: cvar('neutral') };
     const inDelay = st.state === 'arming' || st.state === 'pending';
     const target = APC_MODE_NAMES[st.attributes.targetState];
     this._color = info.color;
@@ -169,7 +170,8 @@ export class AlarmPanelCard extends HTMLElement {
     const label = st.state === 'arming' && target ? `Arming ${target}` : info.label;
     this._title.textContent = label + (this.config.demo ? ' (demo)' : '');
     this._title.style.color = info.color;
-    this._icon.setAttribute('icon', info.icon);
+    // The house's own icons (cd:), drawn by us rather than Home Assistant's <ha-icon>, so they match the apps.
+    if (this._iconName !== info.icon) { this._iconName = info.icon; this._icon.innerHTML = iconHtml(info.icon, { size: '38px' }); }
     this._icon.style.color = info.color;
     this._ring.style.stroke = info.color;
     this._countdown.style.color = info.color;
@@ -204,17 +206,17 @@ export class AlarmPanelCard extends HTMLElement {
   // buttons as icons.
   _compactSpec(st) {
     const a = st.attributes;
-    const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: cvar('neutral') };
+    const info = APC_STATES[st.state] || { label: st.state, icon: 'cd:shield-outline', color: cvar('neutral') };
     const target = APC_MODE_NAMES[a.targetState];
     const inDelay = st.state === 'arming' || st.state === 'pending';
     const secs = st.state === 'pending' ? a.entrySecondsLeft || 0 : st.state === 'arming' ? a.exitSecondsLeft || 0 : 0;
     const feats = a.supported_features || 0;
     const activeKey = inDelay || st.state === 'triggered' ? a.targetState : st.state;
     const actions = [
-      { key: 'disarmed', icon: 'mdi:shield-off-outline', title: 'Disarm', service: 'alarm_disarm', show: true },
-      { key: 'armed_home', icon: 'mdi:shield-home', title: 'Arm Home', service: 'alarm_arm_home', show: (feats & 1) !== 0 },
-      { key: 'armed_away', icon: 'mdi:shield-lock', title: 'Arm Away', service: 'alarm_arm_away', show: (feats & 2) !== 0 },
-      { key: 'armed_night', icon: 'mdi:shield-moon', title: 'Arm Night', service: 'alarm_arm_night', show: (feats & 4) !== 0 },
+      { key: 'disarmed', icon: 'cd:shield-off', title: 'Disarm', service: 'alarm_disarm', show: true },
+      { key: 'armed_home', icon: 'cd:shield-home', title: 'Arm Home', service: 'alarm_arm_home', show: (feats & 1) !== 0 },
+      { key: 'armed_away', icon: 'cd:shield-lock', title: 'Arm Away', service: 'alarm_arm_away', show: (feats & 2) !== 0 },
+      { key: 'armed_night', icon: 'cd:shield-moon', title: 'Arm Night', service: 'alarm_arm_night', show: (feats & 4) !== 0 },
     ].filter((b) => b.show);
     return {
       name: (st.state === 'arming' && target ? `Arming ${target}` : info.label) + (this.config.demo ? ' (demo)' : ''),
@@ -231,10 +233,10 @@ export class AlarmPanelCard extends HTMLElement {
 
   _renderButtons(feats, activeKey, activeColor) {
     const actions = [
-      { key: 'disarmed', icon: 'mdi:shield-off-outline', title: 'Disarm', service: 'alarm_disarm', show: true },
-      { key: 'armed_home', icon: 'mdi:shield-home', title: 'Home', service: 'alarm_arm_home', show: (feats & 1) !== 0 },
-      { key: 'armed_away', icon: 'mdi:shield-lock', title: 'Away', service: 'alarm_arm_away', show: (feats & 2) !== 0 },
-      { key: 'armed_night', icon: 'mdi:shield-moon', title: 'Night', service: 'alarm_arm_night', show: (feats & 4) !== 0 },
+      { key: 'disarmed', icon: 'cd:shield-off', title: 'Disarm', service: 'alarm_disarm', show: true },
+      { key: 'armed_home', icon: 'cd:shield-home', title: 'Home', service: 'alarm_arm_home', show: (feats & 1) !== 0 },
+      { key: 'armed_away', icon: 'cd:shield-lock', title: 'Away', service: 'alarm_arm_away', show: (feats & 2) !== 0 },
+      { key: 'armed_night', icon: 'cd:shield-moon', title: 'Night', service: 'alarm_arm_night', show: (feats & 4) !== 0 },
     ].filter((b) => b.show);
     const sig = JSON.stringify([actions.map((b) => b.key), activeKey, activeColor, !!this.config.demo]);
     if (sig === this._buttonsSig) return;
@@ -248,7 +250,7 @@ export class AlarmPanelCard extends HTMLElement {
       btn.setAttribute('aria-label', btn.title);
       btn.style.setProperty('--btn-tint', (APC_STATES[b.key] || {}).color || '#fff');
       if (active) btn.style.background = activeColor;
-      btn.innerHTML = `<ha-icon icon="${b.icon}"></ha-icon><span>${b.title}</span>`;
+      btn.innerHTML = `${iconHtml(b.icon, { size: '22px', cls: 'apc-bi' })}<span>${b.title}</span>`;
       if (this.config.demo) {
         btn.style.opacity = '0.6';
         btn.style.cursor = 'default';
