@@ -1181,6 +1181,8 @@ def ws_blind_schedule(hass: HomeAssistant, connection: websocket_api.ActiveConne
                 vol.Required("days"): [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
                 vol.Optional("open"): cv.string,
                 vol.Optional("close"): cv.string,
+                # A fan's or humidifier's speed or mode for its On time: a preset mode, or "percentage:NN".
+                vol.Optional("mode"): cv.string,
             }
         ],
     }

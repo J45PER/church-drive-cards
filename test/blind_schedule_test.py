@@ -61,6 +61,7 @@ def _install_stubs():
 bsm, Store, Dt = _install_stubs()
 real_sleep = asyncio.sleep
 BLIND = "cover.roller_blind"
+FAN = "fan.bedroom_fan"
 
 
 class State:
@@ -73,7 +74,7 @@ class Hass:
 
     def __init__(self, state="unknown", fail=0):
         self.cover = State(state)
-        self.states = types.SimpleNamespace(get=lambda e: self.cover if e == BLIND else None)
+        self.states = types.SimpleNamespace(get=lambda e: self.cover if e in (BLIND, FAN, "humidifier.bedroom") else None)
         self.services = types.SimpleNamespace(async_call=self._call)
         self.calls, self.fail, self.fired = [], fail, []
         self.bus = types.SimpleNamespace(async_fire=lambda name, data=None: self.fired.append((name, data)))
@@ -113,6 +114,29 @@ class Applying(unittest.TestCase):
         run(sched._async_apply(BLIND, "close"))
         self.assertEqual(hass.calls, [("cover", "open_cover", {"entity_id": BLIND}), ("cover", "close_cover", {"entity_id": BLIND})])
         self.assertTrue(sched._last_result[BLIND]["ok"])
+
+    def test_a_fan_turns_on_at_its_speed_and_off(self):
+        hass = Hass()
+        sched = bsm.BlindSchedule(hass)
+        run(sched._async_apply(FAN, "open", "sleep"))
+        run(sched._async_apply(FAN, "open", "percentage:40"))
+        run(sched._async_apply(FAN, "open"))
+        run(sched._async_apply(FAN, "close"))
+        self.assertEqual(hass.calls, [
+            ("fan", "set_preset_mode", {"entity_id": FAN, "preset_mode": "sleep"}),
+            ("fan", "set_percentage", {"entity_id": FAN, "percentage": 40}),
+            ("fan", "turn_on", {"entity_id": FAN}),
+            ("fan", "turn_off", {"entity_id": FAN}),
+        ])
+
+    def test_a_humidifier_is_turned_on_before_its_mode_is_set(self):
+        hass = Hass()
+        sched = bsm.BlindSchedule(hass)
+        run(sched._async_apply("humidifier.bedroom", "open", "sleep"))
+        self.assertEqual(hass.calls, [
+            ("humidifier", "turn_on", {"entity_id": "humidifier.bedroom"}),
+            ("humidifier", "set_mode", {"entity_id": "humidifier.bedroom", "mode": "sleep"}),
+        ])
 
     def test_a_refused_call_is_tried_again(self):
         hass = Hass(fail=2)
@@ -167,6 +191,14 @@ class Running(unittest.TestCase):
         self.assertFalse(out["enabled"])
         self.assertIsNone(out["next"])
         self.assertEqual(len(out["schedules"]), 1)
+
+    def test_a_fan_schedule_says_on_and_off(self):
+        sched = bsm.BlindSchedule(Hass())
+        run(sched.async_start())
+        out = run(sched.async_set(FAN, {"schedules": [{"id": "n", "days": [0, 1, 2, 3, 4, 5, 6], "open": "22:00", "close": "06:30", "mode": "sleep"}]}))
+        self.assertEqual(out["schedules"][0]["summary"], "Every day On 22:00 · Off 06:30")
+        self.assertEqual(out["schedules"][0]["mode"], "sleep")
+        self.assertTrue(out["next"]["text"].startswith(("On ", "Off ")))
 
     def test_only_a_cover_can_be_set(self):
         sched = bsm.BlindSchedule(Hass())

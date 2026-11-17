@@ -10,7 +10,8 @@ import org.json.JSONObject
  */
 data class PurifierSchedule(val id: String, val days: List<Int>, val auto: String, val sleep: String)
 
-data class PurifierScheduleState(val enabled: Boolean, val schedules: List<PurifierSchedule>, val next: String?, val lastFailed: String?)
+/** [entity] is the purifier the house runs the schedules on (its device page has the Schedule row); blank from an older house. */
+data class PurifierScheduleState(val enabled: Boolean, val schedules: List<PurifierSchedule>, val next: String?, val lastFailed: String?, val entity: String = "")
 
 const val MAX_PURIFIER_SCHEDULES = 12
 val PURIFIER_DAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -28,7 +29,7 @@ fun parsePurifierSchedule(result: Any?): PurifierScheduleState? {
     }
     val last = o.optJSONObject("last")
     val failed = last?.takeIf { !it.optBoolean("ok", true) && it.optString("skipped").isEmpty() }?.optString("mode")?.takeIf { it.isNotBlank() }
-    return PurifierScheduleState(o.optBoolean("enabled", true), schedules, o.optJSONObject("next")?.optString("text")?.takeIf { it.isNotBlank() }, failed)
+    return PurifierScheduleState(o.optBoolean("enabled", true), schedules, o.optJSONObject("next")?.optString("text")?.takeIf { it.isNotBlank() }, failed, o.optString("entity"))
 }
 
 fun validPurifierTime(t: String) = Regex("^([01]\\d|2[0-3]):[0-5]\\d$").matches(t)

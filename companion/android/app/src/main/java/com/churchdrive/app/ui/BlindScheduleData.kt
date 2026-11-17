@@ -4,11 +4,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * A blind's schedules (`church_drive/blind_schedule`): each is some days and up to two times, shown as
- * "Mon-Fri Open 07:30 · Close 20:00". The house runs them; the app only sets them. Days are 0 = Monday to 6 = Sunday.
+ * A blind's or a fan's schedules (`church_drive/blind_schedule`, which takes covers, fans and humidifiers): each is some days and
+ * up to two times, shown as "Mon-Fri Open 07:30 · Close 20:00" (a fan's are On, with the speed it turns on at, and Off). The house runs them; the app only sets them. Days are 0 = Monday to 6 = Sunday.
  * A time that is left out is null. The rules match blind_schedule_logic.py.
  */
-data class BlindSchedule(val id: String, val days: List<Int>, val open: String?, val close: String?)
+data class BlindSchedule(val id: String, val days: List<Int>, val open: String?, val close: String?, val mode: String? = null)
 
 data class BlindScheduleState(val enabled: Boolean, val schedules: List<BlindSchedule>, val next: String?, val lastFailed: String?)
 
@@ -23,7 +23,7 @@ fun parseBlindSchedule(result: Any?): BlindScheduleState? {
         val open = s.optString("open").takeIf { validBlindTime(it) }
         val close = s.optString("close").takeIf { validBlindTime(it) }
         if (days.isEmpty() || (open == null && close == null)) null
-        else BlindSchedule(s.optString("id").ifBlank { "s" }, days, open, close)
+        else BlindSchedule(s.optString("id").ifBlank { "s" }, days, open, close, s.optString("mode").takeIf { it.isNotBlank() && open != null })
     }
     val last = o.optJSONObject("last")
     val failed = last?.takeIf { !it.optBoolean("ok", true) && it.optString("skipped").isEmpty() }?.optString("action")?.takeIf { it.isNotBlank() }
@@ -78,6 +78,7 @@ fun blindSetBody(entity: String, enabled: Boolean, schedules: List<BlindSchedule
                 val o = JSONObject().put("id", s.id).put("days", JSONArray(s.days))
                 s.open?.let { o.put("open", it) }
                 s.close?.let { o.put("close", it) }
+                s.mode?.takeIf { s.open != null }?.let { o.put("mode", it) }
                 arr.put(o)
             }
         },

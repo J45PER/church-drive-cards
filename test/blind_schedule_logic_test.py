@@ -100,3 +100,35 @@ class Firing(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Fans(unittest.TestCase):
+    def test_fans_and_humidifiers_take_schedules_and_lights_do_not(self):
+        cfg = bs.clean_config({"blinds": {"fan.bedroom": {"schedules": [WEEKDAYS]}, "humidifier.x": {}, "light.kitchen": {}}})
+        self.assertEqual(sorted(cfg), ["fan.bedroom", "humidifier.x"])
+
+    def test_a_mode_is_kept_only_with_an_on_time_and_must_look_like_one(self):
+        out = bs.clean_schedules([
+            {"days": [0], "open": "22:00", "mode": "Sleep"},
+            {"days": [1], "close": "06:00", "mode": "Sleep"},
+            {"days": [2], "open": "22:00", "mode": "percentage:40"},
+            {"days": [3], "open": "22:00", "mode": "percentage:400"},
+            {"days": [4], "open": "22:00", "mode": "<b>"},
+        ])
+        self.assertEqual([s.get("mode") for s in out], ["Sleep", None, "percentage:40", None, None])
+
+    def test_the_mode_for_an_on_time(self):
+        scheds = [{"id": "a", "days": [0], "open": "22:00", "mode": "sleep"}, {"id": "b", "days": [0], "open": "07:00"}]
+        self.assertEqual(bs.mode_at(scheds, 0, "22:00"), "sleep")
+        self.assertIsNone(bs.mode_at(scheds, 0, "07:00"))
+        self.assertIsNone(bs.mode_at(scheds, 1, "22:00"))
+
+    def test_a_fan_says_on_and_off(self):
+        self.assertEqual(bs.words_for("fan.x"), ("On", "Off"))
+        self.assertEqual(bs.words_for("cover.x"), ("Open", "Close"))
+        self.assertEqual(bs.summary(WEEKDAYS, ("On", "Off")), "Mon-Fri On 07:30 · Off 20:00")
+        self.assertEqual(bs.next_change([WEEKDAYS], at(0, 6, 0), ("On", "Off"))["text"], "On Mon 07:30")
+
+    def test_a_catch_up_knows_when_the_change_was_due(self):
+        action, when = bs.due_between_at([WEEKDAYS], at(0, 7, 0), at(0, 7, 45))
+        self.assertEqual((action, when.strftime("%H:%M")), ("open", "07:30"))

@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.163.0
+
+- **Schedules open in place.** On a device's page, tapping Schedule opens the schedules right there under it, instead of on another page. Tap a schedule to change its days and times; Save or Cancel closes it again.
+- **The purifier's schedule moved.** Press and hold the air purifier's card for its device page, where its Schedule is. The purifier card itself now shows its schedule and when it next changes, so the separate Purifier Schedule card is gone.
+- **The bedroom fan can have a schedule.** Press and hold the fan's card: its device page has a Schedule to turn it on (at a speed you choose, or as it was) and off at set times. Any other fan or humidifier gets one the same way. The fan card says when it next turns on or off. Needs Home Assistant 0.163.0.
+- **Overnight heating** is now inside the Heating section.
+- **The week's forecast.** Press and hold the weather at the top of the Climate page for the next seven days: each day's weather, high and low, chance of rain and wind.
+
 ## 0.162.2
 
 - No change you will notice.
