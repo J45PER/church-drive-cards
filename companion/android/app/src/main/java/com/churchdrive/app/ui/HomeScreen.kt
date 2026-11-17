@@ -412,7 +412,8 @@ private fun HomePage(
     titles.forEach { title ->
         when (title) {
             "Security" -> HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
-                CollapsibleCard("custom:alarm-panel-card|$ALARM_ENTITY", true) { AlarmCard(alarm, call, actor = entities[ALARM_ACTOR_ENTITY]) }
+                // Who's home is on the alarm card here too, for administrators, as on the Security page.
+                CollapsibleCard("custom:alarm-panel-card|$ALARM_ENTITY", true) { AlarmCard(alarm, call, actor = entities[ALARM_ACTOR_ENTITY], people = if (LocalIsAdmin.current) peopleRows(entities, registry) else emptyList()) }
             }
             // The home's climate quality score (a sensor made in Home Assistant) leads the Climate panel, as on the dashboard.
             "Climate" -> HomePanel(

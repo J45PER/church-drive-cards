@@ -29,9 +29,28 @@ object DashboardPanels {
         for (i in 0 until views.length()) {
             val view = views.optJSONObject(i) ?: continue
             val path = view.optString("path").takeIf { it.isNotBlank() } ?: continue
-            out[path] = arrange(path, listOfNotNull(header(view)) + panels(view).map { panel(it, views) })
+            val all = listOfNotNull(header(view)) + panels(view).map { panel(it, views) }
+            if (path == "security") out[SECURITY_DETAILS] = securityDetails(all)
+            out[path] = arrange(path, all)
         }
         return out
+    }
+
+    /** Under this key: what the Security page doesn't show itself but its Details pages do (see [securityDetails]). */
+    const val SECURITY_DETAILS = "security:details"
+
+    /**
+     * What moves from the Security page onto Details pages (decided 2026-11-17): the header's status lines (doors, movement, who's
+     * home, smoke and CO, batteries) go on the alarm's Details page, and the plain tiles of the Safety panel (the smoke and CO base
+     * station's mode and volume) on the smoke and CO alarms' Details page. As two panels: "lines", then "safety".
+     */
+    private fun securityDetails(all: List<PanelSpec>): List<PanelSpec> {
+        val lines = all.firstOrNull { it.title.isBlank() && it.cards.firstOrNull()?.type == "header:lines" }
+        val safety = all.firstOrNull { p -> p.cards.any { it.type == "custom:safety-card" } }
+        return listOf(
+            PanelSpec("lines", null, null, null, null, lines?.cards.orEmpty()),
+            PanelSpec("safety", null, null, null, null, safety?.cards.orEmpty().filter { it.type == "tile" }),
+        )
     }
 
     /**
@@ -39,6 +58,11 @@ object DashboardPanels {
      * the weather leads the Climate section, with the temperatures; the Security page keeps the dashboard's order: the notices (when there are any), then the alarm.
      */
     fun arrange(path: String, panels: List<PanelSpec>): List<PanelSpec> {
+        if (path == "security") {
+            // The status lines and the base station's tiles are on the Details pages (press and hold the alarm, or the smoke and CO alarms).
+            return panels.filterNot { it.title.isBlank() && it.cards.firstOrNull()?.type == "header:lines" }
+                .map { p -> if (p.cards.any { it.type == "custom:safety-card" }) p.copy(cards = p.cards.filter { it.type != "tile" }) else p }
+        }
         fun isHeader(p: PanelSpec, kind: String) = p.title.isBlank() && p.cards.firstOrNull()?.type == kind
         if (path == "climate") {
             val weather = panels.firstOrNull { isHeader(it, "header:forecast") } ?: return panels
