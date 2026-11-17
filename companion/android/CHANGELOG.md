@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.161.1
+
+- No change you will notice.
+
 ## 0.161.0
 
 - **Schedules open on a page of their own.** The blind's and the purifier's schedules used to be edited inside the card, which was cramped. Now a page opens over the app: the switch, then a row per schedule ("Mon-Fri · Open 07:30 · Close 20:00"). Tap a row to change it on its own, with large M T W T F S S day buttons, Weekdays, Weekend and Every day picks, and the two times as big tiles. Back from a schedule returns to the list; leaving with unsaved changes asks first. Save sends it all to the house.

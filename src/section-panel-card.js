@@ -607,8 +607,11 @@ export class SectionPanelCard extends HTMLElement {
       : '';
     const glowOn = kitGlowOn(this);
     this.innerHTML = `
-      <style>${KIT_GLOW_CSS}</style>
-      <div class="spc-panel${glowOn ? ' ck-glow' : ''}" style="--ck-g1:${color}; --ck-g2:color-mix(in srgb, ${color} 55%, #fff); position:relative; ${glowOn ? 'overflow:hidden;' : ''} box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION}; ${frost}">
+      <style>${KIT_GLOW_CSS}
+        /* The glow is clipped to the panel by the stylesheet, not the panel's own style: folding and opening the panel set and then
+           clear its inline overflow, which used to take the clip with it and let the glow spill out from then on. */
+        .spc-panel.ck-glow { overflow:hidden; }</style>
+      <div class="spc-panel${glowOn ? ' ck-glow' : ''}" style="--ck-g1:${color}; --ck-g2:color-mix(in srgb, ${color} 55%, #fff); position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION}; ${frost}">
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
     const panel = this.querySelector('.spc-panel');
