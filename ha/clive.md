@@ -63,7 +63,7 @@ Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` 
 
 `clive_zappi_charge` with mode Fast at a rate that is not cheap does not start. It stamps `input_datetime.zappi_fast_charge_confirm_asked`, and returns `needs_confirmation` with the current and cheapest rates. Clive must ask and wait. A repeat call with `confirm_expensive: true` only counts if it arrives **5 to 300 seconds** after that stamp. The first version trusted the flag, and Clive set it himself on the first call, so the window is enforced in the script.
 
-The helper is an `input_datetime` (date and time), initial `2000-01-01 00:00:00`.
+The helper is an `input_datetime` (date and time), initial `2000-01-01 00:00:00` (on purpose: a restart forgets a pending confirmation).
 
 ## Timed heating and fan
 
@@ -145,6 +145,7 @@ Tuning log:
 
 ## Gotchas learned the hard way
 
+- **Never give his memory helpers an `initial` value (found 2026-11-17).** `input_text.clive_climate_<zone>_note` and `_expect` were created with `initial: ""`, and Home Assistant forces an `initial` value on every restart instead of restoring the last state. A restart at 09:56 blanked `_expect`, the only record that Clive had put a zone on Eco for being away (`away: true`). "Clive: offer to take over the heating when the alarm is disarmed" (which also fires when a person arrives home) and `clive_climate_control` `resume` only act on a zone whose `_expect` says `away`, so with it blank nobody coming home took the heating off Eco, and even "resume" said "nothing has changed". They were recreated without `initial` on 2026-11-17, and so were `input_datetime.clive_climate_<zone>_when`, `_resume` and `_notified` (an update cannot remove the field: delete and create, then put the values back; do it just after a :00/:10 check so no run lands while a helper is missing). Any helper he must remember across a restart needs the same: leave `initial` out (`ha_config_list_helpers` shows it only when set). Left with `initial` on purpose, because forgetting is the safe answer for a short confirmation window: `input_datetime.clive_timed_warning_asked`, `input_text.clive_timed_warning_target` and `input_datetime.zappi_fast_charge_confirm_asked`.
 - **Check state after a write, not the spoken reply.** Clive says "Done" whenever a script runs without error. A template condition that returned a non-boolean string (a time) was silently false.
 - **Script `variables` re-sort alphabetically when saved** through the API, so a variable that reads another declared "later" breaks. Use separate `variables` steps, or one template.
 - **Datetimes and lists of datetimes become strings between variables.** Do date maths in a single template (as the Zappi smart charge automation does).
