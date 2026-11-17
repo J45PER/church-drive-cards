@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.160.1
+
+- Device health (Home, and the Device health page) no longer lists cars, and leaves out any device labelled "Hide from Device health" in Home Assistant, so a Ring camera that Home Assistant has twice is listed once.
+
 ## 0.160.0
 
 - No change you will notice.

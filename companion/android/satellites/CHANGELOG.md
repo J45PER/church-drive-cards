@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.160.1
+
+- No change you will notice.
+
 ## 0.160.0
 
 - No change you will notice.

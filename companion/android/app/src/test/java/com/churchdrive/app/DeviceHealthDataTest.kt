@@ -2,7 +2,9 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.Registry
+import com.churchdrive.app.ui.HIDE_FROM_HEALTH_LABEL
 import com.churchdrive.app.ui.HealthLevel
+import com.churchdrive.app.ui.isCarDevice
 import com.churchdrive.app.ui.deviceHealthList
 import com.churchdrive.app.ui.deviceHealthSummary
 import com.churchdrive.app.ui.deviceIdFor
@@ -119,5 +121,55 @@ class DeviceHealthDataTest {
         assertEquals("door", deviceIdFor("door", registry))
         assertNull(deviceIdFor("light.unknown", registry))
         assertNull(deviceIdFor("nonsense", registry))
+    }
+
+    // ---- Cars and hidden devices stay out of the list
+
+    private fun battery(id: String, state: String) = entity(id, state, "device_class" to "battery", "unit_of_measurement" to "%")
+
+    /** The house's two cars, as the registry shows them, a Ring camera on both its integration and the add-on, and an alarm sensor with no twin. */
+    private val garage = Registry(
+        entityDevice = mapOf(
+            "sensor.astra_battery" to "astra", "sensor.astra_service_battery" to "astra", "sensor.astra_range" to "astra",
+            "sensor.octopus_id5_soc" to "id5", "sensor.octopus_meter_rate" to "meter",
+            "sensor.front_door_battery" to "ring", "sensor.front_door_battery_3" to "mqtt", "sensor.hall_sensor_battery" to "alarm",
+        ),
+        deviceNames = mapOf("astra" to "Vauxhall Astra", "id5" to "Volkswagen ID.5", "meter" to "Smart meter", "ring" to "Front Doorbell", "mqtt" to "Front Door", "alarm" to "Hall sensor"),
+        entityArea = emptyMap(), deviceArea = emptyMap(),
+        entityPlatform = mapOf(
+            "sensor.astra_battery" to "stellantis_vehicles", "sensor.astra_service_battery" to "stellantis_vehicles", "sensor.astra_range" to "stellantis_vehicles",
+            "sensor.octopus_id5_soc" to "octopus_energy", "sensor.octopus_meter_rate" to "octopus_energy",
+            "sensor.front_door_battery" to "ring", "sensor.front_door_battery_3" to "mqtt", "sensor.hall_sensor_battery" to "mqtt",
+        ),
+        labels = mapOf("sensor.front_door_battery_3" to setOf(HIDE_FROM_HEALTH_LABEL)),
+    )
+    private val garageStates = listOf(
+        battery("sensor.astra_battery", "6"), battery("sensor.astra_service_battery", "98"), entity("sensor.astra_range", "0"),
+        battery("sensor.octopus_id5_soc", "12"), entity("sensor.octopus_meter_rate", "unavailable"),
+        battery("sensor.front_door_battery", "34"), battery("sensor.front_door_battery_3", "34"), battery("sensor.hall_sensor_battery", "67"),
+    ).associateBy { it.entityId }
+
+    @Test
+    fun aCarIsNotADeviceToKeepHealthy() {
+        // A car at 6% is how far it can go, not a battery to replace: the Astra's service battery and the ID.5's charge are left out too.
+        assertTrue(isCarDevice("astra", garageStates, garage))
+        assertTrue(isCarDevice("id5", garageStates, garage))
+        val names = deviceHealthList(garageStates, garage, emptyMap()).map { it.name }
+        assertFalse("Vauxhall Astra" in names)
+        assertFalse("Volkswagen ID.5" in names)
+    }
+
+    @Test
+    fun otherDevicesOfACarIntegrationAreStillListed() {
+        // Octopus's smart meter is on the same integration as the ID.5 but has no charge level to be a car by (and here it is not answering).
+        assertFalse(isCarDevice("meter", garageStates, garage))
+        assertTrue("Smart meter" in deviceHealthList(garageStates, garage, emptyMap()).map { it.name })
+    }
+
+    @Test
+    fun aDeviceWithTheHideLabelIsLeftOutAndItsTwinStays() {
+        val names = deviceHealthList(garageStates, garage, emptyMap()).map { it.name }
+        assertEquals(setOf("Front Doorbell", "Smart meter", "Hall sensor"), names.toSet())
+        assertEquals(3, names.size)
     }
 }

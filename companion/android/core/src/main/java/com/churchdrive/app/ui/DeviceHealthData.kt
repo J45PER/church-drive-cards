@@ -104,11 +104,32 @@ fun healthOfDevice(deviceId: String, entities: Map<String, EntityState>, registr
 fun staleDevices(entities: Map<String, EntityState>, registry: Registry): Map<String, String> =
     watchedDevices(entities).filter { !it.ok }.mapNotNull { w -> registry.deviceOf(w.id)?.let { it to w.reason.ifBlank { "Not responding" } } }.toMap()
 
-/** The devices worth listing (a battery, a filter, or not answering), those needing attention first and then by name. Phones are left out. */
+/**
+ * The label (its id in Home Assistant) that keeps a device out of the Device health list: put it on any one of the device's entities. For a device that
+ * shows twice (Ring comes through both its own integration and the Ring-MQTT add-on) or anything else not worth watching.
+ */
+const val HIDE_FROM_HEALTH_LABEL = "hide_from_device_health"
+
+/**
+ * A car: a device of a car integration that gives a charge level (the same rule as the Cars card). Its charge is how far it can go, not a battery to
+ * replace, and it sleeps between updates, so it is not a device to keep healthy.
+ */
+fun isCarDevice(deviceId: String, entities: Map<String, EntityState>, registry: Registry): Boolean {
+    val ids = registry.entitiesOfDevice(deviceId)
+    return ids.any { registry.platformOf(it) in CAR_PLATFORMS } && carEntities(ids, entities).battery.isNotEmpty()
+}
+
+/** Whether a device is left out of the Device health list: a phone, a car, or one labelled [HIDE_FROM_HEALTH_LABEL]. */
+fun leftOutOfHealth(deviceId: String, entities: Map<String, EntityState>, registry: Registry): Boolean {
+    val ids = registry.entitiesOfDevice(deviceId)
+    return ids.any { registry.platformOf(it) == "mobile_app" || HIDE_FROM_HEALTH_LABEL in registry.labelsOf(it) } || isCarDevice(deviceId, entities, registry)
+}
+
+/** The devices worth listing (a battery, a filter, or not answering), those needing attention first and then by name. Phones, cars and hidden devices are left out. */
 fun deviceHealthList(entities: Map<String, EntityState>, registry: Registry, areaNames: Map<String, String>): List<DeviceHealthItem> {
     val stale = staleDevices(entities, registry)
     return registry.deviceIds()
-        .filter { d -> registry.entitiesOfDevice(d).none { registry.platformOf(it) == "mobile_app" } }
+        .filter { d -> !leftOutOfHealth(d, entities, registry) }
         .mapNotNull { healthOfDevice(it, entities, registry, areaNames, stale) }
         .filter { it.tracked }
         .sortedWith(compareByDescending<DeviceHealthItem> { it.level.ordinal }.thenBy { it.name.lowercase() })
