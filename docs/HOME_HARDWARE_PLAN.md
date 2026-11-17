@@ -103,6 +103,14 @@ Open:
 - The website isn't on the list of website pages in CLAUDE.md for this kind of thing. Confirm the detail page belongs on the website, or move it into the Admin app.
 - Which metrics and how far back the history goes.
 
+## Camera streams and talk (decided)
+
+- **Frigate runs on the NAS**, with recordings on its own drives. Not on the Beelink.
+- **Detection streams:** Frigate uses a low-resolution substream for detection, and the main stream for recording and live view. Hardware decoding on the NAS's N100.
+- **Cameras are wired** (PoE or hardwired doorbell). The D260 needs hardwired power for 24/7 recording, so it's not Wi-Fi-only.
+- **Two-way talk:** go2rtc uses the camera's `tapo://` route with a **local camera account**, not the Tapo cloud login, so the cloud password isn't stored on the NAS. Test this on the bench before fitting. If the local account won't work, that's a new decision, not a silent fallback to the cloud login.
+- **Talk in the dashboard needs HTTPS** (the browser only allows the microphone over HTTPS). Inside the house, use HA's HTTPS address.
+
 ## Camera recognition (planned)
 
 Decided:
