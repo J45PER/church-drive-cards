@@ -49,13 +49,14 @@ export const KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.5
 .ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#f0b13a; color:#2a1700; cursor:pointer; }`;
 
 // The card shell: ha-card, shared styles, the title row, then `body`.
-/** The CSS of the Clive glow, for any card whose ha-card has the class `ck-glow` toggled by kitGlow(). The card must be `position:relative; overflow:hidden; isolation:isolate`. */
+/**
+ * The CSS of the Clive glow, for any card whose ha-card has the class `ck-glow` toggled by kitGlow(). The card must be
+ * `position:relative; overflow:hidden; isolation:isolate`. The two soft blobs stay still (decided 2026-11-17): the gradient is kept,
+ * but it no longer drifts, so a dashboard full of panels isn't repainting large blurred layers all the time.
+ */
 export const KIT_GLOW_CSS = `.ck-glow::before, .ck-glow::after { content:''; position:absolute; z-index:-1; width:85%; aspect-ratio:1; border-radius:50%; filter:blur(26px); opacity:.30; pointer-events:none; }
-.ck-glow::before { background:radial-gradient(circle, var(--ck-g1, transparent), transparent 68%); left:-22%; top:-55%; animation:ckGlowA 14s ease-in-out infinite alternate; }
-.ck-glow::after { background:radial-gradient(circle, var(--ck-g2, transparent), transparent 68%); right:-26%; bottom:-65%; animation:ckGlowB 17s ease-in-out infinite alternate; }
-@keyframes ckGlowA { to { transform:translate(45%,30%) scale(1.15); } }
-@keyframes ckGlowB { to { transform:translate(-50%,-25%) scale(1.2); } }
-@media (prefers-reduced-motion: reduce) { .ck-glow::before, .ck-glow::after { animation:none; } }`;
+.ck-glow::before { background:radial-gradient(circle, var(--ck-g1, transparent), transparent 68%); left:-22%; top:-55%; }
+.ck-glow::after { background:radial-gradient(circle, var(--ck-g2, transparent), transparent 68%); right:-26%; bottom:-65%; }`;
 
 export function kitShell(body, extraCss = '') {
   return `
