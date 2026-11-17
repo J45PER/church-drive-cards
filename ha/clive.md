@@ -63,7 +63,7 @@ Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` 
 
 `clive_zappi_charge` with mode Fast at a rate that is not cheap does not start. It stamps `input_datetime.zappi_fast_charge_confirm_asked`, and returns `needs_confirmation` with the current and cheapest rates. Clive must ask and wait. A repeat call with `confirm_expensive: true` only counts if it arrives **5 to 300 seconds** after that stamp. The first version trusted the flag, and Clive set it himself on the first call, so the window is enforced in the script.
 
-The helper is an `input_datetime` (date and time) with no `initial` (so a restart keeps it; it began at `2000-01-01 00:00:00`, which means never).
+The helper is an `input_datetime` (date and time), initial `2000-01-01 00:00:00` (on purpose: a restart forgets a pending confirmation).
 
 ## Timed heating and fan
 
