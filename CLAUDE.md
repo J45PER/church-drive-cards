@@ -8,6 +8,10 @@ Read this first. The longer notes are in `HANDOFF.md` (the house and the apps), 
 
 This applies to: what a page or feature should do, where it lives (website, Clive Admin, phone app, Home Assistant), what to keep or remove, privacy and recording choices, and wording or layout choices. It does not apply to routine steps already agreed (bumping a version, running tests, following the release process).
 
+## Releasing (decided 2026-11-17)
+
+**When a pull request's CI is green, merge it and let the release go out without asking.** Jamie has said to always merge and push updates once green. Watch the PR, fix anything CI flags, and merge as soon as every check passes; merging to `main` publishes the release (`v<version>`) and the apps. Still never merge with a red or unfinished check, and never skip or weaken a test to get green.
+
 ## Designing
 
 - Design proposals are built as a tweakable example page first (a published Artifact, tweak panel hidden by default), page by page, and ported to the live site only once signed off. Keep the example site 1:1 with the live site.
