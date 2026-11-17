@@ -120,6 +120,31 @@ fun parseForecast(event: JSONObject): List<ForecastPoint> {
     }
 }
 
+/** One day of the week's forecast: its high and low, what it'll be like, the chance of rain (%) and the wind (in the house's unit). */
+data class ForecastDay(val timeMs: Long, val high: Double?, val low: Double?, val condition: String, val rainChance: Int?, val wind: Double?)
+
+/** The daily forecast from a `weather/subscribe_forecast` event (forecast_type "daily"). */
+fun parseDailyForecast(event: JSONObject): List<ForecastDay> {
+    val a = event.optJSONArray("forecast") ?: return emptyList()
+    fun JSONObject.num(key: String) = if (has(key) && !isNull(key)) optDouble(key).takeIf { !it.isNaN() } else null
+    return (0 until a.length()).mapNotNull { i ->
+        val o = a.optJSONObject(i) ?: return@mapNotNull null
+        val time = runCatching { OffsetDateTime.parse(o.optString("datetime")).toInstant().toEpochMilli() }.getOrNull() ?: return@mapNotNull null
+        ForecastDay(time, o.num("temperature"), o.num("templow"), o.optString("condition"), o.num("precipitation_probability")?.toInt(), o.num("wind_speed"))
+    }
+}
+
+/** "Today", "Tomorrow", then "Thursday" for a day [days] after today. */
+fun forecastDayName(timeMs: Long, nowMs: Long = System.currentTimeMillis(), zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): String {
+    val day = java.time.Instant.ofEpochMilli(timeMs).atZone(zone).toLocalDate()
+    val today = java.time.Instant.ofEpochMilli(nowMs).atZone(zone).toLocalDate()
+    return when (java.time.temporal.ChronoUnit.DAYS.between(today, day)) {
+        0L -> "Today"
+        1L -> "Tomorrow"
+        else -> day.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.UK)
+    }
+}
+
 /** "19 Jul" from a time with any offset (such as "2026-07-19T09:00:00+00:00"), or null if it can't be read. */
 fun shortDayOf(iso: String?): String? {
     val ms = parseMillis(iso) ?: return null

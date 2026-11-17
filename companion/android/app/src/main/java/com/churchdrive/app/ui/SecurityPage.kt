@@ -120,7 +120,8 @@ private fun CardContent(card: CardSpec, entities: Map<String, EntityState>, regi
         "custom:overnight-heating-card" -> OvernightHeatingCard(entities, call)
         "custom:fan-card" -> FanCard(card.config, entities, call)
         "custom:air-purifier-card" -> AirPurifierCard(card.config, entities, call)
-        "custom:purifier-schedule-card" -> PurifierScheduleCard(card.config)
+        // The purifier's schedule is on the purifier card (what's next) and its device page (the editor), not a card of its own.
+        "custom:purifier-schedule-card" -> {}
         "custom:co-alarm-card" -> CoAlarmCard(card.config, entities, call)
         "custom:cover-card" -> CoverCard(card.config, entities, call)
         "entities" -> SettingsEntitiesCard(card.config, entities, call)

@@ -236,7 +236,7 @@ class MainActivity : ComponentActivity() {
                                     // A device's page in the phone app also has its schedules (a blind's), for an administrator.
                                     CompositionLocalProvider(
                                         com.churchdrive.app.ui.LocalIsAdmin provides isAdmin,
-                                        com.churchdrive.app.ui.LocalDeviceExtras provides { item -> com.churchdrive.app.ui.DeviceScheduleRows(item) },
+                                        com.churchdrive.app.ui.LocalDeviceExtras provides { item -> com.churchdrive.app.ui.DeviceScheduleRows(item, entities) },
                                     ) {
                                         com.churchdrive.app.ui.DeviceHealthOverlay(openDevice, entities, registry, areaNames) { deviceHealthOpen = false; openDevice = null }
                                     }

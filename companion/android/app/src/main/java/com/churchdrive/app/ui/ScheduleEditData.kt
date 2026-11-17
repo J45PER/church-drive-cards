@@ -2,9 +2,10 @@ package com.churchdrive.app.ui
 
 /**
  * One schedule as the full-page editor sees it, whatever it belongs to: some days (0 = Monday to 6 = Sunday) and two times. For a
- * blind they are Open and Close (either can be left out, so null); for the purifier, Auto and Sleep (both always set).
+ * blind they are Open and Close (either can be left out, so null), for a fan On (at [SlotSchedule.mode], a preset mode or
+ * "percentage:NN", or as it was) and Off; for the purifier, Auto and Sleep (both always set).
  */
-data class SlotSchedule(val id: String, val days: List<Int>, val first: String?, val second: String?)
+data class SlotSchedule(val id: String, val days: List<Int>, val first: String?, val second: String?, val mode: String? = null)
 
 /** The one-letter day buttons, Monday first. */
 val SCHEDULE_DAY_LETTERS = listOf("M", "T", "W", "T", "F", "S", "S")
@@ -20,8 +21,8 @@ fun slotToggleDay(s: SlotSchedule, day: Int): SlotSchedule =
 fun slotTimesText(s: SlotSchedule, firstWord: String, secondWord: String): String =
     listOfNotNull(s.first?.let { "$firstWord $it" }, s.second?.let { "$secondWord $it" }).joinToString(" · ").ifEmpty { "No times set" }
 
-fun BlindSchedule.toSlot() = SlotSchedule(id, days, open, close)
-fun SlotSchedule.toBlind() = BlindSchedule(id, days, first, second)
+fun BlindSchedule.toSlot() = SlotSchedule(id, days, open, close, mode)
+fun SlotSchedule.toBlind() = BlindSchedule(id, days, first, second, mode?.takeIf { first != null })
 
 fun PurifierSchedule.toSlot() = SlotSchedule(id, days, auto, sleep)
 

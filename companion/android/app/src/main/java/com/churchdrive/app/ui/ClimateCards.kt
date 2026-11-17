@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -162,6 +164,9 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val status = if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On"
     val fold = rememberFold("grid-fold|$id")
     val ink = tone.onContainer
+    // When it next turns on or off by itself (its schedule is on its device page: press and hold the card).
+    val schedule = rememberBlindSchedule(id).value?.takeIf { it.enabled && it.schedules.isNotEmpty() }
+    val hint = schedule?.next?.let { "Next: $it" }
     if (fold.value) {
         GridCard(tone.container, ink, 2.5f, name, deviceEntity = id, fold = fold) {
             val first = 8f - speedItems.size
@@ -172,7 +177,9 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     var y = 3f
     val speedsY = if (showSpeeds) { val v = y; y += 2f; v } else 0f
     val secondY = if (second.isNotEmpty()) { val v = y; y += 2f; v } else 0f
+    val hintY = if (hint != null) { val v = y - 0.45f; y += 0.5f; v } else 0f
     GridCard(tone.container, ink, y, name, deviceEntity = id, fold = fold) {
+        if (hint != null) Text(hint, style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f), modifier = Modifier.at(0.5f, hintY, 7f, 0.5f))
         RingHead(config.optString("icon").ifBlank { "mdi:fan" }, if (on && speeds.isNotEmpty() && current != null) (speeds.indexOf(current) + 1f) / speeds.size else if (on) 1f else 0f, tone.accent, ink, status, "", room?.let { "${temp(it)}°" })
         if (showSpeeds) GridTiles(speedItems, speedsY, 1.5f, tone, ink, enabled, stacked = true)
         if (second.isNotEmpty()) GridTiles(second, secondY, 1.5f, tone, ink, enabled, stacked = true)
@@ -212,6 +219,11 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     val status = if (!shownOn) "Off" else shownPreset?.let { presetLabel(it) } ?: "On"
     val ink = tone.onContainer
     val fold = rememberFold("grid-fold|$id")
+    // The purifier's schedule, on its card ("Every day Auto: 07:00-22:30 · Next: Sleep Tue 22:30"); it's changed on the device page.
+    val schedule = rememberPurifierSchedule().value?.takeIf { (it.entity.isBlank() || it.entity == id) && it.schedules.isNotEmpty() }
+    val scheduleLine = schedule?.let { s ->
+        if (!s.enabled) "Schedule off" else listOfNotNull(s.schedules.joinToString(" · ") { purifierSummary(it) }, s.next?.let { "Next: $it" }).joinToString(" · ")
+    }
     if (fold.value) {
         GridCard(tone.container, ink, 2.5f, name, deviceEntity = id, fold = fold) {
             val buttons = modeItems.take(4)
@@ -225,8 +237,11 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     val graphY = if (showGraph) { val v = y; y += 2.5f; v } else 0f
     val modesY = y; y += 2f
     val filtersY = y
-    val total = if (filterRows.isEmpty()) filtersY else Math.ceil(((filtersY + filterRows.size * 0.75f + 0.5f) * 2f).toDouble()).toFloat() / 2f
+    val afterFilters = if (filterRows.isEmpty()) filtersY else filtersY + filterRows.size * 0.75f + 0.25f
+    val scheduleY = afterFilters
+    val total = Math.ceil(((afterFilters + (if (scheduleLine != null) 0.75f else 0f) + (if (filterRows.isEmpty() && scheduleLine == null) 0f else 0.25f)) * 2f).toDouble()).toFloat() / 2f
     GridCard(tone.container, ink, total, name, deviceEntity = id, fold = fold) {
+        if (scheduleLine != null) Text(scheduleLine, style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.75f), maxLines = 2, modifier = Modifier.at(0.5f, scheduleY, 7f, 0.75f))
         RingHead("mdi:air-purifier", if (pm == null) 1f else (1f - (pm.toFloat() / 135f)).coerceIn(0.1f, 1f), tone.accent, ink, status, listOfNotNull(pm?.let { "PM2.5 · ${pmWord(it)}" }, allergen?.let { "Allergen ${it.roundToInt()}" }).joinToString(" · "), pm?.let { "${it.roundToInt()}" })
         if (showGraph) Box(Modifier.at(0.5f, graphY, 7f, 2f)) {
             androidx.compose.runtime.CompositionLocalProvider(LocalGraphFill provides true) { SensorGraph(
@@ -363,7 +378,19 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
     val ground = toneColors(Tone.Grey)
     val tone = toneColors(weatherTone(weather.state))
     val upcoming = points.filter { it.timeMs >= System.currentTimeMillis() - 30 * 60_000L }.take(12)
-    EntityCard(ground.container, ground.onContainer) {
+    // Press and hold for the week's forecast, on a page of its own.
+    var week by remember { mutableStateOf(false) }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    if (week) WeekForecastPage(entityId, weather) { week = false }
+    EntityCard(
+        ground.container, ground.onContainer,
+        Modifier.pointerInput(entityId) {
+            detectTapGestures(onLongPress = {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                week = true
+            })
+        },
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName(weatherIcon(weather.state), CdVectors.Info, tone, 48)
             Column(modifier = Modifier.weight(1f)) {
@@ -378,6 +405,49 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
                         Text(eventClock(p.timeMs).take(2), fontSize = 12.sp)
                         HaIcon(weatherIcon(p.condition), CdVectors.Info, toneColors(weatherTone(p.condition)).accent, 24.dp, Modifier.padding(vertical = 4.dp))
                         Text(p.temperature?.let { "${it.roundToInt()}°" } ?: "–", fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The week's forecast (press and hold the weather on the Climate page): a row per day with its weather, high and low, rain and wind. */
+@Composable
+private fun WeekForecastPage(entityId: String, weather: EntityState, onClose: () -> Unit) {
+    val api = LocalHaApi.current
+    var days by remember(entityId) { mutableStateOf<List<ForecastDay>?>(null) }
+    DisposableEffect(entityId) {
+        var subscription = -1
+        if (api != null) subscription = api.subscribe("weather/subscribe_forecast", data("entity_id" to entityId, "forecast_type" to "daily")) { event -> days = parseDailyForecast(event) }
+        onDispose { if (subscription >= 0) api?.close(subscription) }
+    }
+    val windUnit = weather.str("wind_speed_unit") ?: ""
+    FullPage("This week", onBack = onClose) {
+        val list = days
+        when {
+            list == null -> Text("Loading the forecast…", style = MaterialTheme.typography.bodyMedium)
+            list.isEmpty() -> Text("Data not available", style = MaterialTheme.typography.bodyMedium)
+            else -> list.take(7).forEach { d ->
+                val tone = toneColors(weatherTone(d.condition))
+                EntityCard(tone.container, tone.onContainer) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ToneIconName(weatherIcon(d.condition), CdVectors.Info, tone, 44)
+                        Column(Modifier.weight(1f)) {
+                            Text(forecastDayName(d.timeMs), style = MaterialTheme.typography.titleMedium, color = tone.onContainer)
+                            Text(
+                                listOfNotNull(
+                                    presetLabel(d.condition.replace('-', ' ')),
+                                    d.rainChance?.let { "$it% rain" },
+                                    d.wind?.let { "Wind ${it.roundToInt()} $windUnit".trim() },
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.85f),
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(d.high?.let { "${it.roundToInt()}°" } ?: "–", style = MaterialTheme.typography.headlineSmall, color = tone.accent)
+                            d.low?.let { Text("${it.roundToInt()}°", style = MaterialTheme.typography.bodyMedium, color = tone.onContainer.copy(alpha = 0.75f)) }
+                        }
                     }
                 }
             }

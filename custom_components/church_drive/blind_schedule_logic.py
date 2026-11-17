@@ -1,4 +1,7 @@
-"""The plain rules behind a blind's schedules (no Home Assistant in here, so they can be tested alone).
+"""The plain rules behind a blind's or a fan's schedules (no Home Assistant in here, so they can be tested alone).
+
+A fan (or humidifier) uses the same rules: its "open" time turns it on (at the schedule's `mode`, a preset mode or
+"percentage:NN", if one is set) and its "close" time turns it off. Its words are On and Off.
 
 A schedule is a set of days and up to two times: the blind **opens** at the first time and **closes** at the
 second, on each of those days. "Mon-Fri Open 07:30 · Close 20:00" opens at 07:30 and closes at 20:00, Monday to
@@ -19,6 +22,31 @@ from typing import Any
 
 MAX_SCHEDULES = 12
 ACTIONS = ("open", "close")
+# The kinds of entity that take a schedule, and what their two times are called.
+DOMAINS = ("cover", "fan", "humidifier")
+WORDS = {"cover": ("Open", "Close"), "fan": ("On", "Off"), "humidifier": ("On", "Off")}
+
+
+def words_for(entity: str) -> tuple[str, str]:
+    """("Open", "Close") for a blind, ("On", "Off") for a fan or humidifier."""
+    return WORDS.get(str(entity).split(".", 1)[0], WORDS["cover"])
+
+
+def schedulable(entity: Any) -> bool:
+    """A cover, fan or humidifier entity."""
+    return isinstance(entity, str) and entity.split(".", 1)[0] in DOMAINS and "." in entity
+
+
+def clean_mode(value: Any) -> str | None:
+    """What a fan turns on at: a preset mode's name, or "percentage:NN" (1 to 100); None for "as it was"."""
+    text = str(value or "").strip()[:40]
+    if not text:
+        return None
+    m = re.match(r"^percentage:(\d{1,3})$", text)
+    if m:
+        pct = int(m.group(1))
+        return f"percentage:{pct}" if 1 <= pct <= 100 else None
+    return text if re.match(r"^[\w .+-]+$", text) else None
 DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 _TIME = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$")
@@ -63,6 +91,9 @@ def clean_schedules(value: Any) -> list[dict[str, Any]]:
             item["open"] = opens
         if closes is not None:
             item["close"] = closes
+        mode = clean_mode(raw.get("mode"))
+        if mode is not None and opens is not None:
+            item["mode"] = mode
         out.append(item)
         if len(out) >= MAX_SCHEDULES:
             break
@@ -84,12 +115,13 @@ def clean_blind(value: Any, current: dict[str, Any] | None = None) -> dict[str, 
 
 
 def clean_config(value: Any) -> dict[str, dict[str, Any]]:
-    """Everything kept: {"cover.some_blind": {"enabled", "schedules"}}. Only cover entities are taken."""
+    """Everything kept: {"cover.some_blind": {"enabled", "schedules"}, "fan.bedroom": {...}}. Only covers, fans and
+    humidifiers are taken (the store's key is still "blinds", from when only blinds had schedules)."""
     out: dict[str, dict[str, Any]] = {}
     blinds = value.get("blinds") if isinstance(value, dict) else None
     if isinstance(blinds, dict):
         for entity, raw in blinds.items():
-            if isinstance(entity, str) and entity.startswith("cover."):
+            if schedulable(entity):
                 out[entity] = clean_blind(raw)
     return out
 
@@ -116,13 +148,13 @@ def days_text(days: list[int]) -> str:
     return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " & " + parts[-1]
 
 
-def summary(schedule: dict[str, Any]) -> str:
-    """"Mon-Fri Open 07:30 · Close 20:00" (a time that isn't set is left out)."""
+def summary(schedule: dict[str, Any], words: tuple[str, str] = WORDS["cover"]) -> str:
+    """"Mon-Fri Open 07:30 · Close 20:00", or a fan's "Every day On 22:00 · Off 06:30" (a time that isn't set is left out)."""
     times = []
     if schedule.get("open"):
-        times.append(f"Open {schedule['open']}")
+        times.append(f"{words[0]} {schedule['open']}")
     if schedule.get("close"):
-        times.append(f"Close {schedule['close']}")
+        times.append(f"{words[1]} {schedule['close']}")
     return f"{days_text(schedule.get('days', []))} " + " · ".join(times) if times else days_text(schedule.get("days", []))
 
 
@@ -146,6 +178,28 @@ def action_for(actions: list[str]) -> str | None:
     return "close" if "close" in actions else actions[0]
 
 
+def mode_at(schedules: list[dict[str, Any]], weekday: int, hhmm: str) -> str | None:
+    """The mode a fan turns on at for an "open" due this minute: the first such schedule's, or None."""
+    for s in schedules:
+        if weekday in s.get("days", []) and s.get("open") == hhmm and s.get("mode"):
+            return s["mode"]
+    return None
+
+
+def due_between_at(schedules: list[dict[str, Any]], start: datetime, end: datetime) -> tuple[str, datetime] | None:
+    """As due_between, with the minute the change was due (so a fan's catch-up can find its mode)."""
+    if end <= start:
+        return None
+    minute = start.replace(second=0, microsecond=0) + timedelta(minutes=1)
+    last: tuple[str, datetime] | None = None
+    while minute <= end:
+        action = action_for(events_at(schedules, minute.weekday(), minute.strftime("%H:%M")))
+        if action:
+            last = (action, minute)
+        minute += timedelta(minutes=1)
+    return last
+
+
 def due_between(schedules: list[dict[str, Any]], start: datetime, end: datetime) -> str | None:
     """The action to take for the minutes after `start` up to and including `end` (local times): the latest event
     in that window, or None. Used to catch up after Home Assistant was off through a scheduled minute."""
@@ -161,8 +215,9 @@ def due_between(schedules: list[dict[str, Any]], start: datetime, end: datetime)
     return last
 
 
-def next_change(schedules: list[dict[str, Any]], now: datetime) -> dict[str, str] | None:
-    """The next scheduled change after `now` (looking a week ahead): {"action", "at" (ISO), "text" ("Close Fri 20:00")}."""
+def next_change(schedules: list[dict[str, Any]], now: datetime, words: tuple[str, str] = WORDS["cover"]) -> dict[str, str] | None:
+    """The next scheduled change after `now` (looking a week ahead): {"action", "at" (ISO), "text" ("Close Fri 20:00",
+    or "Off Fri 06:30" for a fan)}."""
     if not schedules:
         return None
     start = now.replace(second=0, microsecond=0)
@@ -178,5 +233,6 @@ def next_change(schedules: list[dict[str, Any]], now: datetime) -> dict[str, str
         for hhmm, action in sorted(hits):
             at = datetime.combine(date, datetime.min.time(), tzinfo=now.tzinfo).replace(hour=int(hhmm[:2]), minute=int(hhmm[3:]))
             if at > start:
-                return {"action": action, "at": at.isoformat(), "text": f"{action.capitalize()} {DAY_NAMES[date.weekday()]} {hhmm}"}
+                word = words[0] if action == "open" else words[1]
+                return {"action": action, "at": at.isoformat(), "text": f"{word} {DAY_NAMES[date.weekday()]} {hhmm}"}
     return None
