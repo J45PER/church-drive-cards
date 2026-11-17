@@ -108,7 +108,8 @@ Open:
 - **Frigate runs on the NAS**, with recordings on its own drives. Not on the Beelink.
 - **Detection streams:** Frigate uses a low-resolution substream for detection, and the main stream for recording and live view. Hardware decoding on the NAS's N100.
 - **Cameras are wired** (PoE or hardwired doorbell). The D260 needs hardwired power for 24/7 recording, so it's not Wi-Fi-only.
-- **Two-way talk:** go2rtc uses the camera's `tapo://` route with a **local camera account**, not the Tapo cloud login, so the cloud password isn't stored on the NAS. Test this on the bench before fitting. If the local account won't work, that's a new decision, not a silent fallback to the cloud login.
+- **Two-way talk:** go2rtc's `tapo://` route takes the **Tapo cloud password** (go2rtc's README says so; not a local camera account). The Tapo account itself is free. Decided: the password is stored in go2rtc's config on the NAS, readable only by the service, and go2rtc's API is not exposed outside the house. Anyone who can read that file gets into the Tapo account, so the NAS must be locked down. The Tapo cloud account can reach every Tapo device on it, so use a separate account for the house if one is set up. Newer firmware may need the SHA256 form of the password; test which one the D260 accepts on the bench.
+- **Test before fitting:** confirm talk works from the bench with the password route, and confirm the D260 streams over RTSP.
 - **Talk in the dashboard needs HTTPS** (the browser only allows the microphone over HTTPS). Inside the house, use HA's HTTPS address.
 
 ## Camera recognition (planned)
