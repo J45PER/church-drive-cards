@@ -103,6 +103,19 @@ Open:
 - The website isn't on the list of website pages in CLAUDE.md for this kind of thing. Confirm the detail page belongs on the website, or move it into the Admin app.
 - Which metrics and how far back the history goes.
 
+## Camera recognition (planned)
+
+Decided:
+- **What the Server does with snapshots:** name known people, flag packages and deliveries, and give a short label for everything else (for example "car on the drive"). Alerts are sent for people and packages, not every label.
+- **Who is recognised:** the household, plus named friends and family who have each agreed to be enrolled.
+- **Where it runs:** on the house's own hardware. Face data is never sent to a cloud service.
+
+Required before going live (not yet done):
+- A consent record for each enrolled friend or family member.
+- A stated retention period for face data, and a rule that a person's data is deleted when they're removed.
+- Notices for visitors and neighbours who may be on camera.
+- A short check on the UK data protection rules by someone who knows them. This is a planning note, not legal advice.
+
 ## Open decisions
 
 | Decision | Options | Notes |
