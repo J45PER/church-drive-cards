@@ -48,10 +48,13 @@ class SecurityPageTest {
 
     @Test
     fun cardsKeepTheirOrderAndStacksAreOpenedUp() {
-        val cards = DashboardPanels.parse(dashboard)["security"]!![1].cards
-        assertEquals(listOf("custom:safety-card", "tile", "tile"), cards.map { it.type })
-        assertEquals("number.volume", cards[2].config.getString("entity"))
-        assertEquals(emptyList<Any>(), DashboardPanels.parse(dashboard)["home"])
+        // The Safety panel's tiles (stacks opened up, in order) go to the smoke and CO alarms' Details page, not the page itself.
+        val parsed = DashboardPanels.parse(dashboard)
+        assertEquals(listOf("custom:safety-card"), parsed["security"]!![1].cards.map { it.type })
+        val tiles = parsed[DashboardPanels.SECURITY_DETAILS]!!.first { it.title == "safety" }.cards
+        assertEquals(listOf("tile", "tile"), tiles.map { it.type })
+        assertEquals("number.volume", tiles[1].config.getString("entity"))
+        assertEquals(emptyList<Any>(), parsed["home"])
     }
 
     @Test
