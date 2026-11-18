@@ -290,6 +290,26 @@ private fun plain(d: Double) = if (d % 1.0 == 0.0) d.toInt().toString() else d.t
 private fun List<Reading>.upTo(now: Long, current: Double?): List<Reading> =
     if (current == null) this else this + Reading(now, current)
 
+/**
+ * The last history each graph drew, kept for as long as the app is open (by the entities and hours it shows), so a graph that
+ * comes back on screen (a card opened again, a page revisited) draws at once from what it had instead of a blank space while it
+ * asks Home Assistant again. A copy older than [GRAPH_REFRESH_MS] is asked for again straight away, behind the one on screen.
+ */
+object GraphCache {
+    private val entries = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Any>>()
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T> get(key: String): T? = entries[key]?.second as? T
+
+    fun put(key: String, value: Any) { entries[key] = System.currentTimeMillis() to value }
+
+    /** How long until the copy under [key] is due to be asked for again (0 when there's none, or it's due now). */
+    fun waitFor(key: String): Long = entries[key]?.first?.let { (it + GRAPH_REFRESH_MS - System.currentTimeMillis()).coerceAtLeast(0L) } ?: 0L
+}
+
+/** How often a graph on screen asks for its history again. */
+const val GRAPH_REFRESH_MS = 5 * 60_000L
+
 /** The room's temperature and/or humidity over the last day, as on the dashboard's thermostat card (range, limits, target, smoothing). */
 @Composable
 fun ClimateGraph(
@@ -304,8 +324,10 @@ fun ClimateGraph(
     val showT = config.optBoolean("show_temperature_history")
     val showH = config.optBoolean("show_humidity_history")
     val humiditySensor = humidity?.entityId
-    var history by remember { mutableStateOf<ClimateHistory?>(null) }
+    val key = "climate|$id|$humiditySensor"
+    var history by remember(key) { mutableStateOf(GraphCache.get<ClimateHistory>(key)) }
     LaunchedEffect(id, humiditySensor) {
+        delay(GraphCache.waitFor(key))
         while (true) {
             val ids = org.json.JSONArray().put(id).also { if (humiditySensor != null) it.put(humiditySensor) }
             val params = org.json.JSONObject()
@@ -316,8 +338,8 @@ fun ClimateGraph(
                 .put("significant_changes_only", false)
             val result = api.ask("history/history_during_period", params)
             if (result != null) {
-                history = climateHistory(result, id, humiditySensor)
-                delay(5 * 60_000L)
+                history = climateHistory(result, id, humiditySensor).also { GraphCache.put(key, it) }
+                delay(GRAPH_REFRESH_MS)
             } else {
                 // Not answered: try again soon rather than leave the graph out for five minutes.
                 delay(8_000L)
@@ -338,11 +360,13 @@ fun ClimateGraph(
 @Composable
 fun RoomGraph(tempId: String, humidityId: String?, type: String, ink: Color, lineColour: Color, low: Double? = null, high: Double? = null) {
     val load = LocalHistory.current
-    var history by remember { mutableStateOf<Map<String, List<Pair<Long, String>>>>(emptyMap()) }
+    val key = "room|$tempId|$humidityId|$GRAPH_HOURS"
+    var history by remember(key) { mutableStateOf(GraphCache.get<Map<String, List<Pair<Long, String>>>>(key).orEmpty()) }
     LaunchedEffect(tempId, humidityId) {
+        delay(GraphCache.waitFor(key))
         while (true) {
-            load(listOfNotNull(tempId, humidityId), GRAPH_HOURS) { history = it }
-            delay(5 * 60_000L)
+            load(listOfNotNull(tempId, humidityId), GRAPH_HOURS) { history = it; GraphCache.put(key, it) }
+            delay(GRAPH_REFRESH_MS)
         }
     }
     val temps = numericSeries(history[tempId])
@@ -423,11 +447,13 @@ private fun ClimateGraphBody(h: ClimateHistory, currentTemp: Double?, target: Do
 @Composable
 fun SensorGraph(id: String, hours: Int, unit: String, colour: Color, ink: Color, smooth: Boolean = true, scale: List<Pair<Double, Color>>? = null) {
     val load = LocalHistory.current
-    var history by remember { mutableStateOf<Map<String, List<Pair<Long, String>>>>(emptyMap()) }
+    val key = "sensor|$id|$hours"
+    var history by remember(key) { mutableStateOf(GraphCache.get<Map<String, List<Pair<Long, String>>>>(key).orEmpty()) }
     LaunchedEffect(id, hours) {
+        delay(GraphCache.waitFor(key))
         while (true) {
-            load(listOf(id), hours) { history = it }
-            delay(5 * 60_000L)
+            load(listOf(id), hours) { history = it; GraphCache.put(key, it) }
+            delay(GRAPH_REFRESH_MS)
         }
     }
     val raw = numericSeries(history[id])

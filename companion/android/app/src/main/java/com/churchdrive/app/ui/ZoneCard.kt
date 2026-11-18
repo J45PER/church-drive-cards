@@ -71,12 +71,15 @@ private fun levelTone(level: ZoneLevel): Tone = when (level) {
 fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {
     val cfg = remember(config.toString()) { zoneConfig(config) }
     val loadHistory = LocalHistory.current
-    var history by remember { mutableStateOf<Map<String, List<Pair<Long, String>>>>(emptyMap()) }
     val ids = cfg.historyIds()
+    // Kept while the app is open (GraphCache), so the strips are drawn at once when the card comes back on screen.
+    val key = "zone|${ids.joinToString(",")}|${cfg.hours}"
+    var history by remember(key) { mutableStateOf(GraphCache.get<Map<String, List<Pair<Long, String>>>>(key).orEmpty()) }
     LaunchedEffect(ids, cfg.hours) {
+        delay(GraphCache.waitFor(key))
         while (true) {
-            loadHistory(ids, cfg.hours) { history = it }
-            delay(5 * 60_000L)
+            loadHistory(ids, cfg.hours) { history = it; GraphCache.put(key, it) }
+            delay(GRAPH_REFRESH_MS)
         }
     }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }

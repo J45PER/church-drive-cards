@@ -21,6 +21,10 @@ with the APK, so there is a record of what shipped. Newest first.
 - The air purifier card has a Display control: Off, a slider with a notch for each brightness (Dim, Bright) and On.
 - An air purifier is no longer counted as something left on when everyone is out.
 
+## 0.164.1
+
+- **Graphs show at once again.** Opening a card that has a graph (a thermostat, a room, the purifier, a security zone) drew a blank space until the history arrived from Home Assistant, every time. The app now keeps each graph's last history while it's open, so a graph that comes back is drawn straight away and updated behind it when it's more than five minutes old.
+
 ## 0.164.0
 
 - **The Security page is calmer.** The status lines at the top (doors, last movement, who's home, smoke and CO, batteries) are gone from the page; press and hold the alarm card for its Details page, where they stay.

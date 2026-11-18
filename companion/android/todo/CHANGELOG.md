@@ -20,6 +20,10 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 - The air purifier card has a Display control: Off, a slider with a notch for each brightness (Dim, Bright) and On.
 - An air purifier is no longer counted as something left on when everyone is out.
 
+## 0.164.1
+
+- No change you will notice.
+
 ## 0.164.0
 
 - No change you will notice.
