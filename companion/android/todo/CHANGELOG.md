@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.164.3
+
+- The air purifier's Display Off button has its own icon, the sun with a line through it.
+
 ## 0.164.2
 
 - The air purifier's Display control is three buttons: Off, Dim and Bright.

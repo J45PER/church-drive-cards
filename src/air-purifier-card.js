@@ -359,7 +359,7 @@ export class AirPurifierCard extends HTMLElement {
     const unavailable = st.state === 'unavailable';
     this.querySelector('.ap-dtitle').textContent = `Display · ${unavailable ? 'Unavailable' : levelWord(idx, levels)}`;
     const tiles = [
-      { key: 'off', name: 'Off', icon: iconFor('purifier', 'display_off', 'mdi:eye-off'), color: KIT_COLOR.off, on: idx == null && !unavailable, disabled: unavailable },
+      { key: 'off', name: 'Off', icon: iconFor('purifier', 'display_off', 'cd:sun-off'), color: KIT_COLOR.off, on: idx == null && !unavailable, disabled: unavailable },
       ...levels.map((_, i) => ({
         key: String(i),
         name: levelWord(i, levels),

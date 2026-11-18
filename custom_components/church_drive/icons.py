@@ -45,7 +45,7 @@ DEFAULTS: dict[str, dict[str, str]] = {
         "night": "mdi:power-sleep",
         "low": "mdi:fan-speed-1",
         "high": "mdi:fan-speed-3",
-        "display_off": "mdi:eye-off",
+        "display_off": "cd:sun-off",
         "display_dim": "cd:sun-half",
         "display_bright": "cd:sun",
         "other": "mdi:fan",
