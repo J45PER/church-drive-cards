@@ -1,6 +1,6 @@
 # Clive on the Home Assistant side
 
-Clive is the preferred Assist pipeline ("Home Assistant Cloud"): wake word `hey_jarvis` (openWakeWord, local), Home Assistant Cloud speech-to-text and text-to-speech, and the Claude conversation agent (`conversation.claude_conversation`, Haiku 4.5, the Anthropic integration with the household's own API key). `prefer_local_intents` is on, so simple commands never reach Claude.
+Clive is the preferred Assist pipeline ("Home Assistant Cloud"): wake word `hey_jarvis` (openWakeWord, local), Home Assistant Cloud speech-to-text and text-to-speech, and the Claude conversation agent (`conversation.claude_conversation`, Sonnet 5.5, the Anthropic integration with the household's own API key). `prefer_local_intents` is on, so simple commands never reach Claude.
 
 What Clive can reach is decided by **voice assistant exposure** (Settings > Voice assistants > Expose), which is global, not per person. Everything below changes only `conversation`; Alexa and Google exposure were left alone.
 
@@ -117,7 +117,7 @@ Settings on 2026-10-23 before the first tuning (the baseline to go back to; the 
 
 | Setting | Value |
 |---|---|
-| `chat_model` | `claude-haiku-4-5` |
+| `chat_model` | `claude-sonnet-5-5` |
 | `max_tokens` | 3000 |
 | `thinking_budget` | 1024 |
 | `prompt_caching` | `prompt` |
