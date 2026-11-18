@@ -46,6 +46,7 @@ DEFAULTS: dict[str, dict[str, str]] = {
         "low": "mdi:fan-speed-1",
         "high": "mdi:fan-speed-3",
         "display_off": "cd:sun-off",
+        "display_keep": "cd:minus",
         "display_dim": "cd:sun-half",
         "display_bright": "cd:sun",
         "other": "mdi:fan",

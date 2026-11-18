@@ -63,6 +63,7 @@ from .alarm_lights import AlarmLights
 from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
 from .blind_schedule import BlindSchedule
+from .purifier_display import PurifierDisplay
 from .alarm_tests import AlarmTests
 from .purifier_schedule import PurifierSchedule
 from .const import (
@@ -135,6 +136,8 @@ from .const import (
     WS_BLIND_SCHEDULE_SET,
     WS_ALARM_TESTS,
     WS_ALARM_TESTS_SET,
+    WS_PURIFIER_DISPLAY,
+    WS_PURIFIER_DISPLAY_SET,
     WS_PURIFIER_SCHEDULE,
     WS_PURIFIER_SCHEDULE_SET,
     WS_REMINDER_SET,
@@ -1158,6 +1161,41 @@ async def ws_purifier_schedule_set(hass: HomeAssistant, connection: websocket_ap
     connection.send_result(msg["id"], await sched.async_set(change))
 
 
+def _purifier_display(hass: HomeAssistant) -> PurifierDisplay | None:
+    return hass.data.get(DOMAIN, {}).get("purifier_display")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_PURIFIER_DISPLAY})
+@callback
+def ws_purifier_display(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """What the purifier's display does in each mode (off, dim, bright or left alone), the purifier's modes and its display light."""
+    display = _purifier_display(hass)
+    if display is None:
+        connection.send_error(msg["id"], "not_ready", "The purifier display settings aren't running")
+        return
+    connection.send_result(msg["id"], display.status())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PURIFIER_DISPLAY_SET,
+        vol.Optional("enabled"): bool,
+        vol.Optional("entity"): cv.entity_id,
+        vol.Optional("modes"): {cv.string: vol.In(["keep", "off", "dim", "bright"])},
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_purifier_display_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Change what the purifier's display does in each mode (only what's sent changes)."""
+    display = _purifier_display(hass)
+    if display is None:
+        connection.send_error(msg["id"], "not_ready", "The purifier display settings aren't running")
+        return
+    change = {k: v for k, v in msg.items() if k not in ("id", "type")}
+    connection.send_result(msg["id"], await display.async_set(change))
+
+
 def _blind_schedule(hass: HomeAssistant) -> BlindSchedule | None:
     return hass.data.get(DOMAIN, {}).get("blind_schedule")
 
@@ -1654,7 +1692,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
-            ws_purifier_schedule, ws_purifier_schedule_set, ws_blind_schedule, ws_blind_schedule_set, ws_alarm_tests, ws_alarm_tests_set,
+            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_alarm_tests, ws_alarm_tests_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -1858,6 +1896,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("The purifier schedule couldn't start; everything else still works")
         data["purifier_schedule"] = None
+
+    # Nor must the purifier's display settings.
+    purifier_display = PurifierDisplay(hass)
+    try:
+        await purifier_display.async_start()
+        entry.async_on_unload(purifier_display.async_stop)
+        data["purifier_display"] = purifier_display
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The purifier display settings couldn't start; everything else still works")
+        data["purifier_display"] = None
 
     # Nor must the blind schedule.
     blind_schedule = BlindSchedule(hass)

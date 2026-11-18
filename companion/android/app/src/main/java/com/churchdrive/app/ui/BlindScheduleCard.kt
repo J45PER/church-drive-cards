@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,11 +16,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.EntityState
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
@@ -37,6 +40,22 @@ fun rememberBlindSchedule(entity: String): MutableState<BlindScheduleState?> {
     }
     DisposableEffect(api) {
         val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_blind_schedule_changed")) { changed++ } ?: -1
+        onDispose { if (sub >= 0) api?.close(sub) }
+    }
+    return state
+}
+
+/** What the air purifier's display does in each mode (`church_drive/purifier_display`), refreshed when it changes; null until the house answers (and for good from an older house). */
+@Composable
+fun rememberPurifierDisplayModes(): MutableState<PurifierDisplayModes?> {
+    val api = LocalHaApi.current
+    val state = remember { mutableStateOf<PurifierDisplayModes?>(null) }
+    var changed by remember { mutableIntStateOf(0) }
+    LaunchedEffect(api, changed) {
+        parsePurifierDisplayModes(api?.ask("church_drive/purifier_display", JSONObject()))?.let { state.value = it }
+    }
+    DisposableEffect(api) {
+        val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_purifier_display_changed")) { changed++ } ?: -1
         onDispose { if (sub >= 0) api?.close(sub) }
     }
     return state
@@ -71,9 +90,10 @@ fun DeviceScheduleRows(item: DeviceHealthItem, entities: Map<String, EntityState
     if (!LocalIsAdmin.current) return
     val purifier = rememberPurifierSchedule()
     val purifierEntity = purifier.value?.entity?.takeIf { it.isNotBlank() }
+    val displayModes = rememberPurifierDisplayModes()
     item.entityIds.forEach { id ->
         when {
-            id == purifierEntity -> PurifierScheduleRow(purifier)
+            id == purifierEntity -> { PurifierScheduleRow(purifier); PurifierDisplayRow(displayModes) }
             id.startsWith("cover.") || id.startsWith("fan.") || id.startsWith("humidifier.") -> DeviceScheduleRow(id, entities[id])
         }
     }
@@ -81,17 +101,19 @@ fun DeviceScheduleRows(item: DeviceHealthItem, entities: Map<String, EntityState
 
 /** A Schedule row that opens its editor in place: the header (clock, "Schedule", what's next) and, open, the editor under it. */
 @Composable
-private fun ScheduleRow(line: String, open: Boolean, onToggle: () -> Unit, editor: @Composable (ToneColors) -> Unit) {
+private fun ScheduleRow(
+    line: String, open: Boolean, onToggle: () -> Unit, title: String = "Schedule", icon: String = "cd:clock", editor: @Composable (ToneColors) -> Unit,
+) {
     val neutral = panelNeutral()
     val ink = neutral.onContainer
     EntityCard(neutral.container, ink) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Close the schedule" else "Change the schedule", onClick = onToggle),
+            Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Close $title" else "Change $title", onClick = onToggle),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            HaIcon("cd:clock", CdVectors.Info, ink, 24.dp)
+            HaIcon(icon, CdVectors.Info, ink, 24.dp)
             Column(Modifier.weight(1f)) {
-                Text("Schedule", style = MaterialTheme.typography.titleMedium, color = ink)
+                Text(title, style = MaterialTheme.typography.titleMedium, color = ink)
                 if (!open) Text(line, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
             }
             HaIcon(if (open) "cd:chevron-up" else "cd:chevron-right", CdVectors.Info, ink.copy(alpha = 0.7f), 22.dp)
@@ -167,4 +189,45 @@ private fun PurifierScheduleRow(purifier: MutableState<PurifierScheduleState?>) 
             onDone = { open = false },
         )
     }
+}
+
+/**
+ * The purifier's display by mode: a row for each of its modes with Leave, Off, Dim and Bright. A pick is saved at once; the house sets the
+ * display when the mode changes (so a display changed by hand stays until the next change).
+ */
+@Composable
+private fun PurifierDisplayRow(modes: MutableState<PurifierDisplayModes?>) {
+    val api = LocalHaApi.current
+    val scope = rememberCoroutineScope()
+    val s = modes.value ?: return
+    var open by remember { mutableStateOf(false) }
+    var problem by remember { mutableStateOf<String?>(null) }
+    ScheduleRow(purifierDisplayLine(s), open, { open = !open }, title = "Display by mode", icon = "cd:sun") { tone ->
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (s.display == null) Text("This purifier's display light wasn't found.", style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.8f))
+            s.presetModes.forEach { mode ->
+                Text(presetLabel(mode), style = MaterialTheme.typography.titleSmall, color = tone.onContainer)
+                val items = DISPLAY_MODE_CHOICES.map { (choice, word) ->
+                    TileItem(IconMap.of("purifier", "display_$choice", displayChoiceIcon(choice)), word, s.choiceFor(mode) == choice) {
+                        scope.launch {
+                            val saved = parsePurifierDisplayModes(api?.ask("church_drive/purifier_display/set", purifierDisplaySetBody(mode, choice)))
+                            if (saved != null) { modes.value = saved; problem = null }
+                            else problem = "The house didn't accept that${api?.lastErrorCode?.let { " ($it)" }.orEmpty()}."
+                        }
+                    }
+                }
+                TileRow(items, tone, tone.onContainer)
+            }
+            problem?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            Text("The display is set when the mode changes. Change it by hand and it stays until the next change.", style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.7f))
+        }
+    }
+}
+
+/** The icon a display choice has unless the Icon Styles card says otherwise (the group "purifier", key "display_<choice>"). */
+private fun displayChoiceIcon(choice: String): String = when (choice) {
+    "off" -> "cd:sun-off"
+    "dim" -> "cd:sun-half"
+    "bright" -> "cd:sun"
+    else -> "cd:minus"
 }
