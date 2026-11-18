@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.164.2
+
+- The air purifier's Display control is three buttons: Off, Dim and Bright.
+
 ## 0.164.1
 
 - The air purifier card has a Display control: Off, a slider with a notch for each brightness (Dim, Bright) and On.

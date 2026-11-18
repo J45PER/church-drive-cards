@@ -9,7 +9,7 @@ import kotlin.math.roundToInt
  * The air purifier's display: its brightness light, as a few notches between Off and On.
  *
  * A Philips purifier's display ("Display backlight") is a Home Assistant light, but the device only has a few real steps: off, dim and bright
- * (anything from 1 to 254 comes back as 128, 255 is bright). So the card shows Off, a slider with a notch for each step, and On, not a free
+ * (anything from 1 to 254 comes back as 128, 255 is bright). So the card shows Off and a button for each step, not a free
  * brightness slider. The notches are percentages of full brightness: dim (50%) and bright (100%) unless the card lists others in
  * `display_levels`. The dashboard card has the same rules (`src/purifier-display-logic.js`): change both together.
  */

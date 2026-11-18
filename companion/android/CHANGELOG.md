@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.164.2
+
+- The air purifier's Display control is three buttons: Off, Dim and Bright.
+
 ## 0.164.1
 
 - The air purifier card has a Display control: Off, a slider with a notch for each brightness (Dim, Bright) and On.
