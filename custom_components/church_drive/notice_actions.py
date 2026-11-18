@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-import re
 from typing import Any
 
 from homeassistant.core import Event, HomeAssistant, callback
 
-from .notice_actions_logic import HOUSE_VERBS, split_action
+from .notice_actions_logic import HOUSE_VERBS, NOT_REAL, split_action
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -16,7 +15,6 @@ EVENT_NOTICE_ACTION = "church_drive_notice_action"  # fired by the Church Drive 
 EVENT_APP_ACTION = "mobile_app_notification_action"  # fired by the Home Assistant app
 ZAPPI_MODE = "select.zappi_charge_mode"
 ZAPPI_LOCKED = "binary_sensor.zappi_locked"
-NOT_REAL = re.compile(r"backlight|display|indicator|status")
 
 
 class NoticeActions:

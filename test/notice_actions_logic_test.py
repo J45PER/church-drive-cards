@@ -105,6 +105,14 @@ class NoticeActionsLogic(unittest.TestCase):
         self.assertFalse(na.is_app_only_link("/dashboard-mobile/security"))
         self.assertFalse(na.is_app_only_link("church-drive-camera:camera.x"))
 
+    def test_everything_off_leaves_a_display_and_a_running_purifier_alone(self):
+        # The purifier's fan runs on auto while nobody is home, and its display backlight is not a light somebody left on.
+        for entity in ("fan.hayleys_bedroom_air_purifier", "light.hayleys_bedroom_air_purifier_display_backlight", "light.tv_indicator", "sensor.printer_status"):
+            self.assertTrue(na.NOT_REAL.search(entity), entity)
+        # The things the button is for are still turned off.
+        for entity in ("light.kitchen", "media_player.living_room_tv", "fan.hayleys_bedroom_bedroom_fan", "light.hall_ceiling"):
+            self.assertIsNone(na.NOT_REAL.search(entity), entity)
+
 
 if __name__ == "__main__":
     unittest.main()

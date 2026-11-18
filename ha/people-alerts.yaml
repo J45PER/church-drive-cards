@@ -6,7 +6,8 @@ alias: "Church Drive: people alerts"
 description: >-
   '<Name> gets home or leaves': when someone arrives home or leaves and it is still true 90 seconds later, the people ticked in
   Manager's Notifications table are told (never the person themselves). 'Everyone's out and something's left on': once the house has
-  been empty for 10 minutes and everyone's location is known, a list of lights, TVs, speakers and fans still on.
+  been empty for 10 minutes and everyone's location is known, a list of lights, TVs, speakers and fans still on (not display backlights, the lights Clive keeps on while the
+  house is away, or air purifiers, which are meant to run).
 mode: queued
 max: 10
 triggers:
@@ -72,7 +73,7 @@ actions:
             note: Only when everyone's location is known.
         sequence:
           - variables:
-              left_on: "{% set ns = namespace(l=[]) %}{% for s in states.light if s.state == 'on' and not (s.entity_id is search('backlight|display|indicator|status')) %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{% for s in states.media_player if s.state in ['on', 'playing', 'paused'] %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{% for s in states.fan if s.state == 'on' %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{{ ns.l }}"
+              left_on: "{% set ns = namespace(l=[]) %}{% set intended = (label_entities('away_security_light') + label_entities('away_tv_simulation')) if is_state('input_boolean.clive_away_lights_active', 'on') else [] %}{% for s in states.light if s.state == 'on' and s.entity_id not in intended and not (s.entity_id is search('backlight|display|indicator|status')) %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{% for s in states.media_player if s.state in ['on', 'playing', 'paused'] %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{% for s in states.fan if s.state == 'on' and not (s.entity_id is search('purifier')) %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{{ ns.l }}"
           - condition: template
             value_template: "{{ left_on | count > 0 }}"
           - action: church_drive.notify
