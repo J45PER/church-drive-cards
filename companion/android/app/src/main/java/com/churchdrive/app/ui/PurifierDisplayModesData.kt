@@ -22,8 +22,8 @@ data class PurifierDisplayModes(
 val DISPLAY_MODE_CHOICES: List<Pair<String, String>> = listOf("keep" to "Leave", "off" to "Off", "dim" to "Dim", "bright" to "Bright")
 
 /** The house's answer, or null if it is missing or an older house has none. */
-fun parsePurifierDisplayModes(json: JSONObject?): PurifierDisplayModes? {
-    json ?: return null
+fun parsePurifierDisplayModes(result: Any?): PurifierDisplayModes? {
+    val json = result as? JSONObject ?: return null
     if (!json.has("modes")) return null
     val modes = json.optJSONObject("modes")?.let { m -> m.keys().asSequence().associateWith { m.optString(it, "keep") } }.orEmpty()
     val presets = json.optJSONArray("preset_modes")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() } }.orEmpty()
