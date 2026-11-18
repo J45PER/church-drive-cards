@@ -2,8 +2,8 @@
 // Title in the air-quality colour (grey when off) with the mode and quality;
 // a PM2.5 gauge (good green, fair amber, poor orange, very poor red), the
 // allergen index, a 24-hour PM2.5 graph, mode tiles (Off, Auto, Medium,
-// Turbo, Sleep… grey until selected), the purifier's display (Off, a notched
-// slider and On, from its display backlight light; see purifier-display-logic.js)
+// Turbo, Sleep… grey until selected), the purifier's display (Off and a button for each
+// brightness, from its display backlight light; see purifier-display-logic.js)
 // and filter life bars. Every extra can
 // be switched off in the editor. Picking the purifier finds its PM2.5,
 // allergen and filter sensors automatically (same entity name prefix).
@@ -165,7 +165,7 @@ export const AirPurifierCardEditor = createFormEditor({
     show_allergen: 'Allergen index',
     show_graph: 'PM2.5 graph (24 hours)',
     show_modes: 'Mode buttons',
-    show_display: 'Display (off, brightness, on)',
+    show_display: 'Display (off, dim, bright)',
     show_filters: 'Filter life',
     smooth_graphs: 'Smooth the graph (averages jumpy readings)',
     pm25_entity: 'PM2.5 sensor',
@@ -192,7 +192,6 @@ export class AirPurifierCard extends HTMLElement {
     this._demo = config.demo ? apDemo() : null;
     this._pending = new KitPending(this);
     this._dpending = new KitPending(this);
-    this._dlast = null;
     this._hist = config.demo || !config.pm25_entity ? null : new KitHistory(this, [config.pm25_entity], 24);
   }
 
@@ -219,12 +218,7 @@ export class AirPurifierCard extends HTMLElement {
         <div class="ck-row ap-modes"></div>
         <div class="ap-display" style="display:none; flex-direction:column; gap:6px;">
           <div class="ck-sub ap-dtitle"></div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div class="ap-doff" style="flex:none; width:84px; display:flex;"></div>
-            <input class="ap-dslider" type="range" min="0" max="1" step="1" aria-label="Display brightness" style="flex:1 1 0; min-width:0; margin:0;">
-            <div class="ap-don" style="flex:none; width:84px; display:flex;"></div>
-          </div>
-          <div class="ck-sub ap-dnotches" style="display:flex; justify-content:space-between; padding:0 96px; font-size:0.75rem;"></div>
+          <div class="ck-row ap-dtiles"></div>
         </div>
         <div class="ap-filters" style="display:flex; flex-direction:column; gap:10px;"></div>`);
       this._built = true;
@@ -286,8 +280,8 @@ export class AirPurifierCard extends HTMLElement {
       : [];
     kitTiles(this.querySelector('.ap-modes'), modes, (t) => this._mode(t.key), { column: true });
 
-    // Display: Off, a slider with a notch for each step the display has, and On.
-    this._renderDisplay(color);
+    // Display: Off and a button for each step the display has (Dim, Bright).
+    this._renderDisplay();
 
     // Filters.
     const fBox = this.querySelector('.ap-filters');
@@ -353,41 +347,29 @@ export class AirPurifierCard extends HTMLElement {
     return id && this._hass.states[id] ? id : null;
   }
 
-  _renderDisplay(color) {
+  _renderDisplay() {
     const box = this.querySelector('.ap-display');
     const id = this._displayId();
     box.style.display = id ? 'flex' : 'none';
     if (!id) return;
-    const c = this.config;
-    const levels = displayLevels(c);
+    const levels = displayLevels(this.config);
     const raw = this._demo ? this._demo.display : this._hass.states[id];
     const st = this._dpending.apply(raw);
     const idx = levelIndex(st.state, st.attributes && st.attributes.brightness, levels);
-    const on = idx != null;
-    if (on) this._dlast = idx;
-    const shown = this._dlast == null ? levels.length - 1 : this._dlast;
     const unavailable = st.state === 'unavailable';
-    const slider = this.querySelector('.ap-dslider');
-    slider.max = String(levels.length - 1);
-    if (document.activeElement !== slider && !this._dragging) slider.value = String(shown);
-    slider.disabled = unavailable;
-    slider.style.accentColor = color;
-    slider.style.opacity = on ? '1' : '0.55';
     this.querySelector('.ap-dtitle').textContent = `Display · ${unavailable ? 'Unavailable' : levelWord(idx, levels)}`;
-    this.querySelector('.ap-dnotches').innerHTML = levels.map((_, i) => `<span>${levelWord(i, levels)}</span>`).join('');
-    kitTiles(this.querySelector('.ap-doff'), [{ key: 'off', name: 'Off', icon: iconFor('purifier', 'display_off', 'mdi:eye-off'), color: KIT_COLOR.off, on: !on && !unavailable, disabled: unavailable }], () => this._display(null));
-    kitTiles(this.querySelector('.ap-don'), [{ key: 'on', name: 'On', icon: iconFor('purifier', 'display_on', 'mdi:eye'), color: KIT_COLOR.good, on: on, disabled: unavailable }], () => this._display(this._dlast == null ? levels.length - 1 : this._dlast));
-    if (!this._dwired) {
-      this._dwired = true;
-      slider.addEventListener('input', () => {
-        this._dragging = true;
-        this.querySelector('.ap-dtitle').textContent = `Display · ${levelWord(Number(slider.value), displayLevels(this.config))}`;
-      });
-      slider.addEventListener('change', () => {
-        this._dragging = false;
-        this._display(Number(slider.value));
-      });
-    }
+    const tiles = [
+      { key: 'off', name: 'Off', icon: iconFor('purifier', 'display_off', 'mdi:eye-off'), color: KIT_COLOR.off, on: idx == null && !unavailable, disabled: unavailable },
+      ...levels.map((_, i) => ({
+        key: String(i),
+        name: levelWord(i, levels),
+        icon: iconFor('purifier', levels.length > 1 && i < levels.length - 1 ? 'display_dim' : 'display_bright', levels.length > 1 && i < levels.length - 1 ? 'cd:sun-half' : 'cd:sun'),
+        color: KIT_COLOR.good,
+        on: idx === i,
+        disabled: unavailable,
+      })),
+    ];
+    kitTiles(this.querySelector('.ap-dtiles'), tiles, (t) => this._display(t.key === 'off' ? null : Number(t.key)));
     hydrateIcons(this);
   }
 
@@ -398,7 +380,6 @@ export class AirPurifierCard extends HTMLElement {
     if (!id) return;
     const off = index == null;
     const brightness = off ? null : levelBrightness(index, levels);
-    if (!off) this._dlast = index;
     if (this._demo) {
       this._demo.display.state = off ? 'off' : 'on';
       this._demo.display.attributes = { brightness: off ? null : brightness };
