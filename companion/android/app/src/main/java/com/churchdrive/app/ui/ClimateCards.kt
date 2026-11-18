@@ -284,7 +284,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
                 color = ink.copy(alpha = 0.75f), modifier = Modifier.at(0.5f, displayY, 7f, 0.5f).wrapContentHeight(Alignment.CenterVertically),
             )
             val displayItems = buildList {
-                add(TileItem(IconMap.of("purifier", "display_off", "mdi:eye-off"), "Off", shownDisplay == null && displayLight?.available == true) { setDisplay(null) })
+                add(TileItem(IconMap.of("purifier", "display_off", "cd:sun-off"), "Off", shownDisplay == null && displayLight?.available == true) { setDisplay(null) })
                 levels.indices.forEach { i ->
                     val dim = levels.size > 1 && i < levels.size - 1
                     add(TileItem(if (dim) IconMap.of("purifier", "display_dim", "cd:sun-half") else IconMap.of("purifier", "display_bright", "cd:sun"), displayLevelWord(i, levels), shownDisplay == i) { setDisplay(i) })
