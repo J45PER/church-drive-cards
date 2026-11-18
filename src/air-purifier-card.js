@@ -2,7 +2,9 @@
 // Title in the air-quality colour (grey when off) with the mode and quality;
 // a PM2.5 gauge (good green, fair amber, poor orange, very poor red), the
 // allergen index, a 24-hour PM2.5 graph, mode tiles (Off, Auto, Medium,
-// Turbo, Sleep… grey until selected) and filter life bars. Every extra can
+// Turbo, Sleep… grey until selected), the purifier's display (Off, a notched
+// slider and On, from its display backlight light; see purifier-display-logic.js)
+// and filter life bars. Every extra can
 // be switched off in the editor. Picking the purifier finds its PM2.5,
 // allergen and filter sensors automatically (same entity name prefix).
 
@@ -11,6 +13,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub, kitHealthBanner, kitCompact, kitCompactable, kitBlend } from './card-kit.js';
 import { iconFor, watchIcons } from './icon-library.js';
+import { displayLevels, findDisplay, levelIndex, levelWord, levelBrightness } from './purifier-display-logic.js';
 
 // PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
 // standard (good up to 35, then 75, 115); each band can be changed per card.
@@ -54,7 +57,7 @@ const AP_MODE_ICONS = {
   high: 'mdi:fan-speed-3',
 };
 
-const AP_ROWS = { show_gauge: true, show_allergen: true, show_graph: true, show_modes: true, show_filters: true };
+const AP_ROWS = { show_gauge: true, show_allergen: true, show_graph: true, show_modes: true, show_display: true, show_filters: true };
 const row = (c, k) => (c[k] != null ? !!c[k] : AP_ROWS[k]);
 
 function apDemo() {
@@ -64,6 +67,7 @@ function apDemo() {
       state: 'on',
       attributes: { friendly_name: 'Air Purifier', preset_modes: ['auto', 'turbo', 'medium', 'sleep'], preset_mode: 'auto', model_id: 'AC0951/13' },
     },
+    display: { entity_id: 'light.demo_purifier_display_backlight', state: 'on', attributes: { brightness: 255 } },
     pm25: 30,
     allergen: 3,
     filters: [
@@ -81,6 +85,7 @@ function apSiblings(hass, fanId) {
   const ids = Object.keys(hass.states).filter((id) => id.startsWith(`sensor.${base}_`));
   const find = (re) => ids.find((id) => re.test(id));
   return {
+    display_entity: findDisplay(hass.states, fanId) || '',
     pm25_entity: find(/pm2_?5/),
     allergen_entity: find(/allergen/),
     filters: ids.filter((id) => /filter/.test(id) && !isNaN(Number(hass.states[id].state))).map((entity) => ({ entity })),
@@ -98,7 +103,7 @@ export const AirPurifierCardEditor = createFormEditor({
   fill: (config, hass) => {
     if (config.demo || !config.entity || config.pm25_entity !== undefined || !hass) return config;
     const found = apSiblings(hass, config.entity);
-    return { ...config, pm25_entity: found.pm25_entity || '', allergen_entity: found.allergen_entity || '', filters: found.filters || [] };
+    return { ...config, pm25_entity: found.pm25_entity || '', allergen_entity: found.allergen_entity || '', display_entity: found.display_entity || '', filters: found.filters || [] };
   },
   schema: (config) => [
     ...(config.demo ? [] : [{ name: 'entity', selector: { entity: { domain: 'fan' } } }]),
@@ -121,6 +126,7 @@ export const AirPurifierCardEditor = createFormEditor({
             schema: [
               { name: 'pm25_entity', selector: { entity: { domain: 'sensor' } } },
               { name: 'allergen_entity', selector: { entity: { domain: 'sensor' } } },
+              { name: 'display_entity', selector: { entity: { domain: 'light' } } },
               {
                 name: 'filters',
                 selector: {
@@ -159,10 +165,12 @@ export const AirPurifierCardEditor = createFormEditor({
     show_allergen: 'Allergen index',
     show_graph: 'PM2.5 graph (24 hours)',
     show_modes: 'Mode buttons',
+    show_display: 'Display (off, brightness, on)',
     show_filters: 'Filter life',
     smooth_graphs: 'Smooth the graph (averages jumpy readings)',
     pm25_entity: 'PM2.5 sensor',
     allergen_entity: 'Allergen index sensor (optional)',
+    display_entity: 'Display light (optional)',
     filters: 'Filters',
     good_max: 'Good up to',
     fair_max: 'Fair up to',
@@ -171,6 +179,7 @@ export const AirPurifierCardEditor = createFormEditor({
   },
   helpers: {
     good_max: 'Defaults 35 / 75 / 115, the Chinese standard Philips purifiers use, so the card matches the Philips app.',
+    display_entity: 'The purifier\'s display backlight. Found automatically; clear it to hide the display control.',
     filters: 'Shown as bars; amber under 25% ("Clean soon" for a pre-filter, "Replace soon" otherwise), red under 10%.',
   },
 });
@@ -182,6 +191,8 @@ export class AirPurifierCard extends HTMLElement {
     this._built = false;
     this._demo = config.demo ? apDemo() : null;
     this._pending = new KitPending(this);
+    this._dpending = new KitPending(this);
+    this._dlast = null;
     this._hist = config.demo || !config.pm25_entity ? null : new KitHistory(this, [config.pm25_entity], 24);
   }
 
@@ -206,6 +217,15 @@ export class AirPurifierCard extends HTMLElement {
         </div>
         <div class="ap-graph"></div>
         <div class="ck-row ap-modes"></div>
+        <div class="ap-display" style="display:none; flex-direction:column; gap:6px;">
+          <div class="ck-sub ap-dtitle"></div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="ap-doff" style="flex:none; width:84px; display:flex;"></div>
+            <input class="ap-dslider" type="range" min="0" max="1" step="1" aria-label="Display brightness" style="flex:1 1 0; min-width:0; margin:0;">
+            <div class="ap-don" style="flex:none; width:84px; display:flex;"></div>
+          </div>
+          <div class="ck-sub ap-dnotches" style="display:flex; justify-content:space-between; padding:0 96px; font-size:0.75rem;"></div>
+        </div>
         <div class="ap-filters" style="display:flex; flex-direction:column; gap:10px;"></div>`);
       this._built = true;
     }
@@ -266,6 +286,9 @@ export class AirPurifierCard extends HTMLElement {
       : [];
     kitTiles(this.querySelector('.ap-modes'), modes, (t) => this._mode(t.key), { column: true });
 
+    // Display: Off, a slider with a notch for each step the display has, and On.
+    this._renderDisplay(color);
+
     // Filters.
     const fBox = this.querySelector('.ap-filters');
     const filters = !row(c, 'show_filters')
@@ -321,6 +344,73 @@ export class AirPurifierCard extends HTMLElement {
     };
   }
 
+  // The display light next to the purifier (found by its name unless the card names one), or null for no control.
+  _displayId() {
+    const c = this.config;
+    if (!row(c, 'show_display')) return null;
+    if (this._demo) return this._demo.display.entity_id;
+    const id = findDisplay(this._hass.states, c.entity, c.display_entity);
+    return id && this._hass.states[id] ? id : null;
+  }
+
+  _renderDisplay(color) {
+    const box = this.querySelector('.ap-display');
+    const id = this._displayId();
+    box.style.display = id ? 'flex' : 'none';
+    if (!id) return;
+    const c = this.config;
+    const levels = displayLevels(c);
+    const raw = this._demo ? this._demo.display : this._hass.states[id];
+    const st = this._dpending.apply(raw);
+    const idx = levelIndex(st.state, st.attributes && st.attributes.brightness, levels);
+    const on = idx != null;
+    if (on) this._dlast = idx;
+    const shown = this._dlast == null ? levels.length - 1 : this._dlast;
+    const unavailable = st.state === 'unavailable';
+    const slider = this.querySelector('.ap-dslider');
+    slider.max = String(levels.length - 1);
+    if (document.activeElement !== slider && !this._dragging) slider.value = String(shown);
+    slider.disabled = unavailable;
+    slider.style.accentColor = color;
+    slider.style.opacity = on ? '1' : '0.55';
+    this.querySelector('.ap-dtitle').textContent = `Display · ${unavailable ? 'Unavailable' : levelWord(idx, levels)}`;
+    this.querySelector('.ap-dnotches').innerHTML = levels.map((_, i) => `<span>${levelWord(i, levels)}</span>`).join('');
+    kitTiles(this.querySelector('.ap-doff'), [{ key: 'off', name: 'Off', icon: iconFor('purifier', 'display_off', 'mdi:eye-off'), color: KIT_COLOR.off, on: !on && !unavailable, disabled: unavailable }], () => this._display(null));
+    kitTiles(this.querySelector('.ap-don'), [{ key: 'on', name: 'On', icon: iconFor('purifier', 'display_on', 'mdi:eye'), color: KIT_COLOR.good, on: on, disabled: unavailable }], () => this._display(this._dlast == null ? levels.length - 1 : this._dlast));
+    if (!this._dwired) {
+      this._dwired = true;
+      slider.addEventListener('input', () => {
+        this._dragging = true;
+        this.querySelector('.ap-dtitle').textContent = `Display · ${levelWord(Number(slider.value), displayLevels(this.config))}`;
+      });
+      slider.addEventListener('change', () => {
+        this._dragging = false;
+        this._display(Number(slider.value));
+      });
+    }
+    hydrateIcons(this);
+  }
+
+  // Set the display to a notch (an index into the notches), or off (null).
+  _display(index) {
+    const levels = displayLevels(this.config);
+    const id = this._displayId();
+    if (!id) return;
+    const off = index == null;
+    const brightness = off ? null : levelBrightness(index, levels);
+    if (!off) this._dlast = index;
+    if (this._demo) {
+      this._demo.display.state = off ? 'off' : 'on';
+      this._demo.display.attributes = { brightness: off ? null : brightness };
+      this._render();
+      return;
+    }
+    this._dpending.set(off ? { state: 'off' } : { state: 'on', attrs: { brightness } });
+    this._render();
+    if (off) this._hass.callService('light', 'turn_off', { entity_id: id });
+    else this._hass.callService('light', 'turn_on', { entity_id: id, brightness });
+  }
+
   _mode(key) {
     if (this._demo) {
       const f = this._demo.fan;
@@ -340,7 +430,7 @@ export class AirPurifierCard extends HTMLElement {
 
   getCardSize() {
     const c = this.config;
-    return 2 + (row(c, 'show_gauge') ? 2 : 0) + (row(c, 'show_graph') ? 1 : 0) + (row(c, 'show_modes') ? 1 : 0) + (row(c, 'show_filters') ? 1 : 0);
+    return 2 + (row(c, 'show_gauge') ? 2 : 0) + (row(c, 'show_graph') ? 1 : 0) + (row(c, 'show_modes') ? 1 : 0) + (row(c, 'show_display') ? 1 : 0) + (row(c, 'show_filters') ? 1 : 0);
   }
 
   getGridOptions() {

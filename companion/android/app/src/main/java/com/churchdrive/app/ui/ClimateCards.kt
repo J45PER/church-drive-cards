@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -206,6 +207,29 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     androidx.compose.runtime.LaunchedEffect(on, preset) { if (wanted != null && ((wanted == "__off" && !on) || (on && preset == wanted))) wanted = null }
     val shownOn = when (wanted) { null -> on; "__off" -> false; else -> true }
     val shownPreset = if (wanted != null && wanted != "__off") wanted else preset
+    // The display (its backlight light): Off, a slider with a notch for each step the display has, and On (see PurifierDisplayData.kt; the dashboard card has the same row).
+    val displayId = if (config.optBoolean("show_display", true)) displayEntityFor(config, id, entities) else null
+    val displayLight = displayId?.let { entities[it] }
+    val levels = displayLevels(config)
+    val displayIdx = displayLevelIndex(displayLight?.state, displayLight?.attributes?.optDouble("brightness", Double.NaN)?.takeIf { !it.isNaN() }, levels)
+    // What was just chosen is shown at once (-1 is off) and kept until the display says it has changed, as for the modes.
+    var wantedDisplay by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Int?>(null) }
+    androidx.compose.runtime.LaunchedEffect(wantedDisplay) { if (wantedDisplay != null) { kotlinx.coroutines.delay(30_000); wantedDisplay = null } }
+    androidx.compose.runtime.LaunchedEffect(displayIdx) { if (wantedDisplay != null && ((wantedDisplay == -1 && displayIdx == null) || displayIdx == wantedDisplay)) wantedDisplay = null }
+    val shownDisplay: Int? = when (wantedDisplay) { null -> displayIdx; -1 -> null; else -> wantedDisplay }
+    var lastDisplay by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Int?>(null) }
+    androidx.compose.runtime.LaunchedEffect(shownDisplay) { if (shownDisplay != null) lastDisplay = shownDisplay }
+    var dragging by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Float?>(null) }
+    fun setDisplay(notch: Int?) {
+        val light = displayId ?: return
+        if (notch == null) {
+            wantedDisplay = -1
+            call("light", "turn_off", light, data())
+        } else {
+            wantedDisplay = notch
+            call("light", "turn_on", light, data("brightness" to displayLevelBrightness(notch, levels)))
+        }
+    }
     val modeItems = buildList {
         add(TileItem(IconMap.of("purifier", "off", "mdi:power"), "Off", !shownOn) { wanted = "__off"; call("fan", "turn_off", id, data()) })
         if (presets.isEmpty()) add(TileItem("mdi:air-purifier", "On", shownOn) { wanted = null; call("fan", "turn_on", id, data()) })
@@ -236,6 +260,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     var y = 3f
     val graphY = if (showGraph) { val v = y; y += 2.5f; v } else 0f
     val modesY = y; y += 2f
+    val displayY = y; if (displayId != null) y += 2.25f
     val filtersY = y
     val afterFilters = if (filterRows.isEmpty()) filtersY else filtersY + filterRows.size * 0.75f + 0.25f
     val scheduleY = afterFilters
@@ -256,6 +281,25 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
             ) }
         }
         GridTiles(modeItems, modesY, 1.5f, tone, ink, enabled, stacked = true)
+        if (displayId != null) {
+            val usable = enabled && displayLight?.available == true
+            Text(
+                "Display · ${if (displayLight?.available == true) displayLevelWord(shownDisplay, levels) else "Unavailable"}", style = MaterialTheme.typography.labelSmall,
+                color = ink.copy(alpha = 0.75f), modifier = Modifier.at(0.5f, displayY, 7f, 0.5f).wrapContentHeight(Alignment.CenterVertically),
+            )
+            GridButton(TileItem(IconMap.of("purifier", "display_off", "mdi:eye-off"), "Off", shownDisplay == null && displayLight?.available == true) { setDisplay(null) }, tone, ink, usable, false, Modifier.at(0.5f, displayY + 0.5f, 1.75f, 1f))
+            Slider(
+                value = dragging ?: (shownDisplay ?: lastDisplay ?: (levels.size - 1)).toFloat(),
+                onValueChange = { dragging = it },
+                onValueChangeFinished = { dragging?.let { setDisplay(it.roundToInt().coerceIn(0, levels.size - 1)) }; dragging = null },
+                valueRange = 0f..(levels.size - 1).coerceAtLeast(1).toFloat(),
+                steps = (levels.size - 2).coerceAtLeast(0),
+                enabled = usable,
+                colors = SliderDefaults.colors(thumbColor = tone.accent, activeTrackColor = tone.accent, inactiveTrackColor = ink.copy(alpha = 0.25f), activeTickColor = tone.onAccent, inactiveTickColor = ink.copy(alpha = 0.5f)),
+                modifier = Modifier.at(2.4f, displayY + 0.5f, 3.2f, 1f),
+            )
+            GridButton(TileItem(IconMap.of("purifier", "display_on", "mdi:eye"), "On", shownDisplay != null) { setDisplay(lastDisplay ?: (levels.size - 1)) }, tone, ink, usable, false, Modifier.at(5.75f, displayY + 0.5f, 1.75f, 1f))
+        }
         filterRows.forEachIndexed { k, (fname, left, _) ->
             Row(Modifier.at(0.5f, filtersY + 0.75f * k, 7f, 0.75f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(fname, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, modifier = Modifier.weight(1f))

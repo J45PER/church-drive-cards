@@ -16,6 +16,10 @@ from typing import Any, Callable
 
 PREFIX = "CD_"
 
+# Things "Turn them off" and the lights button leave alone, matched on the entity id: a display's backlight or an indicator is not a light someone left
+# on, and an air purifier is meant to run (on auto) while nobody is home. The "Everyone's out, something's left on" alert (ha/people-alerts.yaml) uses the same words.
+NOT_REAL = re.compile(r"backlight|display|indicator|status|purifier")
+
 # Buttons that change something in the house.
 HOUSE_VERBS = ("lights_on", "dock", "all_off", "car_now", "car_pause", "backup", "clive_resume")
 # Buttons the Church Drive app handles on the phone: hide this kind for a while, or bring this one back later.
