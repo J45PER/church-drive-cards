@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.164.4
+
+- The air purifier's device page has Display by mode: for each mode, Leave, Off, Dim or Bright (Sleep turns the display off until you change it).
+
 ## 0.164.3
 
 - The air purifier's Display Off button has its own icon, the sun with a line through it.
