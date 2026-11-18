@@ -112,6 +112,12 @@ Open:
   - Talk through go2rtc connects to the camera over the LAN, which it does per the README's examples.
   - Notifications contain no footage, or only what you accept leaves the house.
 
+## Camera choices (decided, pending bench tests)
+
+- **Doorbell: Tapo D260.** The only option found with both colour night vision and RTSP. Talk is wanted but can be lived without. Must pass the bench test (RTSP stream, and talk through go2rtc's `tapo://` route with the cloud password) before it's fitted. If RTSP fails, the doorbell becomes a Reolink with IR night vision.
+- **Cameras: talk is required.** Each camera needs RTSP for Frigate and working two-way talk through go2rtc. Reolink's own list includes RTSP and ONVIF, but its FAQ warns that two-way audio may vary on third-party platforms, so test talk on the bench before buying any Reolink for the cameras.
+- **Night vision on the cameras:** not decided. Colour at night is wanted on the doorbell. For the other cameras, check each model's night-vision type when choosing.
+
 ## Camera streams and talk (decided)
 
 - **Frigate runs on the NAS**, with recordings on its own drives. Not on the Beelink.
