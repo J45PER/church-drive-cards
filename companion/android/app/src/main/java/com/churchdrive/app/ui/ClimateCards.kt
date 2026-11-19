@@ -453,12 +453,18 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
 private fun WeekForecastPage(entityId: String, weather: EntityState, onClose: () -> Unit) {
     val api = LocalHaApi.current
     var days by remember(entityId) { mutableStateOf<List<ForecastDay>?>(null) }
+    var hours by remember(entityId) { mutableStateOf<List<ForecastHour>>(emptyList()) }
     DisposableEffect(entityId) {
-        var subscription = -1
-        if (api != null) subscription = api.subscribe("weather/subscribe_forecast", data("entity_id" to entityId, "forecast_type" to "daily")) { event -> days = parseDailyForecast(event) }
-        onDispose { if (subscription >= 0) api?.close(subscription) }
+        val subs = if (api == null) emptyList() else listOf(
+            api.subscribe("weather/subscribe_forecast", data("entity_id" to entityId, "forecast_type" to "daily")) { event -> days = parseDailyForecast(event) },
+            // The hours, for an opened day's Morning, Afternoon, Evening and Night (only about the next two days have them).
+            api.subscribe("weather/subscribe_forecast", data("entity_id" to entityId, "forecast_type" to "hourly")) { event -> hours = parseHourlyForecast(event) },
+        )
+        onDispose { subs.filter { it >= 0 }.forEach { api?.close(it) } }
     }
     val windUnit = weather.str("wind_speed_unit") ?: ""
+    // Which days are open (tap a day to open or close its breakdown).
+    var open by remember { mutableStateOf(setOf<Long>()) }
     FullPage("This week", onBack = onClose) {
         val list = days
         when {
@@ -466,26 +472,73 @@ private fun WeekForecastPage(entityId: String, weather: EntityState, onClose: ()
             list.isEmpty() -> Text("Data not available", style = MaterialTheme.typography.bodyMedium)
             else -> list.take(7).forEach { d ->
                 val tone = toneColors(weatherTone(d.condition))
-                EntityCard(tone.container, tone.onContainer) {
+                val ink = tone.onContainer
+                val isOpen = d.timeMs in open
+                EntityCard(
+                    tone.container, ink,
+                    Modifier.clickable(onClickLabel = if (isOpen) "Close the day" else "Open the day") { open = if (isOpen) open - d.timeMs else open + d.timeMs },
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         ToneIconName(weatherIcon(d.condition), CdVectors.Info, tone, 44)
                         Column(Modifier.weight(1f)) {
-                            Text(forecastDayName(d.timeMs), style = MaterialTheme.typography.titleMedium, color = tone.onContainer)
+                            Text(forecastDayName(d.timeMs), style = MaterialTheme.typography.titleMedium, color = ink)
                             Text(
                                 listOfNotNull(
                                     presetLabel(d.condition.replace('-', ' ')),
                                     d.rainChance?.let { "$it% rain" },
                                     d.wind?.let { "Wind ${it.roundToInt()} $windUnit".trim() },
                                 ).joinToString(" · "),
-                                style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.85f),
+                                style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.85f),
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(d.high?.let { "${it.roundToInt()}°" } ?: "–", style = MaterialTheme.typography.headlineSmall, color = tone.accent)
-                            d.low?.let { Text("${it.roundToInt()}°", style = MaterialTheme.typography.bodyMedium, color = tone.onContainer.copy(alpha = 0.75f)) }
+                            d.low?.let { Text("${it.roundToInt()}°", style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.75f)) }
                         }
                     }
+                    if (isOpen) DayBreakdown(d, dayParts(hours, d.timeMs), windUnit, ink)
                 }
+            }
+        }
+    }
+}
+
+/**
+ * An opened day: Morning, Afternoon, Evening and Night, each with its weather, temperatures, rain and wind, from the hourly
+ * forecast. A day beyond the hours (about two days ahead) shows its own rain, wind direction, humidity and UV instead.
+ */
+@Composable
+private fun DayBreakdown(day: ForecastDay, parts: List<DayPart>, windUnit: String, ink: androidx.compose.ui.graphics.Color) {
+    fun t(v: Double?) = v?.let { "${it.roundToInt()}°" }
+    fun wind(speed: Double?, bearing: Double?) = speed?.let { "Wind ${it.roundToInt()} $windUnit".trim() + (bearing?.let { b -> " ${compassPoint(b)}" } ?: "") }
+    if (parts.isEmpty()) {
+        val facts = listOfNotNull(
+            day.rain?.let { "Rain ${"%.1f".format(it)} mm" },
+            wind(day.wind, day.bearing),
+            day.humidity?.let { "Humidity ${it.roundToInt()}%" },
+            day.uv?.let { "UV ${"%.1f".format(it).removeSuffix(".0")}" },
+        )
+        Text(facts.ifEmpty { listOf("Data not available") }.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = ink)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        parts.forEach { p ->
+            val partTone = toneColors(weatherTone(p.condition))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ToneIconName(weatherIcon(p.condition), CdVectors.Info, partTone, 32)
+                Column(Modifier.weight(1f)) {
+                    Text(p.name, style = MaterialTheme.typography.bodyLarge, color = ink)
+                    Text(
+                        listOfNotNull(
+                            presetLabel(p.condition.replace('-', ' ')),
+                            if (p.rain >= 0.05) "Rain ${"%.1f".format(p.rain)} mm" else null,
+                            wind(p.wind, p.bearing),
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.85f),
+                    )
+                }
+                val range = if (p.low != null && p.high != null && p.low.roundToInt() != p.high.roundToInt()) "${t(p.low)}–${t(p.high)}" else t(p.high ?: p.low) ?: "–"
+                Text(range, style = MaterialTheme.typography.titleMedium, color = ink)
             }
         }
     }
