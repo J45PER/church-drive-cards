@@ -354,6 +354,40 @@ fun climateWord(c: EntityState?): String = when {
     else -> "Idle"
 }
 
+/** What the thermostat is doing now: "heating" (preheating counts), "cooling", "drying", "fan", or null (idle, or off). */
+fun climateAction(c: EntityState?): String? = when (val a = c?.str("hvac_action")) {
+    "heating", "preheating" -> "heating"
+    "cooling", "drying", "fan" -> a
+    else -> null
+}
+
+/** True while it is heating or cooling: the dashboard's card only takes the tint of its colour then. */
+fun climateBusy(c: EntityState?): Boolean = climateAction(c).let { it == "heating" || it == "cooling" }
+
+/**
+ * The word on a thermostat card: Heating, Cooling, Drying, Fan or Idle, with its preset in front when it has one ("Eco · Idle",
+ * "Eco · Heating"); Off, or Unavailable. (The dashboard's card says just "Eco" there; this also says what it is doing.)
+ */
+fun climateStatusWord(c: EntityState?): String {
+    if (c == null) return "Loading…"
+    if (c.state == "off") return "Off"
+    if (!c.available) return "Unavailable"
+    val action = climateAction(c)?.replaceFirstChar { it.uppercase() } ?: "Idle"
+    val preset = c.str("preset_mode")?.takeIf { it.isNotBlank() && it != "none" }
+    return if (preset == null) action else "${presetLabel(preset)} · $action"
+}
+
+/**
+ * The card's colours: the full tone while it heats or cools, and while idle the same colour on a flatter ground (the tone's card
+ * ground a little way towards grey), as the dashboard only tints the card while it is working. Off stays grey.
+ */
+@Composable
+fun climateCardTone(c: EntityState?): ToneColors {
+    val tone = toneColors(climateTone(c))
+    if (c == null || c.state == "off" || !c.available || climateBusy(c)) return tone
+    return tone.copy(container = androidx.compose.ui.graphics.lerp(toneColors(Tone.Grey).container, tone.container, 0.45f))
+}
+
 /** [v] moved onto the thermostat's step grid (anchored at its minimum) and kept within its limits, so targets stay tidy: 18, 18.5, 19. */
 fun snapToStep(v: Double, step: Double, min: Double, max: Double): Double {
     val s = if (step > 0) step else 0.5
@@ -389,7 +423,7 @@ fun ClimateCard(
     zone: ZoneControl? = null,
     below: (@Composable () -> Unit)? = null,
 ) {
-    val tone = toneColors(climateTone(climate))
+    val tone = climateCardTone(climate)
     var sheetOpen by remember { mutableStateOf(false) }
     val enabled = climate?.available == true
     val target = climate?.num("temperature")
@@ -487,7 +521,7 @@ fun ClimateCard(
             val firstBtn = 8f - items.size
             Column(Modifier.at(2f, 0.9f, firstBtn - 2f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
                 Text("${temp(cur)}° room", style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
-                Text(climateWord(climate), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
+                Text(climateStatusWord(climate), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
             }
             (quick ?: DEFAULT_QUICK).forEachIndexed { i, q ->
                 SmallModeButton(quickSettingIcon(q), isSelected(q), tone, ink, false, Modifier.atCentre(firstBtn + i, 1.5f, 0.8f, 0.8f), enabled, q.name) { applyQuick(q) }
@@ -500,6 +534,8 @@ fun ClimateCard(
     val zoneY = if (zone != null) { val y = end + 0.5f; end = y + 1f; y } else 0f
     val belowY = if (below != null) { val y = end + 0.5f; end = y + 2f; y } else 0f
     GridCard(tone.container, ink, end + 0.5f, title, deviceEntity = climate?.entityId, fold = fold) {
+        // What it is doing, as a pill on the title row ending before the fold arrow (Heating, Idle, Eco · Idle, Off).
+        Box(Modifier.at(3f, 0.25f, 4f, 0.5f), contentAlignment = Alignment.CenterEnd) { StatusPill(climateStatusWord(climate), tone) }
         // The dial: the ring is the size and place of the alarm's ring.
         Dial(1.25f, 2f, 1.5f)
         // Humidity and the outside temperature from the centre of column C, the room's temperature on the right.
