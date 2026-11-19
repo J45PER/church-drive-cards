@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.165.0
+
+- **Open a day on the weather's Details page** (press and hold the weather on the Climate page, then tap a day) for its Morning, Afternoon, Evening and Night: the weather, temperatures, rain and wind (with its direction) for each. The forecast only has hours for about the next two days; a day further ahead opens to its rain, wind direction, humidity and UV instead.
+
 ## 0.164.5
 
 - **Graphs show at once again.** Opening a card that has a graph (a thermostat, a room, the purifier, a security zone) drew a blank space until the history arrived from Home Assistant, every time. The app now keeps each graph's last history while it's open, so a graph that comes back is drawn straight away and updated behind it when it's more than five minutes old.

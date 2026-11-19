@@ -121,18 +121,78 @@ fun parseForecast(event: JSONObject): List<ForecastPoint> {
 }
 
 /** One day of the week's forecast: its high and low, what it'll be like, the chance of rain (%) and the wind (in the house's unit). */
-data class ForecastDay(val timeMs: Long, val high: Double?, val low: Double?, val condition: String, val rainChance: Int?, val wind: Double?)
+data class ForecastDay(
+    val timeMs: Long,
+    val high: Double?,
+    val low: Double?,
+    val condition: String,
+    val rainChance: Int?,
+    val wind: Double?,
+    /** Rain in mm, wind direction in degrees, humidity (%) and UV index, where the forecast has them. */
+    val rain: Double? = null,
+    val bearing: Double? = null,
+    val humidity: Double? = null,
+    val uv: Double? = null,
+)
+
+/** One hour of the forecast (forecast_type "hourly"; Met Office/met.no give about the next 48 hours). */
+data class ForecastHour(val timeMs: Long, val temperature: Double?, val condition: String, val rain: Double?, val wind: Double?, val bearing: Double?)
+
+private fun JSONObject.forecastNum(key: String) = if (has(key) && !isNull(key)) optDouble(key).takeIf { !it.isNaN() } else null
+
+private fun JSONObject.forecastTime() = runCatching { OffsetDateTime.parse(optString("datetime")).toInstant().toEpochMilli() }.getOrNull()
 
 /** The daily forecast from a `weather/subscribe_forecast` event (forecast_type "daily"). */
 fun parseDailyForecast(event: JSONObject): List<ForecastDay> {
     val a = event.optJSONArray("forecast") ?: return emptyList()
-    fun JSONObject.num(key: String) = if (has(key) && !isNull(key)) optDouble(key).takeIf { !it.isNaN() } else null
     return (0 until a.length()).mapNotNull { i ->
         val o = a.optJSONObject(i) ?: return@mapNotNull null
-        val time = runCatching { OffsetDateTime.parse(o.optString("datetime")).toInstant().toEpochMilli() }.getOrNull() ?: return@mapNotNull null
-        ForecastDay(time, o.num("temperature"), o.num("templow"), o.optString("condition"), o.num("precipitation_probability")?.toInt(), o.num("wind_speed"))
+        val time = o.forecastTime() ?: return@mapNotNull null
+        ForecastDay(
+            time, o.forecastNum("temperature"), o.forecastNum("templow"), o.optString("condition"), o.forecastNum("precipitation_probability")?.toInt(),
+            o.forecastNum("wind_speed"), o.forecastNum("precipitation"), o.forecastNum("wind_bearing"), o.forecastNum("humidity"), o.forecastNum("uv_index"),
+        )
     }
 }
+
+/** The hourly forecast from a `weather/subscribe_forecast` event (forecast_type "hourly"). */
+fun parseHourlyForecast(event: JSONObject): List<ForecastHour> {
+    val a = event.optJSONArray("forecast") ?: return emptyList()
+    return (0 until a.length()).mapNotNull { i ->
+        val o = a.optJSONObject(i) ?: return@mapNotNull null
+        val time = o.forecastTime() ?: return@mapNotNull null
+        ForecastHour(time, o.forecastNum("temperature"), o.optString("condition"), o.forecastNum("precipitation"), o.forecastNum("wind_speed"), o.forecastNum("wind_bearing"))
+    }
+}
+
+/** A part of a day in an opened forecast day: its weather (the most common in those hours), temperatures, rain and strongest wind. */
+data class DayPart(val name: String, val condition: String, val low: Double?, val high: Double?, val rain: Double, val wind: Double?, val bearing: Double?)
+
+/**
+ * A day's hours as Morning (06-12), Afternoon (12-18), Evening (18-24) and Night (that night, 00-06 the next day), leaving out a
+ * part with no hours (one already past today, or beyond the hourly forecast). [dayMs] is any time on that day.
+ */
+fun dayParts(hours: List<ForecastHour>, dayMs: Long, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): List<DayPart> {
+    val date = java.time.Instant.ofEpochMilli(dayMs).atZone(zone).toLocalDate()
+    fun at(d: java.time.LocalDate, h: Int) = d.atStartOfDay(zone).plusHours(h.toLong()).toInstant().toEpochMilli()
+    val parts = listOf(
+        Triple("Morning", at(date, 6), at(date, 12)),
+        Triple("Afternoon", at(date, 12), at(date, 18)),
+        Triple("Evening", at(date, 18), at(date.plusDays(1), 0)),
+        Triple("Night", at(date.plusDays(1), 0), at(date.plusDays(1), 6)),
+    )
+    return parts.mapNotNull { (name, from, to) ->
+        val inPart = hours.filter { it.timeMs in from until to }
+        if (inPart.isEmpty()) return@mapNotNull null
+        val temps = inPart.mapNotNull { it.temperature }
+        val windiest = inPart.filter { it.wind != null }.maxByOrNull { it.wind!! }
+        val condition = inPart.groupingBy { it.condition }.eachCount().maxByOrNull { it.value }!!.key
+        DayPart(name, condition, temps.minOrNull(), temps.maxOrNull(), inPart.sumOf { it.rain ?: 0.0 }, windiest?.wind, windiest?.bearing)
+    }
+}
+
+/** A wind direction in degrees as a compass point ("N", "NE"... "NW"): where the wind comes from. */
+fun compassPoint(bearing: Double): String = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")[(((bearing % 360) + 360) % 360 / 45.0 + 0.5).toInt() % 8]
 
 /** "Today", "Tomorrow", then "Thursday" for a day [days] after today. */
 fun forecastDayName(timeMs: Long, nowMs: Long = System.currentTimeMillis(), zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): String {
