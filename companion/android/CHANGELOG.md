@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.164.5
+
+- **Graphs show at once again.** Opening a card that has a graph (a thermostat, a room, the purifier, a security zone) drew a blank space until the history arrived from Home Assistant, every time. The app now keeps each graph's last history while it's open, so a graph that comes back is drawn straight away and updated behind it when it's more than five minutes old.
+
 ## 0.164.4
 
 - The air purifier's device page has Display by mode: for each mode, Leave, Off, Dim or Bright (Sleep turns the display off until you change it).
@@ -20,10 +24,6 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - The air purifier card has a Display control: Off, a slider with a notch for each brightness (Dim, Bright) and On.
 - An air purifier is no longer counted as something left on when everyone is out.
-
-## 0.164.1
-
-- **Graphs show at once again.** Opening a card that has a graph (a thermostat, a room, the purifier, a security zone) drew a blank space until the history arrived from Home Assistant, every time. The app now keeps each graph's last history while it's open, so a graph that comes back is drawn straight away and updated behind it when it's more than five minutes old.
 
 ## 0.164.0
 
