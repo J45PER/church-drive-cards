@@ -47,7 +47,7 @@ NOTED: dict[str, set[str] | None] = {
     "valve": None, "water_heater": None, "siren": None, "vacuum": None, "scene": None, "input_boolean": None,
     "alarm_control_panel": None, "media_player": None, "script": None, "automation": {"turn_on", "turn_off", "toggle", "trigger"},
     "button": {"press"}, "todo": {"add_item", "update_item", "remove_item"}, "number": {"set_value"}, "select": {"select_option"},
-    "church_drive": {"apply_scene", "shopping_add", "steps_create"},
+    "church_drive": {"apply_scene", "apply_hybrid", "shopping_add", "steps_create"},
 }
 # Even within those: not worth a line.
 SKIPPED = {("media_player", "volume_set"), ("media_player", "volume_mute"), ("media_player", "select_source")}
@@ -70,7 +70,7 @@ _VERBS = {
     "alarm_arm_night": "armed (night)", "alarm_arm_vacation": "armed (vacation)", "alarm_trigger": "triggered",
     "start": "started", "stop": "stopped", "pause": "paused", "return_to_base": "sent home", "clean_spot": "cleaned a spot of",
     "locate": "located", "media_play": "played", "media_pause": "paused", "media_stop": "stopped", "media_next_track": "skipped",
-    "media_previous_track": "went back on", "media_play_pause": "played or paused", "apply_scene": "applied a scene to",
+    "media_previous_track": "went back on", "media_play_pause": "played or paused", "apply_scene": "applied a scene to", "apply_hybrid": "applied a hybrid scene",
     "press": "pressed", "trigger": "ran", "add_item": "added to", "update_item": "changed an item on", "remove_item": "removed from",
     "set_value": "set", "select_option": "set", "shopping_add": "added to the shopping list", "steps_create": "made a steps list",
 }
@@ -199,7 +199,7 @@ _ALARM_HEADLINES = {
     "alarm_arm_night": "Alarm armed: Night", "alarm_arm_vacation": "Alarm armed: Vacation", "alarm_trigger": "Alarm went off",
 }
 # Services whose wording only reads verb-first ("added to Shopping list"): no headline, the apps use the text.
-_NO_HEADLINE = {"add_item", "update_item", "remove_item", "press", "trigger", "clean_spot", "locate", "apply_scene", "shopping_add", "steps_create"}
+_NO_HEADLINE = {"add_item", "update_item", "remove_item", "press", "trigger", "clean_spot", "locate", "apply_scene", "apply_hybrid", "shopping_add", "steps_create"}
 _HEADLINE_VERBS = {"media_play": "playing", "media_next_track": "skipped to the next track", "media_previous_track": "went back a track", "set_cover_position": "moved"}
 
 

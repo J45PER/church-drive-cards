@@ -177,11 +177,13 @@ class MainActivity : ComponentActivity() {
                         val registry by vm.registry.collectAsStateWithLifecycle()
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
                         val assistantCtl = remember { com.churchdrive.app.ui.AssistantController() }
+                        val hybrids = com.churchdrive.app.ui.rememberHybridList(vm.haApi)
                         CompositionLocalProvider(
                             com.churchdrive.app.ui.LocalAssistant provides assistantCtl,
                             // The Security page's status lines and base station tiles, shown on its Details pages.
                             com.churchdrive.app.ui.LocalSecurityDetails provides panels[com.churchdrive.app.ui.DashboardPanels.SECURITY_DETAILS].orEmpty(),
                             LocalSceneLooks provides sceneLooks,
+                            com.churchdrive.app.ui.LocalHybrids provides hybrids,
                             LocalTemplates provides vm.templates,
                             LocalBaseUrl provides vm.baseUrl,
                             LocalCameraHost provides vm.cameraHost,
