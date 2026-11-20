@@ -112,6 +112,7 @@ def clean_routine(raw: Any, now: datetime, keep: dict[str, Any] | None = None) -
         "when": when,
         "enabled": bool(raw.get("enabled", old.get("enabled", True))),
         "by": str(raw.get("by", old.get("by")) or "")[:60],
+        "src": "user" if raw.get("src", old.get("src")) == "user" else "clive",
         "made": old.get("made") or now.replace(tzinfo=None).isoformat(timespec="minutes"),
         "done": old.get("done") if when["kind"] == "once" and "when" not in raw else None,
     }

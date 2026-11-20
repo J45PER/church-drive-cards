@@ -353,6 +353,19 @@ fun HomeScreen(
         },
         experimentalContent = { ExperimentalPage(entities, registry, call) },
         activityContent = { ActivityPage() },
+        upcomingContent = {
+            UpcomingPage(
+                isAdmin, entities,
+                onOpenPage = { name ->
+                    when (name) {
+                        "todo" -> { panel = null; openTodo() }
+                        "security" -> go(Page.Security)
+                        "climate" -> go(Page.Climate)
+                    }
+                },
+                onOpenDevice = { entity -> panel = null; openDeviceFor(entity) },
+            )
+        },
     )
     }
 }

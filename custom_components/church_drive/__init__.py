@@ -66,6 +66,8 @@ from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIG
 from .apply import async_apply
 from .blind_schedule import BlindSchedule
 from .routines import Routines
+from .upcoming_logic import build as build_upcoming
+from .blind_schedule_logic import words_for as blind_words
 from .routines_logic import DAY_NAMES as ROUTINE_DAYS
 from .purifier_display import PurifierDisplay
 from .alarm_tests import AlarmTests
@@ -150,6 +152,7 @@ from .const import (
     WS_BLIND_SCHEDULE,
     WS_ROUTINES,
     WS_SCHEDULES,
+    WS_UPCOMING,
     WS_ROUTINES_DELETE,
     WS_ROUTINES_SET,
     WS_BLIND_SCHEDULE_SET,
@@ -1378,7 +1381,7 @@ async def ws_routines_set(hass: HomeAssistant, connection: websocket_api.ActiveC
         if "routine_id" in msg:
             result = await routines.async_update(msg["routine_id"], change)
         else:
-            result = await routines.async_add({**change, "by": connection.user.name if connection.user else ""})
+            result = await routines.async_add({**change, "by": connection.user.name if connection.user else "", "src": "user"})
     except ValueError as err:
         connection.send_error(msg["id"], "invalid_format", str(err))
         return
@@ -1449,6 +1452,61 @@ def ws_schedules(hass: HomeAssistant, connection: websocket_api.ActiveConnection
                 }
             )
     connection.send_result(msg["id"], {"schedules": items})
+
+
+def _hm(value: Any) -> str | None:
+    text = str(value or "")[:5]
+    return text if len(text) == 5 and text[2] == ":" else None
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_UPCOMING, vol.Optional("days"): vol.All(vol.Coerce(int), vol.Range(min=1, max=31))})
+@websocket_api.async_response
+async def ws_upcoming(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Everything the house does at a set time in the next `days` days (7 by default), soonest first: Clive's and hand-made routines, the schedules set
+    from blind, fan, humidifier and air purifier device pages, the alarm tests, Eco or Off overnight heating and to-do tasks that are due. Each item:
+    at, date, time, title, kind, src (clive, user, device), by, card, and tap (where tapping goes)."""
+    now = dt_util.now()
+
+    def friendly(entity: str) -> str:
+        state = hass.states.get(entity)
+        return (state.attributes.get("friendly_name") if state else None) or entity
+
+    routines = _routines(hass)
+    blinds_obj = _blind_schedule(hass)
+    blinds = {e: {**cfg, "name": friendly(e)} for e, cfg in (blinds_obj._cfg.items() if blinds_obj else [])}
+    purifier_obj = _purifier_schedule(hass)
+    purifier = None
+    if purifier_obj is not None and purifier_obj._cfg.get("schedules"):
+        purifier = {**purifier_obj._cfg, "name": friendly(purifier_obj._cfg["entity"])}
+    tests = []
+    tests_obj = hass.data.get(DOMAIN, {}).get("alarm_tests")
+    if tests_obj is not None:
+        for t in tests_obj.status()["tests"].values():
+            if t.get("enabled") and t.get("next"):
+                tests.append({"name": t["name"], "at": t["next"]["at"]})
+    mode = hass.states.get("input_select.clive_overnight_mode")
+    start = hass.states.get("input_datetime.clive_overnight_start")
+    stop = hass.states.get("input_datetime.clive_overnight_end")
+    overnight = {"mode": mode.state, "start": _hm(start.state), "end": _hm(stop.state)} if mode and start and stop else None
+    tasks: list[dict[str, Any]] = []
+    todo_ids = [s.entity_id for s in hass.states.async_all("todo")]
+    if todo_ids:
+        try:
+            got = await hass.services.async_call("todo", "get_items", {"entity_id": todo_ids, "status": ["needs_action"]}, blocking=True, return_response=True)
+        except Exception:  # noqa: BLE001 - tasks are a bonus: the rest of the list still goes
+            got = {}
+        for entity, body in (got or {}).items():
+            for item in (body or {}).get("items", []):
+                if not item.get("due"):
+                    continue
+                parts = str(item.get("description") or "").split(" · ")
+                who = [w.strip() for w in parts[-1][4:].split(",")] if parts and parts[-1].lower().startswith("for ") and parts[-1].lower() != "for everyone" else []
+                tasks.append({"title": item.get("summary", ""), "due": str(item["due"]), "for": who})
+    items = build_upcoming(
+        now, msg.get("days", 7), routines=routines.items() if routines else [], names={}, blinds=blinds, words=blind_words,
+        purifier=purifier, tests=tests, overnight=overnight, tasks=tasks,
+    )
+    connection.send_result(msg["id"], {"items": items, "now": now.replace(tzinfo=None).isoformat(timespec="minutes")})
 
 
 def _alarm_tests(hass: HomeAssistant) -> AlarmTests | None:
@@ -1900,7 +1958,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
-            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_schedules, ws_alarm_tests, ws_alarm_tests_set,
+            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_schedules, ws_upcoming, ws_alarm_tests, ws_alarm_tests_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -2416,7 +2474,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             when = {"kind": "once", "at": str(d.get("at", "")).replace(" ", "T")}
         try:
             made = await routines.async_add(
-                {"entities": d[ATTR_ENTITY_ID], "action": d["action"], "value": d.get("value"), "name": d.get("name", ""), "when": when, "by": who}
+                {"entities": d[ATTR_ENTITY_ID], "action": d["action"], "value": d.get("value"), "name": d.get("name", ""), "when": when, "by": who, "src": "clive"}
             )
         except ValueError as err:
             return {"ok": False, "error": str(err)}

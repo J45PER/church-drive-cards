@@ -102,6 +102,8 @@ fun AccountOverlay(
     experimentalContent: @Composable () -> Unit = {},
     /** The Activity log page (administrators): what people and the assistant did, and who came and went. */
     activityContent: @Composable () -> Unit = {},
+    /** The Upcoming page: what the house does next at a set time, and the one-offs and routines behind it. */
+    upcomingContent: @Composable () -> Unit = {},
     /** The page behind the sidebar, to blur (the bar's acrylic). Null keeps the sidebar solid. */
     acrylic: HazeState? = null,
     /** The height of the bottom bar: the sidebar stops above it, so the bar stays in reach. */
@@ -116,7 +118,7 @@ fun AccountOverlay(
             "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
             "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
             "activity" -> AdminPage("Activity log", { onPanel("account") }) { activityContent() }
-            "schedules" -> AdminPage("Schedules", { onPanel("account") }) { SchedulesPage(isAdmin) }
+            "upcoming" -> AdminPage("Upcoming", { onPanel("account") }) { upcomingContent() }
             else -> if (which.startsWith("manager:")) {
                 managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                     AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
@@ -170,8 +172,8 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, managerPages: List<
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
         PanelCard { PanelRow(CdVectors.BatteryCharging, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
-        // Schedules, for everyone: what Clive was asked to do later or on repeat, and the schedules set from device cards.
-        PanelCard { PanelRow(CdVectors.History, "Schedules", "What Clive and the device cards have scheduled", onClick = { onOpen("schedules") }, leading = { HaIcon("mdi:calendar-clock", CdVectors.History, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) }) }
+        // Upcoming, for everyone: what the house does next at a set time, whoever set it (Clive, a person, or a device's own schedule).
+        PanelCard { PanelRow(CdVectors.History, "Upcoming", "What the house will do next, and what is due", onClick = { onOpen("upcoming") }, leading = { HaIcon("cd:calendar-clock", CdVectors.History, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) }) }
         // The activity log (administrators): what people and the assistant did, and who came and went.
         if (isAdmin) {
             PanelCard { PanelRow(CdVectors.History, "Activity log", "What people and the assistant did, and who came and went", onClick = { onOpen("activity") }) }
