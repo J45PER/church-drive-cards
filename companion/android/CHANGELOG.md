@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.165.2
+
+- **The thermostat's status pill stays when the card is folded.** It sits on the title row in both states, so folded cards still say Heating, Idle or Cooling (the small word under the temperature is gone, as the pill says it).
+
 ## 0.165.1
 
 - **Thermostat cards say what they're doing.** A pill on the card's title row says Heating, Idle or Cooling (with Eco in front when it's on: "Eco · Idle", "Eco · Heating"), and the folded card says the same. While it's idle the card sits on a flatter ground; it takes its full colour only while it's actually heating or cooling, as the dashboard's card does.
