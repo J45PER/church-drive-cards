@@ -1,4 +1,11 @@
 sync_scenes:
+apply_hybrid:
+  fields:
+    id:
+      required: true
+      example: movie
+      selector:
+        text:
 apply_scene:
   fields:
     entity_id:

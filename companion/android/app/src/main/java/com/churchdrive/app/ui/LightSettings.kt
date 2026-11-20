@@ -62,7 +62,7 @@ private fun tintOf(light: EntityState, fallback: Color): Color {
     return fallback
 }
 
-private val SWATCHES = listOf(0.0 to 100.0, 28.0 to 100.0, 50.0 to 100.0, 140.0 to 75.0, 195.0 to 80.0, 235.0 to 70.0, 280.0 to 70.0, 330.0 to 70.0)
+internal val SWATCHES = listOf(0.0 to 100.0, 28.0 to 100.0, 50.0 to 100.0, 140.0 to 75.0, 195.0 to 80.0, 235.0 to 70.0, 280.0 to 70.0, 330.0 to 70.0)
 
 /**
  * A light's full-screen settings, opened by pressing and holding it: brightness for a dimmable light, warm to cool
@@ -105,6 +105,8 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
         // A room, zone or group opens to a list of just its lights; a tap on one opens that light's own settings.
         memberStates.forEach { m -> MemberRow(m, call, tone) { openMember(m.entityId) } }
         Text("Tap a light to open its own settings. The switch turns just that light on or off.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        var openSection by rememberSaveable(light.entityId) { mutableStateOf<String?>(null) }
+        HybridSection(light, memberStates, call, tone, tint, openSection == "hybrid") { openSection = if (openSection == "hybrid") null else "hybrid" }
     } else {
         LightControls(light, light.lightKind(), light.hasWhiteMode(), call, tone, grey, tint)
     }
@@ -137,7 +139,7 @@ private fun PowerBar(light: EntityState, on: Boolean, tint: Color, tone: ToneCol
 
 /** A section that opens only when you go to edit it: an icon, a title and a line saying what it is now, and a chevron. */
 @Composable
-private fun LightSection(icon: String, title: String, summary: String, tint: Color, open: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
+internal fun LightSection(icon: String, title: String, summary: String, tint: Color, open: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 14.dp, vertical = 4.dp),
     ) {
@@ -296,7 +298,7 @@ private fun BarSlider(
 
 /** Saved colours are kept on the phone: one list, up to [MAX_SAVED_COLOURS] hue and saturation pairs. */
 @Composable
-private fun rememberSavedColours(): Pair<List<Pair<Double, Double>>, (List<Pair<Double, Double>>) -> Unit> {
+internal fun rememberSavedColours(): Pair<List<Pair<Double, Double>>, (List<Pair<Double, Double>>) -> Unit> {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("church_drive_light", android.content.Context.MODE_PRIVATE) }
     var saved by remember { mutableStateOf(decodeSavedColours(prefs.getString("saved_colours", null))) }

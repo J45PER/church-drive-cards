@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.167.0
+
+- **Hybrid scenes.** One tap gives each light in a room its own look (leave it, off, a white scene, a colour, a gradient or a dynamic scene). A room's card shows them as split-colour tiles under its scenes; the room's page has a Hybrid scenes section where an administrator makes one, picks its icon from a short list and presses and holds a tile to change it. They are kept in the house, so every phone sees the same ones.
+
 ## 0.166.0
 
 - **A new look for a light's settings.** A power bar at the top switches the light; brightness comes first and moves in 5% steps; the white tone, colour and scenes are sections that open when you edit them. Colour lights have presets, saved colours (up to eight, kept on the phone) and an eyedropper button that opens the colour wheel; white lights have the white scenes under the temperature bar. A room, zone or group opens to a list of just its lights.

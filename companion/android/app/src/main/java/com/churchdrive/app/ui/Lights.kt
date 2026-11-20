@@ -100,10 +100,16 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val showHint = opensSettings(head) && remember(room.head) { LightHoldHint.wants(hintContext, room.head) }
     val lightsEnd = 2f + 1.5f * (if (open) room.rows.size else 0)
     val sceneRows = if (open && room.scenes.isNotEmpty()) room.scenes.chunked(3) else emptyList()
+    // Hybrid scenes (a different look on each light, made by an administrator) go in rows of up to three under the scenes, with their own label.
+    val hybridList = LocalHybrids.current
+    val hybridRows = if (open && room.scenes.isNotEmpty()) hybridList.of(room.head).chunked(3) else emptyList()
+    val scenesEnd = lightsEnd + 1f + 1.25f * sceneRows.size - 0.25f
+    val hybridTop = scenesEnd + 0.25f
     val rows = when {
         !open -> if (showHint) 2.5f else 2f
         sceneRows.isEmpty() -> lightsEnd + 0.5f
-        else -> lightsEnd + 1f + 1.25f * sceneRows.size - 0.25f + 0.5f
+        hybridRows.isEmpty() -> scenesEnd + 0.5f
+        else -> hybridTop + 0.75f + 1.25f * hybridRows.size - 0.25f + 0.5f
     }
     GridCard(tone.container, tone.onContainer, rows, "", deviceEntity = room.head, fold = if (expandable) collapsed else null, arrowTop = 0.5f) {
         LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1f), entities,
@@ -134,6 +140,21 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
                             val haScene = scene.haScene
                             if (haScene != null) call("scene", "turn_on", haScene, data())
                             else call("church_drive", "apply_scene", scene.target, data("scene" to scene.key))
+                        }
+                    }
+                }
+                if (hybridRows.isNotEmpty()) {
+                    Text("Hybrid", style = MaterialTheme.typography.labelLarge, modifier = Modifier.at(0.5f, hybridTop, 3f, 0.5f))
+                    val activeHybrid = hybridList.active[room.head]
+                    hybridRows.forEachIndexed { r, rowItems ->
+                        val n = rowItems.size
+                        val gap = 0.25f
+                        val w = (7f - gap * (n - 1)) / n
+                        rowItems.forEachIndexed { c, hy ->
+                            HybridTile(
+                                hy, active = hy.id == activeHybrid, dimmed = activeHybrid != null && hy.id != activeHybrid,
+                                modifier = Modifier.at(0.5f + c * (w + gap), hybridTop + 0.75f + 1.25f * r, w, 1f), h = cell,
+                            ) { playHybrid(call, hy) }
                         }
                     }
                 }

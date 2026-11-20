@@ -89,6 +89,10 @@ from .const import (
     WS_SHOPPING_ITEM,
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
+    SERVICE_APPLY_HYBRID,
+    WS_HYBRIDS,
+    WS_HYBRID_SAVE,
+    WS_HYBRID_DELETE,
     SERVICE_MEDIA_CONTROL,
     SERVICE_MEDIA_STATUS,
     SERVICE_HEALTH_FIX,
@@ -166,6 +170,7 @@ from .events import URL as EVENTS_URL, CameraEvents, EventFileView
 from .maps import GoogleTiles, MapTileView
 from .health import DeviceHealth
 from .hue import async_sync
+from .hybrid import Hybrids
 from .library import Library, normalise
 from .icons import Icons
 from .assistant import AssistantData
@@ -318,6 +323,10 @@ def _library(hass: HomeAssistant) -> Library:
     return hass.data[DOMAIN]["library"]
 
 
+def _hybrids(hass: HomeAssistant) -> Hybrids:
+    return hass.data[DOMAIN]["hybrids"]
+
+
 def _people(hass: HomeAssistant) -> People | None:
     return hass.data.get(DOMAIN, {}).get("people")
 
@@ -441,6 +450,35 @@ async def ws_people_phone(
 def ws_library(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """Send the scene library (built-in and custom) to the cards."""
     connection.send_result(msg["id"], {"scenes": _library(hass).as_list(), "custom": _library(hass).custom})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_HYBRIDS, vol.Optional("target"): cv.entity_id})
+@callback
+def ws_hybrids(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send the hybrid scenes (all, or one room's) and which one is playing where."""
+    connection.send_result(msg["id"], _hybrids(hass).listing(msg.get("target")))
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_HYBRID_SAVE, vol.Required("hybrid"): dict})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_hybrid_save(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Add or change a hybrid scene (administrators)."""
+    try:
+        hybrid = await _hybrids(hass).async_save_hybrid(msg["hybrid"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], {"hybrid": hybrid})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_HYBRID_DELETE, vol.Required("id"): cv.string})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_hybrid_delete(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Delete a hybrid scene (administrators)."""
+    await _hybrids(hass).async_delete(msg["id"])
+    connection.send_result(msg["id"], {})
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_WATCH})
@@ -1687,7 +1725,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -1707,6 +1745,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     library = Library(hass)
     await library.async_load()
     data["library"] = library
+    hybrids = Hybrids(hass, library)
+    await hybrids.async_load()
+    data["hybrids"] = hybrids
 
     # The mode icons are optional extras: if they can't load, the cards use their built-in ones.
     icons = Icons(hass)
@@ -2128,7 +2169,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise HomeAssistantError(f"Firestore did not take it: {mirror.last_error}")
 
     hass.services.async_register(DOMAIN, SERVICE_SYNC_FIRESTORE, sync_firestore)
-    hass.services.async_register(DOMAIN, SERVICE_APPLY_PROPOSAL, apply_proposal, schema=vol.Schema({vol.Required("id"): cv.string}))
+    hass.services.async_register(DOMAIN, SERVICE_APPLY_PROPOSAL, apply_proposal, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional(ATTR_ENTITY_ID): cv.entity_ids}))
     hass.services.async_register(DOMAIN, SERVICE_DECLINE_PROPOSAL, decline_proposal, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional("reason"): cv.string}))
 
     async def sync_scenes(call: ServiceCall | None = None) -> ServiceResponse:
@@ -2144,6 +2185,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DOMAIN, SERVICE_SYNC_SCENES, sync_scenes, supports_response=SupportsResponse.OPTIONAL
     )
     hass.services.async_register(DOMAIN, SERVICE_APPLY_SCENE, apply_scene, schema=APPLY_SCENE_SCHEMA)
+
+    async def apply_hybrid(call: ServiceCall) -> None:
+        try:
+            await _hybrids(hass).async_play(call.data["id"], call.context)
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    hass.services.async_register(DOMAIN, SERVICE_APPLY_HYBRID, apply_hybrid, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional(ATTR_ENTITY_ID): cv.entity_ids}))
 
     async def media_control(call: ServiceCall) -> ServiceResponse:
         """Control a TV or speaker for whoever asked, if it is theirs to use (the assistant's way in: his own tools are not told who is asking)."""
@@ -2199,6 +2248,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Stop loading the cards on new pages and remove the scene entities."""
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_SCENES)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
+    hass.services.async_remove(DOMAIN, SERVICE_APPLY_HYBRID)
     hass.services.async_remove(DOMAIN, SERVICE_MEDIA_CONTROL)
     hass.services.async_remove(DOMAIN, SERVICE_MEDIA_STATUS)
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
