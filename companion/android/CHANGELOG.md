@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.165.3
+
+- **A new eyedropper icon.** `cd:eyedropper`, drawn for the light colour picker, joins the Clive icon set (nothing in the app shows it yet).
+
 ## 0.165.2
 
 - **The thermostat's status pill stays when the card is folded.** It sits on the title row in both states, so folded cards still say Heating, Idle or Cooling (the small word under the temperature is gone, as the pill says it).

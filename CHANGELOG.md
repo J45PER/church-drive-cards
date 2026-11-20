@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.165.3 + apps 0.165.3** (2026-11-20): a new Clive icon, `cd:eyedropper` (the colour picker's eyedropper), in the icon set for the dashboards and the apps (`mdi:eyedropper` and its variants draw it too). Not used on a screen yet. No Home Assistant change.
 - **v0.165.2 + apps 0.165.2** (2026-11-20): in the Church Drive app, the thermostat's status pill (Heating, Idle, Cooling) stays on the title row when the card is folded; the folded card no longer repeats the word under the temperature. No Home Assistant change.
 - **v0.165.1 + apps 0.165.1** (2026-11-19): in the Church Drive app, thermostat cards show what the thermostat is doing: a pill on the title row (Heating, Idle, Cooling, with the preset in front: "Eco · Idle"), the same word on the folded card, and a flatter card ground while it's idle (the full colour only while it heats or cools, as the dashboard's card tints only then). The Home page and widgets keep their words. No Home Assistant change.
 - **v0.165.0 + apps 0.165.0** (2026-11-19): in the Church Drive app, a day on the weather's Details page opens to its Morning, Afternoon, Evening and Night (weather, temperatures, rain, wind and direction), built from the hourly forecast (`dayParts`); a day beyond the hourly forecast shows its daily rain, wind direction, humidity and UV. No Home Assistant change.
