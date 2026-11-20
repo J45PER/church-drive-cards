@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.166.0
+
+- **A new look for a light's settings.** A power bar at the top switches the light; brightness comes first and moves in 5% steps; the white tone, colour and scenes are sections that open when you edit them. Colour lights have presets, saved colours (up to eight, kept on the phone) and an eyedropper button that opens the colour wheel; white lights have the white scenes under the temperature bar. A room, zone or group opens to a list of just its lights.
+
 ## 0.165.3
 
 - **A new eyedropper icon.** `cd:eyedropper`, drawn for the light colour picker, joins the Clive icon set (nothing in the app shows it yet).

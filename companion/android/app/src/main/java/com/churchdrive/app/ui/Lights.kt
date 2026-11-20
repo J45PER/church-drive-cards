@@ -144,7 +144,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 
 /** A scene as a tile: its colours as a gradient, an icon and its name; the playing scene has a ring. */
 @Composable
-private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modifier: Modifier, h: androidx.compose.ui.unit.Dp = Ui.TallTileHeight, onClick: () -> Unit) {
+internal fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modifier: Modifier, h: androidx.compose.ui.unit.Dp = Ui.TallTileHeight, onClick: () -> Unit) {
     val looks = LocalSceneLooks.current
     // The look set on the dashboards, then the scene's own colours; then a built-in look, then one worked out
     // from a white scene's colour temperature; and last, a colour made from its name so tiles aren't all alike.
