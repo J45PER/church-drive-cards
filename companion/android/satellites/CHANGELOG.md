@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.175.1
+
+- **Upcoming heating items open Heating details.** Tapping a heating item in Upcoming now opens the Heating details page (Back returns to Upcoming), instead of doing nothing.
+
 ## 0.175.0
 
 - No changes here; version kept in step with the other apps.

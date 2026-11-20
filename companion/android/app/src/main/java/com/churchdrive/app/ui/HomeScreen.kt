@@ -136,6 +136,7 @@ fun HomeScreen(
     // going to a page forgets it. (A device opened from Upcoming keeps the account panel open underneath, so closing the device shows it again.)
     var upcomingReturn by rememberSaveable { mutableStateOf<Page?>(null) }
     var todoBack by remember { mutableStateOf<String?>(null) }
+    val openHeating = LocalOpenHeating.current
     androidx.compose.runtime.LaunchedEffect(panel) { if (panel != "todo") todoBack = null }
     fun go(to: Page) { upcomingReturn = null; panel = null; page = to; toTop() }
     fun goFromUpcoming(to: Page) { upcomingReturn = page; panel = null; page = to; toTop() }
@@ -373,7 +374,8 @@ fun HomeScreen(
                         // The To-Do app opens over this one with Upcoming still open under it; the in-app page comes back to Upcoming.
                         "todo" -> if (!com.churchdrive.app.TodoLink.open(context)) { todoBack = "upcoming"; panel = "todo" }
                         "security" -> goFromUpcoming(Page.Security)
-                        "climate" -> goFromUpcoming(Page.Climate)
+                        // Heating details opens over Upcoming, so Back is Upcoming again.
+                        "climate" -> openHeating?.invoke() ?: goFromUpcoming(Page.Climate)
                     }
                 },
                 // The panel stays open under the device's page, so Back from it is Upcoming again.

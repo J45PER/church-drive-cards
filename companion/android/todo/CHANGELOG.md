@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.175.1
+
+- **Upcoming heating items open Heating details.** Tapping a heating item in Upcoming now opens the Heating details page (Back returns to Upcoming), instead of doing nothing.
+
 ## 0.175.0
 
 - No changes here; version kept in step with the other apps.
