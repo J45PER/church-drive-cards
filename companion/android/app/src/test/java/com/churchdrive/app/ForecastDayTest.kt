@@ -1,6 +1,11 @@
 package com.churchdrive.app
 
+import com.churchdrive.app.ui.ForecastDay
 import com.churchdrive.app.ui.ForecastHour
+import com.churchdrive.app.ui.dayDescription
+import com.churchdrive.app.ui.rainWord
+import com.churchdrive.app.ui.uvWord
+import com.churchdrive.app.ui.windWord
 import com.churchdrive.app.ui.compassPoint
 import com.churchdrive.app.ui.dayParts
 import com.churchdrive.app.ui.forecastDayName
@@ -74,5 +79,18 @@ class ForecastDayTest {
 
     @Test fun windDirectionsAsCompassPoints() {
         assertEquals(listOf("N", "NE", "E", "S", "W", "NW", "N"), listOf(0.0, 45.0, 100.0, 180.0, 260.0, 320.0, 359.0).map { compassPoint(it) })
+    }
+
+    @Test fun wordsForUvRainAndWind() {
+        assertEquals(listOf("Low", "Moderate", "High", "Very high"), listOf(1.0, 4.0, 7.0, 9.0).map { uvWord(it) })
+        assertEquals(listOf("Dry", "Light rain", "Some rain", "Heavy rain"), listOf(null, 0.5, 5.0, 12.0).map { rainWord(it) })
+    }
+
+    @Test fun aDayBeyondTheHoursIsDescribedInASentence() {
+        val day = ForecastDay(0L, 10.0, 4.0, "partlycloudy", null, 12.0, rain = 0.0, bearing = 90.0)
+        val text = dayDescription(day, "km/h")
+        assert(text.startsWith("Partlycloudy. Dry.")) { text }
+        assert(text.endsWith("from the E.")) { text }
+        assert(windWord(12.0).isNotBlank())
     }
 }

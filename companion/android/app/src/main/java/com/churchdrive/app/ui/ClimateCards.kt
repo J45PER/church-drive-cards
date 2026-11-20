@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -473,10 +474,12 @@ private fun WeekForecastPage(entityId: String, weather: EntityState, onClose: ()
             else -> list.take(7).forEach { d ->
                 val tone = toneColors(weatherTone(d.condition))
                 val ink = tone.onContainer
-                val isOpen = d.timeMs in open
+                // Today and Tomorrow are always open, with their parts of the day; the later days open when tapped.
+                val always = forecastDayName(d.timeMs).let { it == "Today" || it == "Tomorrow" }
+                val isOpen = always || d.timeMs in open
                 EntityCard(
                     tone.container, ink,
-                    Modifier.clickable(onClickLabel = if (isOpen) "Close the day" else "Open the day") { open = if (isOpen) open - d.timeMs else open + d.timeMs },
+                    if (always) Modifier else Modifier.clickable(onClickLabel = if (isOpen) "Close the day" else "Open the day") { open = if (isOpen) open - d.timeMs else open + d.timeMs },
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         ToneIconName(weatherIcon(d.condition), CdVectors.Info, tone, 44)
@@ -485,7 +488,7 @@ private fun WeekForecastPage(entityId: String, weather: EntityState, onClose: ()
                             Text(
                                 listOfNotNull(
                                     presetLabel(d.condition.replace('-', ' ')),
-                                    d.rainChance?.let { "$it% rain" },
+                                    d.rainChance?.let { "$it% rain" } ?: d.rain?.let { if (it >= 0.05) "${"%.1f".format(it)} mm rain" else "Dry" },
                                     d.wind?.let { "Wind ${it.roundToInt()} $windUnit".trim() },
                                 ).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.85f),
@@ -496,7 +499,7 @@ private fun WeekForecastPage(entityId: String, weather: EntityState, onClose: ()
                             d.low?.let { Text("${it.roundToInt()}°", style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.75f)) }
                         }
                     }
-                    if (isOpen) DayBreakdown(d, dayParts(hours, d.timeMs), windUnit, ink)
+                    if (isOpen) DayBreakdown(d, dayParts(hours, d.timeMs), windUnit, ink, whole = always)
                 }
             }
         }
@@ -504,21 +507,28 @@ private fun WeekForecastPage(entityId: String, weather: EntityState, onClose: ()
 }
 
 /**
- * An opened day: Morning, Afternoon, Evening and Night, each with its weather, temperatures, rain and wind, from the hourly
- * forecast. A day beyond the hours (about two days ahead) shows its own rain, wind direction, humidity and UV instead.
+ * An opened day: Morning, Afternoon, Evening and Night, each with its weather, temperatures and a line of rain, wind, humidity, cloud and UV, from
+ * the hourly forecast. A day the hours don't reach (about two days ahead) shows what it is like in a sentence and every figure the daily forecast
+ * has, labelled; a day the hours half reach shows its parts and then the whole day's figures. [whole] (Today and Tomorrow, always open) adds the
+ * whole day's figures under the parts too.
  */
 @Composable
-private fun DayBreakdown(day: ForecastDay, parts: List<DayPart>, windUnit: String, ink: androidx.compose.ui.graphics.Color) {
+private fun DayBreakdown(day: ForecastDay, parts: List<DayPart>, windUnit: String, ink: androidx.compose.ui.graphics.Color, whole: Boolean = false) {
     fun t(v: Double?) = v?.let { "${it.roundToInt()}°" }
     fun wind(speed: Double?, bearing: Double?) = speed?.let { "Wind ${it.roundToInt()} $windUnit".trim() + (bearing?.let { b -> " ${compassPoint(b)}" } ?: "") }
+    fun uv(v: Double?) = v?.let { "${"%.1f".format(it).removeSuffix(".0")} · ${uvWord(it)}" }
+    val facts = listOfNotNull(
+        day.high?.let { "High" to t(it)!! },
+        day.low?.let { "Low" to t(it)!! },
+        day.rain?.let { "Rain" to if (it >= 0.05) "${"%.1f".format(it)} mm" else "Dry" },
+        wind(day.wind, day.bearing)?.let { "Wind" to it.removePrefix("Wind ") },
+        day.humidity?.let { "Humidity" to "${it.roundToInt()}%" },
+        day.uv?.let { "UV" to uv(it)!! },
+    )
     if (parts.isEmpty()) {
-        val facts = listOfNotNull(
-            day.rain?.let { "Rain ${"%.1f".format(it)} mm" },
-            wind(day.wind, day.bearing),
-            day.humidity?.let { "Humidity ${it.roundToInt()}%" },
-            day.uv?.let { "UV ${"%.1f".format(it).removeSuffix(".0")}" },
-        )
-        Text(facts.ifEmpty { listOf("Data not available") }.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = ink)
+        Text(dayDescription(day, windUnit), style = MaterialTheme.typography.bodyMedium, color = ink)
+        FactGrid(facts, ink)
+        Text("Hour by hour isn't out for this day yet.", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.7f))
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -529,16 +539,42 @@ private fun DayBreakdown(day: ForecastDay, parts: List<DayPart>, windUnit: Strin
                 Column(Modifier.weight(1f)) {
                     Text(p.name, style = MaterialTheme.typography.bodyLarge, color = ink)
                     Text(
-                        listOfNotNull(
-                            presetLabel(p.condition.replace('-', ' ')),
-                            if (p.rain >= 0.05) "Rain ${"%.1f".format(p.rain)} mm" else null,
-                            wind(p.wind, p.bearing),
-                        ).joinToString(" · "),
+                        listOfNotNull(presetLabel(p.condition.replace('-', ' ')), wind(p.wind, p.bearing)).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.85f),
                     )
+                    val more = listOfNotNull(
+                        "Rain ${if (p.rain >= 0.05) "${"%.1f".format(p.rain)} mm" else "none"}",
+                        p.humidity?.let { "Humidity ${it.roundToInt()}%" },
+                        p.cloud?.let { "Cloud ${it.roundToInt()}%" },
+                        p.uv?.takeIf { it >= 0.1 }?.let { "UV ${uv(it)}" },
+                    )
+                    Text(more.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.7f))
                 }
                 val range = if (p.low != null && p.high != null && p.low.roundToInt() != p.high.roundToInt()) "${t(p.low)}–${t(p.high)}" else t(p.high ?: p.low) ?: "–"
                 Text(range, style = MaterialTheme.typography.titleMedium, color = ink)
+            }
+        }
+        // The whole day's figures: always under Today and Tomorrow, and for a day the hours only partly reach.
+        if (whole || parts.size < 4) {
+            Text(if (parts.size < 4 && !whole) "The whole day" else "Over the day", style = MaterialTheme.typography.labelMedium, color = ink.copy(alpha = 0.7f))
+            FactGrid(facts, ink)
+        }
+    }
+}
+
+/** Labelled figures in two columns: High, Low, Rain, Wind, Humidity, UV. */
+@Composable
+private fun FactGrid(facts: List<Pair<String, String>>, ink: androidx.compose.ui.graphics.Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        facts.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { (label, value) ->
+                    Column(Modifier.weight(1f)) {
+                        Text(label, style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f))
+                        Text(value, style = MaterialTheme.typography.bodyMedium, color = ink)
+                    }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
     }

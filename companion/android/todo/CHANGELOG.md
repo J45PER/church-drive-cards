@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.171.0
+
+- No changes here; version kept in step with the other apps.
+
 ## 0.170.0
 
 - **Add to the house's sections.** Open a section in Customise this page and choose Add to this section: cards of the same kind from the house's pages, or any single light or device of that kind (more rooms, zones or lights in Lights; other locks, sensors and cameras in Security; and so on), found by name. What you add shows under the section's own cards and can be taken out again; the house's own cards can still only be hidden.
