@@ -252,6 +252,10 @@ fun HomeScreen(
             }
         },
     ) { padding ->
+        // Slide-up sheets start above this bar (BarSheet).
+        val barFoot = padding.calculateBottomPadding()
+        androidx.compose.runtime.SideEffect { SheetInset.bottom = barFoot }
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { SheetInset.bottom = 0.dp } }
         // The pages scroll under the acrylic bar, so the bar's height is padding at the foot of the page, not around it.
         Box(Modifier.fillMaxSize().acrylicBehind(acrylic)) {
         Row(Modifier.fillMaxSize().padding(padding.withoutBottom()).windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {

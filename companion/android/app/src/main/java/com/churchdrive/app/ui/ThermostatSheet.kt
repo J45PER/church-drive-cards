@@ -147,7 +147,7 @@ fun ThermostatSheet(title: String, zone: ZoneControl, tone: ToneColors, call: Ca
     val now = System.currentTimeMillis()
     val lo = zone.lowValue
     val hi = zone.highValue
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)) {
+    BarSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)) {
         AcrylicSheet()
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
@@ -210,7 +210,7 @@ fun ThermostatSheet(title: String, zone: ZoneControl, tone: ToneColors, call: Ca
 fun RoomRangeSheet(title: String, low: EntityState, high: EntityState, tone: ToneColors, call: CallService, onDismiss: () -> Unit) {
     val lo = low.state.toDoubleOrNull()
     val hi = high.state.toDoubleOrNull()
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)) {
+    BarSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)) {
         AcrylicSheet()
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),

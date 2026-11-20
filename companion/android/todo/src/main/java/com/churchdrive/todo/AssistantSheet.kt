@@ -93,9 +93,9 @@ fun AssistantSheet(vm: TodoModel, onClose: () -> Unit) {
             .putExtra(RecognizerIntent.EXTRA_PROMPT, "Say \"add milk\" or \"tick off the bins\"")
         runCatching { speak.launch(i) }.onFailure { reply = "This phone has no speech input. Type it instead." }
     }
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.churchdrive.app.ui.BarSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 20.dp).padding(bottom = 16.dp),
+            Modifier.fillMaxWidth().imePadding().padding(horizontal = 20.dp).padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

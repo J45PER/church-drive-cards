@@ -51,6 +51,8 @@ so it takes the whole width above the columns. Look at a change on a phone uprig
 
 ## Shared across the apps (phone, To-Do, Satellites)
 
+- **Slide-up sheets are `BarSheet`** (`core/.../ui/BarSheet.kt`), never a bare `ModalBottomSheet`: it starts above the app's bottom bar (the phone app sets `SheetInset`), not from the bottom of the screen.
+
 - **Clive's button is one component**: `AssistantRound` and `AssistOrb` in `core/.../ui/AssistantOrb.kt` (the coloured cloud on a circle the
   colour of the bottom bar, white mark over it, 58 dp, with the outline and shadow). Every app uses it; never draw another Clive button, glyph
   circle or orb. The phone app picks the palette (`assistPalette()`); apps with no such setting pass `AssistClassicPalette`.
