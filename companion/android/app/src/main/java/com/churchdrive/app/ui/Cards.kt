@@ -516,7 +516,7 @@ fun ClimateCard(
         }
     }
     if (fold.value) {
-        GridCard(tone.container, ink, 2.5f, title, deviceEntity = climate?.entityId, fold = fold) {
+        GridCard(tone.container, ink, 2.5f, title, deviceEntity = climate?.entityId, fold = fold, onHold = LocalOpenHeating.current) {
             // The status pill stays on the title row when the card is folded, as when it's open.
             Box(Modifier.at(3f, 0.25f, 4f, 0.5f), contentAlignment = Alignment.CenterEnd) { StatusPill(climateStatusWord(climate), tone) }
             Dial(1f, 1.5f, 1f)
@@ -534,7 +534,7 @@ fun ClimateCard(
     var end = 6f
     val zoneY = if (zone != null) { val y = end + 0.5f; end = y + 1f; y } else 0f
     val belowY = if (below != null) { val y = end + 0.5f; end = y + 2f; y } else 0f
-    GridCard(tone.container, ink, end + 0.5f, title, deviceEntity = climate?.entityId, fold = fold) {
+    GridCard(tone.container, ink, end + 0.5f, title, deviceEntity = climate?.entityId, fold = fold, onHold = LocalOpenHeating.current) {
         // What it is doing, as a pill on the title row ending before the fold arrow (Heating, Idle, Eco · Idle, Off).
         Box(Modifier.at(3f, 0.25f, 4f, 0.5f), contentAlignment = Alignment.CenterEnd) { StatusPill(climateStatusWord(climate), tone) }
         // The dial: the ring is the size and place of the alarm's ring.

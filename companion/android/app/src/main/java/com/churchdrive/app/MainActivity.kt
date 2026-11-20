@@ -61,6 +61,9 @@ class MainActivity : ComponentActivity() {
     private var deviceHealthOpen by mutableStateOf(false)
     private var openDevice by mutableStateOf<String?>(null)
 
+    /** Heating details is open (a thermostat was pressed and held). */
+    private var heatingOpen by mutableStateOf(false)
+
     /** A house job (its words) the To-Do app asked to see the device for: worked out once the house's devices have arrived. */
     private var openHouseTask by mutableStateOf<String?>(null)
 
@@ -199,6 +202,7 @@ class MainActivity : ComponentActivity() {
                             LocalCameraHost provides vm.cameraHost,
                             LocalHistory provides vm::history,
                             com.churchdrive.app.ui.LocalOpenDevice provides { ref -> openDevice = ref; deviceHealthOpen = true },
+                            com.churchdrive.app.ui.LocalOpenHeating provides { heatingOpen = true },
                             LocalHaApi provides vm.haApi,
                             LocalUserName provides userName,
                             com.churchdrive.app.ui.LocalAreaNames provides areaNames,
@@ -257,6 +261,9 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                         com.churchdrive.app.ui.DeviceHealthOverlay(openDevice, entities, registry, areaNames) { deviceHealthOpen = false; openDevice = null }
                                     }
+                                }
+                                if (heatingOpen) {
+                                    com.churchdrive.app.ui.HeatingDetailsOverlay(entities, registry, areaNames, vm::call, isAdmin) { heatingOpen = false }
                                 }
                                 openShopping?.let { com.churchdrive.app.ui.ShoppingScreen(it) { openShopping = null } }
                                 if (chargePrompt) {
