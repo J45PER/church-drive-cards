@@ -1,0 +1,47 @@
+# Script script.clive_schedules: list or cancel the scheduled actions (church_drive.list_schedules, cancel_schedule). Exposed to Assist. A copy of the live script.
+alias: Scheduled actions
+description: 'Use this when someone asks what is scheduled ("what have you got scheduled?", "what''s coming up?") or wants one removed ("cancel the blind", "stop the 7am routine"). For cancel give which: its name or a word from it. It returns "say": your whole reply is the text in "say", nothing before or after it.'
+fields:
+  action:
+    description: list or cancel.
+    name: Action
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options: [list, cancel]
+  which:
+    description: For cancel, the name of the scheduled action or a word from it, such as "blind".
+    name: Which
+    required: false
+    selector:
+      text:
+icon: mdi:calendar-check
+mode: parallel
+max: 5
+sequence:
+- if:
+  - condition: template
+    value_template: '{{ action == ''cancel'' }}'
+  then:
+  - action: church_drive.cancel_schedule
+    data:
+      which: '{{ which | default('''') }}'
+    response_variable: gone
+  - variables:
+      result:
+        say: >-
+          {%- if gone.ok -%}Cancelled {{ gone.cancelled | join(', ') }}.
+          {%- elif gone.matches is defined -%}Which one? {{ gone.matches | map(attribute='what') | join(', ') }}.
+          {%- else -%}{{ gone.error }}.{%- endif -%}
+  else:
+  - action: church_drive.list_schedules
+    response_variable: listed
+  - variables:
+      upcoming: '{{ listed.schedules | selectattr(''on'') | rejectattr(''done'') | list }}'
+      result:
+        say: >-
+          {%- if upcoming | count == 0 -%}Nothing is scheduled.
+          {%- else -%}{{ upcoming | map(attribute='what') | join('. ') }}.{%- endif -%}
+- response_variable: result
+  stop: Done

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.172.0
+
+- **Clive can schedule, and waits for your message.** Ask him to do something later or on repeat and the house does it at the time. And if you pause after "Hey ...", he now listens again straight away instead of giving up.
+
 ## 0.171.0
 
 - **A fuller weather week.** On Climate's This week page, Today and Tomorrow are always open, with Morning, Afternoon, Evening and Night each showing the weather, temperatures, wind and direction, rain, humidity, cloud and UV, and the whole day's figures underneath. Later days now say in a sentence what the day will be like and list high, low, rain, wind, humidity and UV.

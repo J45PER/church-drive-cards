@@ -25,6 +25,8 @@
 
 from __future__ import annotations
 
+import re
+
 from homeassistant.util import dt as dt_util
 
 import asyncio
@@ -63,6 +65,8 @@ from .alarm_lights import AlarmLights
 from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
 from .blind_schedule import BlindSchedule
+from .routines import Routines
+from .routines_logic import DAY_NAMES as ROUTINE_DAYS
 from .purifier_display import PurifierDisplay
 from .alarm_tests import AlarmTests
 from .purifier_schedule import PurifierSchedule
@@ -90,6 +94,9 @@ from .const import (
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
     SERVICE_APPLY_HYBRID,
+    SERVICE_CANCEL_SCHEDULE,
+    SERVICE_LIST_SCHEDULES,
+    SERVICE_SCHEDULE_ACTION,
     WS_HYBRIDS,
     WS_SAVED_COLOURS,
     WS_SAVED_COLOURS_SET,
@@ -141,6 +148,9 @@ from .const import (
     WS_CLIVE_DEVICES,
     WS_ALARM_LIGHTS_TEST,
     WS_BLIND_SCHEDULE,
+    WS_ROUTINES,
+    WS_ROUTINES_DELETE,
+    WS_ROUTINES_SET,
     WS_BLIND_SCHEDULE_SET,
     WS_ALARM_TESTS,
     WS_ALARM_TESTS_SET,
@@ -1326,6 +1336,65 @@ async def ws_blind_schedule_set(hass: HomeAssistant, connection: websocket_api.A
         connection.send_error(msg["id"], "invalid_format", str(err))
 
 
+def _routines(hass: HomeAssistant) -> Routines | None:
+    return hass.data.get(DOMAIN, {}).get("routines")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_ROUTINES})
+@callback
+def ws_routines(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Clive's scheduled actions, soonest first (then the ones that are off or done), each with its "Tomorrow at 08:15" text and when it last ran."""
+    routines = _routines(hass)
+    if routines is None:
+        connection.send_error(msg["id"], "not_ready", "Scheduled actions aren't running")
+        return
+    connection.send_result(msg["id"], {"routines": routines.all()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_ROUTINES_SET,
+        vol.Optional("id"): cv.string,
+        vol.Optional("name"): cv.string,
+        vol.Optional("entities"): [cv.entity_id],
+        vol.Optional("action"): cv.string,
+        vol.Optional("value"): vol.Any(None, vol.Coerce(float)),
+        vol.Optional("when"): dict,
+        vol.Optional("enabled"): bool,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_routines_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Make a scheduled action (no id) or change one (only what's sent changes: its name, devices, action, when, or on/off)."""
+    routines = _routines(hass)
+    if routines is None:
+        connection.send_error(msg["id"], "not_ready", "Scheduled actions aren't running")
+        return
+    change = {k: v for k, v in msg.items() if k not in ("id", "type")}
+    try:
+        if "id" in msg:
+            result = await routines.async_update(msg["id"], change)
+        else:
+            result = await routines.async_add({**change, "by": connection.user.name if connection.user else ""})
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+        return
+    connection.send_result(msg["id"], {"routine": result})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_ROUTINES_DELETE, vol.Required("id"): cv.string})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_routines_delete(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Remove a scheduled action."""
+    routines = _routines(hass)
+    if routines is None:
+        connection.send_error(msg["id"], "not_ready", "Scheduled actions aren't running")
+        return
+    connection.send_result(msg["id"], {"removed": await routines.async_remove(msg["id"])})
+
+
 def _alarm_tests(hass: HomeAssistant) -> AlarmTests | None:
     return hass.data.get(DOMAIN, {}).get("alarm_tests")
 
@@ -1775,7 +1844,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
-            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_alarm_tests, ws_alarm_tests_set,
+            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_alarm_tests, ws_alarm_tests_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -2000,6 +2069,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data["purifier_display"] = None
 
     # Nor must the blind schedule.
+    routines = Routines(hass)
+    try:
+        await routines.async_start()
+        entry.async_on_unload(routines.async_stop)
+        data["routines"] = routines
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Scheduled actions couldn't start; everything else still works")
+        data["routines"] = None
+
     blind_schedule = BlindSchedule(hass)
     try:
         await blind_schedule.async_start()
@@ -2245,6 +2323,93 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, SERVICE_APPLY_HYBRID, apply_hybrid, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional(ATTR_ENTITY_ID): cv.entity_ids}))
 
+    _DAYS = {name.lower(): i for i, name in enumerate(ROUTINE_DAYS)}
+    _DAYS.update({"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6})
+
+    def _days(value: Any) -> list[int]:
+        if isinstance(value, str):
+            value = [v for v in re.split(r"[ ,;/]+", value.strip().lower()) if v]
+        days: list[int] = []
+        for v in value or []:
+            key = str(v).strip().lower()
+            if key in ("weekdays", "weekday"):
+                days += [0, 1, 2, 3, 4]
+            elif key in ("weekends", "weekend"):
+                days += [5, 6]
+            elif key in ("every day", "daily", "everyday", "all"):
+                days += list(range(7))
+            elif key in _DAYS:
+                days.append(_DAYS[key])
+            elif key.isdigit() and 0 <= int(key) <= 6:
+                days.append(int(key))
+        return sorted(set(days))
+
+    async def schedule_action(call: ServiceCall) -> ServiceResponse:
+        """Clive's way to do something later or on repeat: a one-off `at` ("2026-11-21 08:15"), or a `time` with `days`."""
+        routines = _routines(hass)
+        if routines is None:
+            raise ServiceValidationError("Scheduled actions aren't running")
+        who = ""
+        if call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            who = user.name if user and user.name else ""
+        d = call.data
+        if d.get("time"):
+            when: dict[str, Any] = {"kind": "repeat", "time": d["time"], "days": _days(d.get("days")) or list(range(7))}
+        else:
+            when = {"kind": "once", "at": str(d.get("at", "")).replace(" ", "T")}
+        try:
+            made = await routines.async_add(
+                {"entities": d[ATTR_ENTITY_ID], "action": d["action"], "value": d.get("value"), "name": d.get("name", ""), "when": when, "by": who}
+            )
+        except ValueError as err:
+            return {"ok": False, "error": str(err)}
+        return {"ok": True, "id": made["id"], "scheduled": made["summary"], "next": made["next"]}
+
+    async def list_schedules(call: ServiceCall) -> ServiceResponse:
+        routines = _routines(hass)
+        items = routines.all() if routines else []
+        return {"count": len(items), "schedules": [{"id": i["id"], "what": i["summary"], "by": i["by"], "next": i["next"], "on": i["enabled"], "done": bool(i.get("done"))} for i in items]}
+
+    async def cancel_schedule(call: ServiceCall) -> ServiceResponse:
+        routines = _routines(hass)
+        if routines is None:
+            raise ServiceValidationError("Scheduled actions aren't running")
+        found = routines.find(call.data["which"])
+        if not found:
+            return {"ok": False, "error": "Nothing scheduled matches that"}
+        if len(found) > 1 and not call.data.get("all"):
+            return {"ok": False, "error": "More than one matches: ask which", "matches": [{"id": i["id"], "what": i["name"]} for i in found]}
+        for item in found:
+            await routines.async_remove(item["id"])
+        return {"ok": True, "cancelled": [i["name"] for i in found]}
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SCHEDULE_ACTION,
+        schedule_action,
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                vol.Required("action"): vol.In(["on", "off", "open", "close", "set"]),
+                vol.Optional("value"): vol.Any(None, vol.Coerce(float)),
+                vol.Optional("name"): cv.string,
+                vol.Optional("at"): cv.string,
+                vol.Optional("time"): cv.string,
+                vol.Optional("days"): vol.Any(cv.string, [cv.string]),
+            }
+        ),
+        supports_response=SupportsResponse.ONLY,
+    )
+    hass.services.async_register(DOMAIN, SERVICE_LIST_SCHEDULES, list_schedules, supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CANCEL_SCHEDULE,
+        cancel_schedule,
+        schema=vol.Schema({vol.Required("which"): cv.string, vol.Optional("all"): cv.boolean}),
+        supports_response=SupportsResponse.ONLY,
+    )
+
     async def media_control(call: ServiceCall) -> ServiceResponse:
         """Control a TV or speaker for whoever asked, if it is theirs to use (the assistant's way in: his own tools are not told who is asking)."""
         entity = call.data[ATTR_ENTITY_ID]
@@ -2300,6 +2465,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_SCENES)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_HYBRID)
+    hass.services.async_remove(DOMAIN, SERVICE_SCHEDULE_ACTION)
+    hass.services.async_remove(DOMAIN, SERVICE_LIST_SCHEDULES)
+    hass.services.async_remove(DOMAIN, SERVICE_CANCEL_SCHEDULE)
     hass.services.async_remove(DOMAIN, SERVICE_MEDIA_CONTROL)
     hass.services.async_remove(DOMAIN, SERVICE_MEDIA_STATUS)
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)

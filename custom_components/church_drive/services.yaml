@@ -1,4 +1,47 @@
 sync_scenes:
+schedule_action:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          multiple: true
+    action:
+      required: true
+      selector:
+        select:
+          options: [on, off, open, close, set]
+    value:
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: box
+    name:
+      selector:
+        text:
+    at:
+      example: "2026-11-21 08:15"
+      selector:
+        text:
+    time:
+      example: "07:00"
+      selector:
+        text:
+    days:
+      example: "mon, tue, wed, thu, fri"
+      selector:
+        text:
+list_schedules:
+cancel_schedule:
+  fields:
+    which:
+      required: true
+      selector:
+        text:
+    all:
+      selector:
+        boolean:
 apply_hybrid:
   fields:
     id:
