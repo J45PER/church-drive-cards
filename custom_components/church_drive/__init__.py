@@ -95,6 +95,8 @@ from .const import (
     WS_SAVED_COLOURS_SET,
     WS_HYBRID_SAVE,
     WS_HYBRID_DELETE,
+    WS_LAYOUT,
+    WS_LAYOUT_SET,
     SERVICE_MEDIA_CONTROL,
     SERVICE_MEDIA_STATUS,
     SERVICE_HEALTH_FIX,
@@ -174,6 +176,7 @@ from .health import DeviceHealth
 from .hue import async_sync
 from .hybrid import Hybrids
 from .saved_colours import SavedColours
+from .layouts import Layouts
 from .library import Library, normalise
 from .icons import Icons
 from .assistant import AssistantData
@@ -332,6 +335,8 @@ def _hybrids(hass: HomeAssistant) -> Hybrids:
 
 def _saved_colours(hass: HomeAssistant) -> SavedColours:
     return hass.data[DOMAIN]["saved_colours"]
+def _layouts(hass: HomeAssistant) -> Layouts:
+    return hass.data[DOMAIN]["layouts"]
 
 
 def _people(hass: HomeAssistant) -> People | None:
@@ -471,6 +476,25 @@ def ws_saved_colours(hass: HomeAssistant, connection: websocket_api.ActiveConnec
 async def ws_saved_colours_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """Replace the saved colours (anyone signed in: they are the colours a light's settings keep)."""
     connection.send_result(msg["id"], await _saved_colours(hass).async_set(msg["colours"]))
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_LAYOUT})
+@callback
+def ws_layout(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send this person's own layout (their changes to the house's pages)."""
+    connection.send_result(msg["id"], _layouts(hass).get(connection.user.id if connection.user else None))
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_LAYOUT_SET, vol.Required("layout"): dict})
+@websocket_api.async_response
+async def ws_layout_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Replace this person's own layout (only theirs: it is kept against their Home Assistant user)."""
+    try:
+        cleaned = await _layouts(hass).async_set(connection.user.id if connection.user else None, msg["layout"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], cleaned)
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_HYBRIDS, vol.Optional("target"): cv.entity_id})
@@ -1746,7 +1770,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_saved_colours, ws_saved_colours_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -1772,6 +1796,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     saved_colours = SavedColours(hass)
     await saved_colours.async_load()
     data["saved_colours"] = saved_colours
+    layouts = Layouts(hass)
+    await layouts.async_load()
+    data["layouts"] = layouts
 
     # The mode icons are optional extras: if they can't load, the cards use their built-in ones.
     icons = Icons(hass)
