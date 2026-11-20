@@ -91,6 +91,8 @@ from .const import (
     SERVICE_APPLY_SCENE,
     SERVICE_APPLY_HYBRID,
     WS_HYBRIDS,
+    WS_SAVED_COLOURS,
+    WS_SAVED_COLOURS_SET,
     WS_HYBRID_SAVE,
     WS_HYBRID_DELETE,
     SERVICE_MEDIA_CONTROL,
@@ -171,6 +173,7 @@ from .maps import GoogleTiles, MapTileView
 from .health import DeviceHealth
 from .hue import async_sync
 from .hybrid import Hybrids
+from .saved_colours import SavedColours
 from .library import Library, normalise
 from .icons import Icons
 from .assistant import AssistantData
@@ -327,6 +330,10 @@ def _hybrids(hass: HomeAssistant) -> Hybrids:
     return hass.data[DOMAIN]["hybrids"]
 
 
+def _saved_colours(hass: HomeAssistant) -> SavedColours:
+    return hass.data[DOMAIN]["saved_colours"]
+
+
 def _people(hass: HomeAssistant) -> People | None:
     return hass.data.get(DOMAIN, {}).get("people")
 
@@ -450,6 +457,20 @@ async def ws_people_phone(
 def ws_library(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """Send the scene library (built-in and custom) to the cards."""
     connection.send_result(msg["id"], {"scenes": _library(hass).as_list(), "custom": _library(hass).custom})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_SAVED_COLOURS})
+@callback
+def ws_saved_colours(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send the colours kept for lights (hue and saturation pairs)."""
+    connection.send_result(msg["id"], _saved_colours(hass).listing())
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_SAVED_COLOURS_SET, vol.Required("colours"): list})
+@websocket_api.async_response
+async def ws_saved_colours_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Replace the saved colours (anyone signed in: they are the colours a light's settings keep)."""
+    connection.send_result(msg["id"], await _saved_colours(hass).async_set(msg["colours"]))
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_HYBRIDS, vol.Optional("target"): cv.entity_id})
@@ -1725,7 +1746,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_saved_colours, ws_saved_colours_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -1748,6 +1769,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hybrids = Hybrids(hass, library)
     await hybrids.async_load()
     data["hybrids"] = hybrids
+    saved_colours = SavedColours(hass)
+    await saved_colours.async_load()
+    data["saved_colours"] = saved_colours
 
     # The mode icons are optional extras: if they can't load, the cards use their built-in ones.
     icons = Icons(hass)

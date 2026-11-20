@@ -89,6 +89,9 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel, acryl
             "colours" -> SidebarSubPage("Colour palettes", { onPanel(back(which)) }) {
                 ColoursPage()
             }
+            "savedcolours" -> SidebarSubPage("Saved colours", { onPanel(back(which)) }) {
+                com.churchdrive.app.ui.SavedColoursPage()
+            }
             "watch", "notifications", "cameras", "people" -> SidebarSubPage(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; "people" -> "People"; else -> "Notifications" }, { onPanel(back(which)) }) {
                 val section = ManagerSections.forPage(vm.managerSections, which)
                 if (section == null) com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
@@ -130,6 +133,12 @@ private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) ->
             PanelRow(
                 CdVectors.Info, "Colour palettes", "Every palette as the house has it. View only: change them on the website",
                 onClick = { onOpen("colours") }, leading = { Icon(painterResource(R.drawable.mdi_palette), contentDescription = null) },
+            )
+        }
+        PanelCard {
+            PanelRow(
+                CdVectors.Info, "Saved colours", "The colours kept for every light, the same on every phone",
+                onClick = { onOpen("savedcolours") }, leading = { com.churchdrive.app.ui.HaIcon("cd:eyedropper", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
             )
         }
         PanelCard { PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") }) }

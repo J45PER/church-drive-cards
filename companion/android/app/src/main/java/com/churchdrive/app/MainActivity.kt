@@ -178,12 +178,19 @@ class MainActivity : ComponentActivity() {
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
                         val assistantCtl = remember { com.churchdrive.app.ui.AssistantController() }
                         val hybrids = com.churchdrive.app.ui.rememberHybridList(vm.haApi)
+                        // The saved colours live in the house now; the ones this phone kept before are sent up the first time the house has none.
+                        val appContext = androidx.compose.ui.platform.LocalContext.current
+                        val legacyColours = remember { com.churchdrive.app.ui.decodeSavedColours(appContext.getSharedPreferences("church_drive_light", android.content.Context.MODE_PRIVATE).getString("saved_colours", null)) }
+                        val savedColours = com.churchdrive.app.ui.rememberSavedColoursState(vm.haApi, legacyColours) {
+                            appContext.getSharedPreferences("church_drive_light", android.content.Context.MODE_PRIVATE).edit().remove("saved_colours").apply()
+                        }
                         CompositionLocalProvider(
                             com.churchdrive.app.ui.LocalAssistant provides assistantCtl,
                             // The Security page's status lines and base station tiles, shown on its Details pages.
                             com.churchdrive.app.ui.LocalSecurityDetails provides panels[com.churchdrive.app.ui.DashboardPanels.SECURITY_DETAILS].orEmpty(),
                             LocalSceneLooks provides sceneLooks,
                             com.churchdrive.app.ui.LocalHybrids provides hybrids,
+                            com.churchdrive.app.ui.LocalSavedColours provides savedColours,
                             LocalTemplates provides vm.templates,
                             LocalBaseUrl provides vm.baseUrl,
                             LocalCameraHost provides vm.cameraHost,

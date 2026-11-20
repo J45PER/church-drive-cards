@@ -186,7 +186,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
     var draft by remember(start) { mutableStateOf(start) }
     var openLight by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
-    val (saved, _) = rememberSavedColours()
+    val saved = LocalSavedColours.current.colours
 
     OutlinedTextField(
         value = draft.name, onValueChange = { draft = draft.copy(name = it.take(20)); message = null }, singleLine = true,

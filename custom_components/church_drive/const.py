@@ -20,6 +20,8 @@ WS_SCENE_SAVE = "church_drive/scene/save"
 WS_SCENE_DELETE = "church_drive/scene/delete"
 WS_SCENE_PREVIEW = "church_drive/scene/preview"
 WS_HYBRIDS = "church_drive/hybrids"
+WS_SAVED_COLOURS = "church_drive/saved_colours"
+WS_SAVED_COLOURS_SET = "church_drive/saved_colours/set"
 WS_HYBRID_SAVE = "church_drive/hybrid/save"
 WS_HYBRID_DELETE = "church_drive/hybrid/delete"
 

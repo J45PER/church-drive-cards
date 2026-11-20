@@ -46,34 +46,6 @@ fun kelvinRgb(kelvin: Int): IntArray {
     return intArrayOf(r.coerceIn(0.0, 255.0).roundToInt(), g.coerceIn(0.0, 255.0).roundToInt(), b.coerceIn(0.0, 255.0).roundToInt())
 }
 
-/** A hue (0-360) and saturation (0-100) to [r, g, b]. */
-fun hsToRgb(hue: Double, sat: Double): IntArray {
-    val s = (sat / 100.0).coerceIn(0.0, 1.0)
-    val h = ((hue % 360 + 360) % 360) / 60.0
-    val c = s
-    val x = c * (1 - Math.abs(h % 2 - 1))
-    val (r, g, b) = when (h.toInt()) {
-        0 -> Triple(c, x, 0.0); 1 -> Triple(x, c, 0.0); 2 -> Triple(0.0, c, x)
-        3 -> Triple(0.0, x, c); 4 -> Triple(x, 0.0, c); else -> Triple(c, 0.0, x)
-    }
-    val m = 1 - c
-    return intArrayOf(((r + m) * 255).roundToInt(), ((g + m) * 255).roundToInt(), ((b + m) * 255).roundToInt())
-}
-
-/** A touch at ([x], [y]) from the wheel's centre on a wheel of [radius]: its hue and saturation (the edge is fully saturated). */
-fun wheelHueSat(x: Double, y: Double, radius: Double): Pair<Double, Double> {
-    val hue = (Math.toDegrees(atan2(y, x)) + 360) % 360
-    val sat = (hypot(x, y) / radius * 100).coerceIn(0.0, 100.0)
-    return hue to sat
-}
-
-/** Where a hue and saturation sit on the wheel, as an offset from its centre in units of the radius: the inverse of [wheelHueSat]. */
-fun wheelPoint(hue: Double, sat: Double): Pair<Double, Double> {
-    val a = Math.toRadians(hue)
-    val d = sat / 100.0
-    return Math.cos(a) * d to Math.sin(a) * d
-}
-
 /** The colour temperature presets this light can reach. */
 fun whitePresets(min: Int, max: Int): List<Pair<String, Int>> =
     listOf("Candle" to 2200, "Warm" to 2700, "Neutral" to 4000, "Daylight" to 5000, "Cool" to 6500)
@@ -85,9 +57,6 @@ fun kelvinWord(k: Int): String = when {
 
 /** The white scenes in Church Drive's library, in the order a light's White section shows them. */
 val WHITE_SCENES = listOf("bright", "cool_bright", "dimmed", "read", "concentrate", "energise", "relax", "rest", "nightlight")
-
-/** Most colours a person can keep. */
-const val MAX_SAVED_COLOURS = 8
 
 /** A brightness bar moves in 5% steps, from 5% to 100%: the nearest step to [fraction] (0 to 1), as a percentage. */
 fun snapBrightness(fraction: Float): Int = ((fraction * 100f / 5f).roundToInt() * 5).coerceIn(5, 100)
@@ -103,15 +72,3 @@ fun decodeSavedColours(text: String?): List<Pair<Double, Double>> =
 
 fun encodeSavedColours(colours: List<Pair<Double, Double>>): String =
     colours.joinToString(";") { "${"%.1f".format(java.util.Locale.ROOT, it.first)},${"%.1f".format(java.util.Locale.ROOT, it.second)}" }
-
-/** Whether two hue and saturation pairs are the same colour to the eye (a few degrees of hue, a few points of saturation). */
-fun sameColour(a: Pair<Double, Double>, b: Pair<Double, Double>): Boolean {
-    val dh = Math.abs(a.first - b.first).let { if (it > 180) 360 - it else it }
-    return dh < 3.0 && Math.abs(a.second - b.second) < 3.0
-}
-
-/** [colour] added to the saved ones (up to [MAX_SAVED_COLOURS]), or taken out when it is already saved. */
-fun toggleSavedColour(saved: List<Pair<Double, Double>>, colour: Pair<Double, Double>): List<Pair<Double, Double>> =
-    if (saved.any { sameColour(it, colour) }) saved.filterNot { sameColour(it, colour) }
-    else if (saved.size >= MAX_SAVED_COLOURS) saved
-    else saved + colour

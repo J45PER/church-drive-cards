@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.168.0
+
+- **Saved colours live in the house.** The colours kept for a light's colour settings (up to eight) are the same on every phone. Clive Admin has a Saved colours page in the account panel to take them out or add one with a colour wheel. Colours already saved on a phone are sent up the first time the house has none.
+
 ## 0.167.0
 
 - **Hybrid scenes.** One tap gives each light in a room its own look (leave it, off, a white scene, a colour, a gradient or a dynamic scene). A room's card shows them as split-colour tiles under its scenes; the room's page has a Hybrid scenes section where an administrator makes one, picks its icon from a short list and presses and holds a tile to change it. They are kept in the house, so every phone sees the same ones.
