@@ -155,7 +155,7 @@ private val FieldShape = RoundedCornerShape(12.dp)
 
 /** A drop-down list: the label above the current choice, and the options in a menu; [onPick] gets the position chosen. */
 @Composable
-private fun ActivityDropdown(label: String, value: String, options: List<String>, modifier: Modifier, onPick: (Int) -> Unit) {
+fun ActivityDropdown(label: String, value: String, options: List<String>, modifier: Modifier, onPick: (Int) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         ActivityField(label, value, Modifier.fillMaxWidth()) { open = true }

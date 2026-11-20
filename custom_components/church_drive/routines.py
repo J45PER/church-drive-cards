@@ -83,6 +83,10 @@ class Routines:
         nxt = next_run(item, now)
         return {**item, "summary": summary(item, now), "next": nxt.isoformat(timespec="minutes") if nxt else None, "last": self._last_result.get(item["id"])}
 
+    def items(self) -> list[dict[str, Any]]:
+        """The stored routines as they are (for the Upcoming list)."""
+        return list(self._items.values())
+
     def all(self) -> list[dict[str, Any]]:
         views = [self._view(i) for i in self._items.values()]
         # Coming up first (soonest first), then the ones that are off or done.

@@ -356,6 +356,12 @@ fun LightingPage(layout: LightLayout, entities: Map<String, EntityState>, areaNa
             }
         }
     }
+    // Lights that switch themselves at a set time (administrators): Clive makes them when asked, and they are changed here.
+    if (LocalIsAdmin.current) {
+        SectionPanel("Routines", iconName = "cd:calendar-clock", tone = Tone.Lights) {
+            LightRoutinesCard(entities)
+        }
+    }
 }
 
 /** Every room grouped for a picker: the Home panel's rooms first, then each floor's (a room is listed once). */
