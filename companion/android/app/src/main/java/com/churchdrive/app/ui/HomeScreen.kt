@@ -132,7 +132,18 @@ fun HomeScreen(
     val pageScroll = rememberScrollState()
     val acrylic = remember { HazeState() }
     val toTop = rememberToTop(pageScroll, scrollBehavior)
-    fun go(to: Page) { panel = null; page = to; toTop() }
+    // Opened from Upcoming: Back returns to Upcoming (and the page you were on), not to the app's pages. A bar button or any other way of
+    // going to a page forgets it. (A device opened from Upcoming keeps the account panel open underneath, so closing the device shows it again.)
+    var upcomingReturn by rememberSaveable { mutableStateOf<Page?>(null) }
+    var todoBack by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(panel) { if (panel != "todo") todoBack = null }
+    fun go(to: Page) { upcomingReturn = null; panel = null; page = to; toTop() }
+    fun goFromUpcoming(to: Page) { upcomingReturn = page; panel = null; page = to; toTop() }
+    androidx.activity.compose.BackHandler(enabled = upcomingReturn != null && panel == null) {
+        upcomingReturn?.let { page = it }
+        upcomingReturn = null
+        panel = "upcoming"
+    }
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
     // A task tapped on the Home page: a house job goes to the device (or place) it is about, a shopping or steps list to the in-app
@@ -353,17 +364,20 @@ fun HomeScreen(
         },
         experimentalContent = { ExperimentalPage(entities, registry, call) },
         activityContent = { ActivityPage() },
+        todoBackTo = todoBack,
         upcomingContent = {
             UpcomingPage(
                 isAdmin, entities,
                 onOpenPage = { name ->
                     when (name) {
-                        "todo" -> { panel = null; openTodo() }
-                        "security" -> go(Page.Security)
-                        "climate" -> go(Page.Climate)
+                        // The To-Do app opens over this one with Upcoming still open under it; the in-app page comes back to Upcoming.
+                        "todo" -> if (!com.churchdrive.app.TodoLink.open(context)) { todoBack = "upcoming"; panel = "todo" }
+                        "security" -> goFromUpcoming(Page.Security)
+                        "climate" -> goFromUpcoming(Page.Climate)
                     }
                 },
-                onOpenDevice = { entity -> panel = null; openDeviceFor(entity) },
+                // The panel stays open under the device's page, so Back from it is Upcoming again.
+                onOpenDevice = { entity -> openDeviceFor(entity) },
             )
         },
     )

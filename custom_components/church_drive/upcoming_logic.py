@@ -62,7 +62,7 @@ def from_blinds(now: datetime, end: datetime, blinds: dict[str, dict[str, Any]],
                         continue
                     at = _at(day, hhmm, now.tzinfo)
                     if now < at <= end:
-                        out.append(_item(at, f"{word} {cfg.get('name', entity)}", kind, "device", {"to": "device", "entity": entity}, card="Blind card" if kind == "blind" else "Device card"))
+                        out.append(_item(at, f"{word} {str(cfg.get('name', entity)).strip()}", kind, "device", {"to": "device", "entity": entity}, card="Blind card" if kind == "blind" else "Device card"))
     return out
 
 
@@ -78,7 +78,7 @@ def from_purifier(now: datetime, end: datetime, purifier: dict[str, Any] | None)
                 if hhmm:
                     at = _at(day, hhmm, now.tzinfo)
                     if now < at <= end:
-                        out.append(_item(at, f"{purifier.get('name', 'Air purifier')} to {mode}", "fan", "device", {"to": "device", "entity": purifier["entity"]}, card="Purifier card"))
+                        out.append(_item(at, f"{str(purifier.get('name', 'Air purifier')).strip()} to {mode}", "fan", "device", {"to": "device", "entity": purifier["entity"]}, card="Purifier card"))
     return out
 
 

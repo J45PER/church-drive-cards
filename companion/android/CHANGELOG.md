@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.173.1
+
+- **Back goes back to Upcoming.** A device, or the Security, Climate or To-do page, opened from Upcoming returns to Upcoming when you go Back, instead of the app's pages.
+
 ## 0.173.0
 
 - **Upcoming.** A new page in the account panel lists everything the house does at a set time, in time order, with who set each one. Tap a one-off to change or remove it, or add one with the button (administrators). Anything that repeats opens where it is set. The Lights page has a Routines card for lights that switch themselves on or off at a set time.
