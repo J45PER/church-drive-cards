@@ -80,6 +80,8 @@ import org.json.JSONObject
 @Composable
 fun AdminApp(vm: AdminModel) {
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // The colours the house keeps for lights, listed (and managed) under Saved colours in the account panel.
+    val savedColours = com.churchdrive.app.ui.rememberSavedColoursState(vm.api)
     // The blur source for the sidebar and the bottom bar: the page behind them.
     val acrylic = remember { HazeState() }
     // Swiping left anywhere that doesn't scroll sideways opens the account panel, as in the other apps, as well as the person's button.
@@ -94,7 +96,8 @@ fun AdminApp(vm: AdminModel) {
     ) {
         androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api, com.churchdrive.app.ui.LocalBaseUrl provides vm.baseUrl,
             com.churchdrive.app.ui.LocalTemplates provides vm.templates, com.churchdrive.app.ui.LocalUserName provides vm.personName,
-            com.churchdrive.app.ui.LocalIsAdmin provides vm.isAdmin, com.churchdrive.app.ui.LocalAreaNames provides vm.areaNames) {
+            com.churchdrive.app.ui.LocalIsAdmin provides vm.isAdmin, com.churchdrive.app.ui.LocalAreaNames provides vm.areaNames,
+            com.churchdrive.app.ui.LocalSavedColours provides savedColours) {
             AdminPages(vm, acrylic = acrylic, sidebarOpen = panel != null, onSidebar = { panel = if (panel == null) "account" else null }, onPage = { panel = null }, onPerson = { panel = "account" }, onPanel = { panel = it })
             // Inside the providers too: the side panel's pages (Notifications, People, Camera links, Watch) ask the house through them, and
             // outside them they had no line to the house and always said they couldn't be read.

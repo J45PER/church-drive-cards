@@ -5,9 +5,13 @@ import com.churchdrive.app.ui.WHITE_SCENES
 import com.churchdrive.app.ui.decodeSavedColours
 import com.churchdrive.app.ui.encodeSavedColours
 import com.churchdrive.app.ui.sameColour
+import com.churchdrive.app.ui.parseSavedColours
+import com.churchdrive.app.ui.savedColoursBody
 import com.churchdrive.app.ui.snapBrightness
 import com.churchdrive.app.ui.toggleSavedColour
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,5 +57,20 @@ class LightSettingsSavedColoursTest {
     @Test fun theWhiteScenesAreTheLibrarysNine() {
         assertEquals(9, WHITE_SCENES.size)
         assertEquals(WHITE_SCENES.size, WHITE_SCENES.toSet().size)
+    }
+
+    @Test fun theHousesSavedColoursAreRead() {
+        val answer = JSONObject("""{"colours":[[28.0,100.0],[195.5,80.0],[1]]}""")
+        assertEquals(listOf(28.0 to 100.0, 195.5 to 80.0), parseSavedColours(answer))
+        assertNull(parseSavedColours(null))
+        assertEquals(emptyList<Pair<Double, Double>>(), parseSavedColours(JSONObject("""{"colours":[]}""")))
+    }
+
+    @Test fun theSavedColoursAreSentAsPairs() {
+        val body = savedColoursBody(listOf(28.0 to 100.0, 120.0 to 50.5))
+        val a = body.getJSONArray("colours")
+        assertEquals(2, a.length())
+        assertEquals(120.0, a.getJSONArray(1).getDouble(0), 0.001)
+        assertEquals(50.5, a.getJSONArray(1).getDouble(1), 0.001)
     }
 }

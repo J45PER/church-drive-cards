@@ -41,7 +41,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
@@ -296,15 +295,6 @@ private fun BarSlider(
     }
 }
 
-/** Saved colours are kept on the phone: one list, up to [MAX_SAVED_COLOURS] hue and saturation pairs. */
-@Composable
-internal fun rememberSavedColours(): Pair<List<Pair<Double, Double>>, (List<Pair<Double, Double>>) -> Unit> {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("church_drive_light", android.content.Context.MODE_PRIVATE) }
-    var saved by remember { mutableStateOf(decodeSavedColours(prefs.getString("saved_colours", null))) }
-    return saved to { next -> saved = next; prefs.edit().putString("saved_colours", encodeSavedColours(next)).apply() }
-}
-
 /** One colour as a round swatch: ringed when it is the light's colour, with a dashed edge when it is one of the saved ones. */
 @Composable
 private fun Swatch(colour: Pair<Double, Double>, current: Pair<Double, Double>?, saved: Boolean, onClick: () -> Unit) {
@@ -330,7 +320,9 @@ private fun Swatch(colour: Pair<Double, Double>, current: Pair<Double, Double>?,
 private fun ColourPanel(light: EntityState, call: CallService, tone: ToneColors) {
     val ink = MaterialTheme.colorScheme.onSurface
     val current = light.attributes.optJSONArray("hs_color")?.let { it.optDouble(0) to it.optDouble(1) }
-    val (saved, setSaved) = rememberSavedColours()
+    val savedColours = LocalSavedColours.current
+    val saved = savedColours.colours
+    val setSaved = savedColours.set
     var picker by remember { mutableStateOf(false) }
     fun send(c: Pair<Double, Double>) = call("light", "turn_on", light.entityId, data("hs_color" to JSONArray(listOf(c.first, c.second))))
     val label = MaterialTheme.typography.labelMedium
