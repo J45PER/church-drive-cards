@@ -149,6 +149,7 @@ from .const import (
     WS_ALARM_LIGHTS_TEST,
     WS_BLIND_SCHEDULE,
     WS_ROUTINES,
+    WS_SCHEDULES,
     WS_ROUTINES_DELETE,
     WS_ROUTINES_SET,
     WS_BLIND_SCHEDULE_SET,
@@ -1395,6 +1396,60 @@ async def ws_routines_delete(hass: HomeAssistant, connection: websocket_api.Acti
     connection.send_result(msg["id"], {"removed": await routines.async_remove(msg["id"])})
 
 
+def _next_fields(nxt: Any) -> dict[str, Any]:
+    """A device schedule's "next change" ({"at", "text"}, or text alone) as the Schedules list's `next` and `next_text`."""
+    if isinstance(nxt, dict):
+        return {"next": nxt.get("at"), "next_text": nxt.get("text")}
+    return {"next": None, "next_text": nxt if isinstance(nxt, str) else None}
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_SCHEDULES})
+@callback
+def ws_schedules(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Everything scheduled in the house, in one list for the app's Schedules page: Clive's actions, and the schedules set from device cards
+    (blinds, fans and humidifiers, and the air purifier). Each: source (clive, device, purifier), id, title, lines (what happens and when), enabled,
+    next (when it next runs, or null), entity, by, done (a one-off that has run)."""
+    items: list[dict[str, Any]] = []
+    routines = _routines(hass)
+    for r in routines.all() if routines else []:
+        items.append(
+            {
+                "source": "clive", "id": r["id"], "title": r["name"], "lines": [r["summary"].split(": ", 1)[-1].removesuffix(" (off)")],
+                "enabled": r["enabled"], "next": r["next"], "entity": r["entities"][0], "by": r["by"], "done": bool(r.get("done")),
+            }
+        )
+
+    def friendly(entity: str) -> str:
+        state = hass.states.get(entity)
+        return (state.attributes.get("friendly_name") if state else None) or entity
+
+    blinds = _blind_schedule(hass)
+    for entity, cfg in (blinds._cfg.items() if blinds else []):
+        if not cfg["schedules"]:
+            continue
+        status = blinds.status(entity)
+        items.append(
+            {
+                "source": "device", "id": entity, "title": friendly(entity), "lines": [s["summary"] for s in status["schedules"]],
+                "enabled": status["enabled"], **_next_fields(status["next"]),
+                "entity": entity, "by": "", "done": False,
+            }
+        )
+    purifier = _purifier_schedule(hass)
+    if purifier is not None:
+        status = purifier.status()
+        if status["schedules"]:
+            nxt = status["next"]
+            items.append(
+                {
+                    "source": "purifier", "id": status["entity"], "title": friendly(status["entity"]), "lines": [s["summary"] for s in status["schedules"]],
+                    "enabled": status["enabled"], **_next_fields(nxt),
+                    "entity": status["entity"], "by": "", "done": False,
+                }
+            )
+    connection.send_result(msg["id"], {"schedules": items})
+
+
 def _alarm_tests(hass: HomeAssistant) -> AlarmTests | None:
     return hass.data.get(DOMAIN, {}).get("alarm_tests")
 
@@ -1844,7 +1899,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
-            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_alarm_tests, ws_alarm_tests_set,
+            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_schedules, ws_alarm_tests, ws_alarm_tests_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an

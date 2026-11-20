@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.172.0
 
-- **Clive can schedule, and waits for your message.** Ask him to do something later or on repeat and the house does it at the time. And if you pause after "Hey ...", he now listens again straight away instead of giving up.
+- **Clive can schedule, and waits for your message.** Ask him to do something later or on repeat and the house does it at the time. The sidebar has a new Schedules page that lists everything scheduled: Clive's, and the schedules set from device cards. And if you pause after "Hey ...", he now listens again straight away instead of giving up.
 
 ## 0.171.0
 
