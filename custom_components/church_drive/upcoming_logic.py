@@ -132,13 +132,77 @@ def from_tasks(now: datetime, end: datetime, tasks: list[dict[str, Any]]) -> lis
     return out
 
 
+def from_charging(now: datetime, end: datetime, charging: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Car charging: the slots Octopus has planned for the car (`dispatches`), and, for a car plugged in with smart charge on that Octopus doesn't
+    schedule (not the Primary one), the start of each night's cheap-rate window (`window_start`, `window_end`: the next one, as ISO times)."""
+    if not charging:
+        return []
+    out = []
+    tap = {"to": "device", "entity": charging.get("entity", "")}
+    for d in charging.get("dispatches", []):
+        start, stop = datetime.fromisoformat(d["start"]), datetime.fromisoformat(d["end"])
+        if now < start <= end:
+            out.append(_item(start.astimezone(now.tzinfo), f"Car charging until {stop.astimezone(now.tzinfo).strftime('%H:%M')}", "car", "device", tap, card="Octopus"))
+    if charging.get("plugged") and charging.get("smart") and charging.get("role") != "Primary" and charging.get("window_start"):
+        first = datetime.fromisoformat(charging["window_start"]).astimezone(now.tzinfo)
+        stop = datetime.fromisoformat(charging["window_end"]).astimezone(now.tzinfo) if charging.get("window_end") else None
+        for i in range(MAX_DAYS + 1):
+            start = first + timedelta(days=i)
+            if start > end:
+                break
+            if start > now:
+                until = f" until {(stop + timedelta(days=i)).strftime('%H:%M')}" if stop else ""
+                out.append(_item(start, f"Car charging at the cheap rate{until}", "car", "device", tap, card="Zappi"))
+    return out
+
+
+def time_automation_runs(config: dict[str, Any], now: datetime, end: datetime) -> list[datetime]:
+    """When an automation with a plain time trigger ("at": "18:00:00") and, optionally, a weekday condition runs in the window. Triggers that name
+    a helper or anything else are not understood and give nothing."""
+    triggers = config.get("triggers", config.get("trigger", []))
+    triggers = triggers if isinstance(triggers, list) else [triggers]
+    times = [str(t["at"])[:5] for t in triggers if isinstance(t, dict) and (t.get("trigger") or t.get("platform")) == "time" and isinstance(t.get("at"), str) and len(t["at"]) >= 5 and t["at"][2] == ":"]
+    conditions = config.get("conditions", config.get("condition", []))
+    conditions = conditions if isinstance(conditions, list) else [conditions]
+    weekdays = None
+    names = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    for c in conditions:
+        if isinstance(c, dict) and (c.get("condition") == "time") and c.get("weekday"):
+            wd = c["weekday"] if isinstance(c["weekday"], list) else [c["weekday"]]
+            weekdays = {names.index(str(w).lower()[:3]) for w in wd if str(w).lower()[:3] in names}
+    out = []
+    for day in _days(now, (end.date() - now.date()).days):
+        if weekdays is not None and day.weekday() not in weekdays:
+            continue
+        for hhmm in times:
+            at = _at(day, hhmm, now.tzinfo)
+            if now < at <= end:
+                out.append(at)
+    return sorted(out)
+
+
+def from_automations(now: datetime, end: datetime, automations: list[dict[str, Any]], known: dict[str, tuple[str, str, str]]) -> list[dict[str, Any]]:
+    """House automations that run at a set time and that Upcoming knows by name (`known`: alias -> (title, kind, card))."""
+    out = []
+    for cfg in automations:
+        meta = known.get(str(cfg.get("alias", "")))
+        if not meta:
+            continue
+        title, kind, card = meta
+        for at in time_automation_runs(cfg, now, end):
+            out.append(_item(at, title, kind, "device", {"to": "none"}, card=card))
+    return out
+
+
 def build(now: datetime, days: int, *, routines: list[dict[str, Any]], names: dict[str, str], blinds: dict[str, dict[str, Any]], words: Any,
-          purifier: dict[str, Any] | None, tests: list[dict[str, Any]], overnight: dict[str, Any] | None, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+          purifier: dict[str, Any] | None, tests: list[dict[str, Any]], overnight: dict[str, Any] | None, tasks: list[dict[str, Any]],
+          charging: dict[str, Any] | None = None, automations: list[dict[str, Any]] | None = None, known_automations: dict[str, tuple[str, str, str]] | None = None) -> list[dict[str, Any]]:
     """Everything due in the next `days` days (1 to 31), soonest first."""
     days = max(1, min(int(days), MAX_DAYS))
     end = now + timedelta(days=days)
     items = (
         from_routines(now, end, routines, names) + from_blinds(now, end, blinds, words) + from_purifier(now, end, purifier)
         + from_tests(now, end, tests) + from_overnight(now, end, overnight) + from_tasks(now, end, tasks)
+        + from_charging(now, end, charging) + from_automations(now, end, automations or [], known_automations or {})
     )
     return sorted(items, key=lambda i: (i["at"], i["title"]))

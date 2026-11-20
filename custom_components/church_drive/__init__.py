@@ -67,6 +67,7 @@ from .apply import async_apply
 from .blind_schedule import BlindSchedule
 from .routines import Routines
 from .upcoming_logic import build as build_upcoming
+from homeassistant.util.yaml import load_yaml
 from .blind_schedule_logic import words_for as blind_words
 from .routines_logic import DAY_NAMES as ROUTINE_DAYS
 from .purifier_display import PurifierDisplay
@@ -1454,6 +1455,10 @@ def ws_schedules(hass: HomeAssistant, connection: websocket_api.ActiveConnection
     connection.send_result(msg["id"], {"schedules": items})
 
 
+# House automations that run at a set time and appear in Upcoming: the automation's name -> (what it says, its kind, the card it is set on).
+UPCOMING_AUTOMATIONS = {"Battery Notes: Weekly Status Report": ("Weekly battery report", "report", "House")}
+
+
 def _hm(value: Any) -> str | None:
     text = str(value or "")[:5]
     return text if len(text) == 5 and text[2] == ":" else None
@@ -1502,9 +1507,37 @@ async def ws_upcoming(hass: HomeAssistant, connection: websocket_api.ActiveConne
                 parts = str(item.get("description") or "").split(" · ")
                 who = [w.strip() for w in parts[-1][4:].split(",")] if parts and parts[-1].lower().startswith("for ") and parts[-1].lower() != "for everyone" else []
                 tasks.append({"title": item.get("summary", ""), "due": str(item["due"]), "for": who})
+    # Car charging: the slots Octopus has planned, and the cheap-rate window for a plugged-in car on smart charge.
+    def first_state(prefix: str, suffix: str) -> Any:
+        return next((s for s in hass.states.async_all("binary_sensor") if s.entity_id.startswith(prefix) and s.entity_id.endswith(suffix)), None)
+
+    off_peak = first_state("binary_sensor.octopus_energy_electricity_", "_off_peak")
+    dispatching = first_state("binary_sensor.octopus_energy_", "_intelligent_dispatching")
+    plug = hass.states.get("sensor.zappi_plug_status")
+    role = hass.states.get("input_select.zappi_car_role")
+    smart = hass.states.get("input_boolean.zappi_smart_charge")
+    charging = None
+    if hass.states.get("select.zappi_charge_mode") is not None and (dispatching is not None or off_peak is not None):
+        charging = {
+            "entity": "select.zappi_charge_mode",
+            "plugged": bool(plug and plug.state not in ("EV Disconnected", "unavailable", "unknown")),
+            "smart": bool(smart and smart.state == "on"),
+            "role": role.state if role else "",
+            "window_start": off_peak.attributes.get("next_start") if off_peak else None,
+            "window_end": off_peak.attributes.get("next_end") if off_peak else None,
+            "dispatches": [d for d in (dispatching.attributes.get("planned_dispatches") or []) if isinstance(d, dict) and d.get("start") and d.get("end")] if dispatching else [],
+        }
+    # House automations that run at a set time and are listed by name (read from their own config, so a changed time follows).
+    automations: list[dict[str, Any]] = []
+    try:
+        loaded = await hass.async_add_executor_job(load_yaml, hass.config.path("automations.yaml"))
+        automations = [a for a in loaded if isinstance(a, dict)] if isinstance(loaded, list) else []
+    except Exception:  # noqa: BLE001 - a bonus: the rest of the list still goes
+        automations = []
     items = build_upcoming(
         now, msg.get("days", 7), routines=routines.items() if routines else [], names={}, blinds=blinds, words=blind_words,
         purifier=purifier, tests=tests, overnight=overnight, tasks=tasks,
+        charging=charging, automations=automations, known_automations=UPCOMING_AUTOMATIONS,
     )
     connection.send_result(msg["id"], {"items": items, "now": now.replace(tzinfo=None).isoformat(timespec="minutes")})
 

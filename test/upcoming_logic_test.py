@@ -82,5 +82,40 @@ class Sources(unittest.TestCase):
         self.assertEqual(len(up.build(NOW, 30, routines=[r, late], names={}, blinds={}, words=words, purifier=None, tests=[], overnight=None, tasks=[])), 2)
 
 
+class CarAndAutomations(unittest.TestCase):
+    CHARGING = {"entity": "select.zappi_charge_mode", "plugged": True, "smart": True, "role": "Additional",
+                "window_start": "2026-11-20T23:30:00+00:00", "window_end": "2026-11-21T06:00:00+00:00",
+                "dispatches": [{"start": "2026-11-21T04:30:00+00:00", "end": "2026-11-21T05:30:00+00:00"}]}
+
+    def test_planned_slots_are_listed(self):
+        items = [i for i in build(charging={**self.CHARGING, "role": "Primary"}) if i["kind"] == "car"]
+        self.assertEqual([(i["date"], i["time"], i["title"]) for i in items], [("2026-11-21", "04:30", "Car charging until 05:30")])
+        self.assertEqual(items[0]["tap"], {"to": "device", "entity": "select.zappi_charge_mode"})
+
+    def test_a_plugged_in_car_on_smart_charge_gets_each_nights_cheap_rate(self):
+        items = [i for i in build(charging=self.CHARGING) if i["kind"] == "car"]
+        self.assertEqual([i["date"] for i in items if i["title"].startswith("Car charging at")], [f"2026-11-{d}" for d in range(20, 27)])
+        self.assertEqual(items[0]["title"], "Car charging at the cheap rate until 06:00")
+
+    def test_no_cheap_rate_when_unplugged_or_smart_charge_is_off(self):
+        for off in ({"plugged": False}, {"smart": False}):
+            items = [i for i in build(charging={**self.CHARGING, **off}) if i["title"].startswith("Car charging at")]
+            self.assertEqual(items, [])
+
+    BATTERY = {"alias": "Battery Notes: Weekly Status Report", "triggers": [{"at": "18:00:00", "trigger": "time"}], "conditions": [{"condition": "time", "weekday": ["fri"]}]}
+
+    def test_a_time_automation_is_read_from_its_own_config(self):
+        runs = up.time_automation_runs(self.BATTERY, NOW, datetime(2026, 12, 4, 23, 0, tzinfo=timezone.utc))
+        self.assertEqual([r.strftime("%Y-%m-%d %H:%M") for r in runs], ["2026-11-20 18:00".replace("11-20", "11-27"), "2026-12-04 18:00"])
+
+    def test_only_known_automations_are_listed_and_odd_triggers_are_ignored(self):
+        known = {"Battery Notes: Weekly Status Report": ("Weekly battery report", "report", "House")}
+        helper = {"alias": "Other", "triggers": [{"at": "input_datetime.x", "trigger": "time"}]}
+        items = build(automations=[self.BATTERY, helper, {"alias": "Unknown", "triggers": [{"at": "09:00:00", "trigger": "time"}]}], known_automations=known)
+        self.assertEqual([(i["date"], i["time"], i["title"], i["kind"]) for i in items], [("2026-11-27", "18:00", "Weekly battery report", "report")])
+        self.assertEqual(items[0]["tap"], {"to": "none"})
+        self.assertEqual(up.time_automation_runs(helper, NOW, datetime(2026, 12, 30, tzinfo=timezone.utc)), [])
+
+
 if __name__ == "__main__":
     unittest.main()

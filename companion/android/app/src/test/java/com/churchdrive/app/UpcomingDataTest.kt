@@ -18,6 +18,7 @@ import com.churchdrive.app.ui.upcomingDays
 import com.churchdrive.app.ui.upcomingDetail
 import com.churchdrive.app.ui.upcomingFilter
 import com.churchdrive.app.ui.upcomingHeading
+import com.churchdrive.app.ui.upcomingIcon
 import com.churchdrive.app.ui.upcomingPeople
 import com.churchdrive.app.ui.upcomingTone
 import com.churchdrive.app.ui.upcomingWho
@@ -74,6 +75,18 @@ class UpcomingDataTest {
         assertEquals(Tone.Blinds, upcomingTone("blind"))
         assertEquals(Tone.Lights, upcomingTone("light"))
         assertEquals(Tone.Grey, upcomingTone("nothing"))
+    }
+
+    @Test fun carChargingAndTheBatteryReport() {
+        val items = parseUpcoming(JSONObject("""{"items":[
+            {"at":"2026-11-21T04:30","date":"2026-11-21","time":"04:30","title":"Car charging until 05:30","kind":"car","src":"device","by":"","card":"Octopus","tap":{"to":"device","entity":"select.zappi_charge_mode"}},
+            {"at":"2026-11-27T18:00","date":"2026-11-27","time":"18:00","title":"Weekly battery report","kind":"report","src":"device","by":"","card":"House","tap":{"to":"none"}}]}"""))!!
+        assertEquals(1, upcomingFilter(items, UpcomingShow.Car, UpcomingDates.Month, null, today).size)
+        assertEquals(listOf("Weekly battery report"), upcomingFilter(items, UpcomingShow.Reminders, UpcomingDates.Month, null, today).map { it.title })
+        assertEquals(Tone.Car, upcomingTone("car"))
+        assertEquals("cd:ev", upcomingIcon("car"))
+        assertEquals("none", items[1].tapTo)
+        assertEquals(listOf("Octopus", "House"), items.map { upcomingWho(it) })
     }
 
     @Test fun readsRoutines() {
