@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.175.1
+
+- **Upcoming heating items open Heating details.** Tapping a heating item in Upcoming now opens the Heating details page (Back returns to Upcoming), instead of doing nothing.
+- **Slide-up sheets start above the bottom bar.** The thermostat's Clive settings, the room range and the To-Do assistant now rise from above the app's bottom bar (or the phone's navigation bar), not from the very bottom of the screen. Every app's sheets use the one `BarSheet`.
+
 ## 0.175.0
 
 - **Heating details.** Press and hold a thermostat to open each thermostat's status and the overnight schedule (moved from the Climate page). The Clive settings pane is now acrylic.

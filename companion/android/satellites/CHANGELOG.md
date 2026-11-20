@@ -1,5 +1,10 @@
 # Church Drive Satellites: changelog
 
+## 0.175.1
+
+- **Upcoming heating items open Heating details.** Tapping a heating item in Upcoming now opens the Heating details page (Back returns to Upcoming), instead of doing nothing.
+- **Slide-up sheets start above the bottom bar.** The thermostat's Clive settings, the room range and the To-Do assistant now rise from above the app's bottom bar (or the phone's navigation bar), not from the very bottom of the screen. Every app's sheets use the one `BarSheet`.
+
 ## 0.175.0
 
 - No changes here; version kept in step with the other apps.
