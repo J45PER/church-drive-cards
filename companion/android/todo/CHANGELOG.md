@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.165.3
+
+- **A new eyedropper icon.** `cd:eyedropper`, drawn for the light colour picker, joins the Clive icon set (nothing in the app shows it yet).
+
 ## 0.165.2
 
 - No change you will notice.

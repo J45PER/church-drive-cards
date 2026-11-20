@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.165.3
+
+- **A new eyedropper icon.** `cd:eyedropper`, drawn for the light colour picker, joins the Clive icon set (nothing in the app shows it yet).
+
 ## 0.165.2
 
 - No change you will notice.
