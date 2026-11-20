@@ -20,7 +20,7 @@ from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .routines_logic import MAX_ROUTINES, call_for, clean_routine, clean_routines, next_run, occurrences, summary
+from .routines_logic import DOMAINS, MAX_ROUTINES, call_for, clean_routine, clean_routines, next_run, occurrences, resolve_entity, summary
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -88,7 +88,27 @@ class Routines:
         # Coming up first (soonest first), then the ones that are off or done.
         return sorted(views, key=lambda v: (v["next"] is None, v["next"] or "", v["name"]))
 
+    def _resolve(self, raw: dict[str, Any]) -> dict[str, Any]:
+        """The change with each device checked against the house (and a guessed id swapped for the real one), or ValueError naming what isn't there."""
+        if "entities" not in raw:
+            return raw
+        known = {
+            s.entity_id: s.attributes.get("friendly_name") or s.entity_id
+            for domain in DOMAINS
+            for s in self.hass.states.async_all(domain)
+        }
+        asked = raw["entities"] if isinstance(raw["entities"], (list, tuple)) else [raw["entities"]]
+        found: list[str] = []
+        for entity in asked:
+            real, near = resolve_entity(str(entity), known)
+            if real is None:
+                hint = f" Did you mean {', '.join(near)}?" if near else ""
+                raise ValueError(f"I can't find a device called {str(entity).split('.', 1)[-1].replace('_', ' ')}.{hint}")
+            found.append(real)
+        return {**raw, "entities": found}
+
     async def async_add(self, raw: dict[str, Any]) -> dict[str, Any]:
+        raw = self._resolve(raw)
         if len(self._items) >= MAX_ROUTINES:
             raise ValueError("There are as many scheduled actions as can be kept: remove one first")
         item = clean_routine({k: v for k, v in raw.items() if k != "id"}, dt_util.now())
@@ -103,7 +123,7 @@ class Routines:
         old = self._items.get(rid)
         if old is None:
             raise ValueError("No such scheduled action")
-        item = clean_routine(change, dt_util.now(), old)
+        item = clean_routine(self._resolve(change), dt_util.now(), old)
         self._items[rid] = item
         await self._async_save()
         self.hass.bus.async_fire(EVENT_CHANGED, {"id": rid})

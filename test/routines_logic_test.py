@@ -74,5 +74,27 @@ class Times(unittest.TestCase):
         self.assertEqual(rl.describe_days(list(range(7))), "Every day")
 
 
+class Resolve(unittest.TestCase):
+    KNOWN = {"cover.roller_blind": "Hayley's Bedroom Blind", "cover.living_room_blind": "Living Room Blind", "light.landing": "Landing light"}
+
+    def test_slug(self):
+        self.assertEqual(rl.slug("Hayley's Bedroom Blind"), "hayleys_bedroom_blind")
+        self.assertEqual(rl.slug("Hayley\u2019s Room"), "hayleys_room")
+
+    def test_a_real_id_is_kept(self):
+        self.assertEqual(rl.resolve_entity("cover.roller_blind", self.KNOWN), ("cover.roller_blind", []))
+
+    def test_a_guessed_id_becomes_the_real_one(self):
+        self.assertEqual(rl.resolve_entity("cover.hayleys_bedroom_blind", self.KNOWN), ("cover.roller_blind", []))
+
+    def test_an_unknown_one_gets_suggestions(self):
+        real, near = rl.resolve_entity("cover.kitchen_blind", self.KNOWN)
+        self.assertIsNone(real)
+        self.assertEqual(near, ["Hayley's Bedroom Blind", "Living Room Blind"])
+
+    def test_the_kind_must_match(self):
+        self.assertIsNone(rl.resolve_entity("light.hayleys_bedroom_blind", self.KNOWN)[0])
+
+
 if __name__ == "__main__":
     unittest.main()

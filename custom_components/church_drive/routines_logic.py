@@ -206,3 +206,26 @@ def describe_days(days: list[int]) -> str:
 
 def summary(routine: dict[str, Any], now: datetime) -> str:
     return f"{routine['name']}: {describe_when(routine['when'], now)}" + ("" if routine["enabled"] else " (off)")
+
+
+def slug(text: Any) -> str:
+    """"Hayley's Bedroom Blind" as "hayleys_bedroom_blind": lower case, apostrophes dropped, everything else not a letter or digit an underscore."""
+    return re.sub(r"[^a-z0-9]+", "_", re.sub(r"['\u2019]", "", str(text).lower())).strip("_")
+
+
+def resolve_entity(entity: str, known: dict[str, str]) -> tuple[str | None, list[str]]:
+    """The real entity for what was asked: the same id if the house has it; otherwise the one of a schedulable kind whose name is the same words
+    (Clive guesses an id such as cover.hayleys_bedroom_blind from a name, and the real one is cover.roller_blind). `known` maps each schedulable
+    entity id to its friendly name. Returns (entity or None, suggestions): suggestions are the names that share a word with what was asked."""
+    if entity in known:
+        return entity, []
+    domain, _, wanted = entity.partition(".")
+    wanted = slug(wanted)
+    same = [e for e, name in known.items() if e.startswith(domain + ".") and slug(name) == wanted]
+    if len(same) == 1:
+        return same[0], []
+    words = set(wanted.split("_")) - {"the", "a", "my", "room", "light", "blind"} or set(wanted.split("_"))
+    near = sorted(name for e, name in known.items() if words & set(slug(name).split("_")))
+    if not near:
+        near = sorted(name for e, name in known.items() if e.startswith(domain + "."))
+    return None, near[:5]

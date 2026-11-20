@@ -528,12 +528,12 @@ async def ws_hybrid_save(hass: HomeAssistant, connection: websocket_api.ActiveCo
     connection.send_result(msg["id"], {"hybrid": hybrid})
 
 
-@websocket_api.websocket_command({vol.Required("type"): WS_HYBRID_DELETE, vol.Required("id"): cv.string})
+@websocket_api.websocket_command({vol.Required("type"): WS_HYBRID_DELETE, vol.Required("hybrid_id"): cv.string})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_hybrid_delete(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """Delete a hybrid scene (administrators)."""
-    await _hybrids(hass).async_delete(msg["id"])
+    """Delete a hybrid scene (administrators). Its id is `hybrid_id`: `id` is the websocket message's own."""
+    await _hybrids(hass).async_delete(msg["hybrid_id"])
     connection.send_result(msg["id"], {})
 
 
@@ -1355,7 +1355,8 @@ def ws_routines(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
 @websocket_api.websocket_command(
     {
         vol.Required("type"): WS_ROUTINES_SET,
-        vol.Optional("id"): cv.string,
+        # (Not "id": that is the websocket message's own id, which the app's connection sets over any "id" it is given.)
+        vol.Optional("routine_id"): cv.string,
         vol.Optional("name"): cv.string,
         vol.Optional("entities"): [cv.entity_id],
         vol.Optional("action"): cv.string,
@@ -1372,10 +1373,10 @@ async def ws_routines_set(hass: HomeAssistant, connection: websocket_api.ActiveC
     if routines is None:
         connection.send_error(msg["id"], "not_ready", "Scheduled actions aren't running")
         return
-    change = {k: v for k, v in msg.items() if k not in ("id", "type")}
+    change = {k: v for k, v in msg.items() if k not in ("id", "type", "routine_id")}
     try:
-        if "id" in msg:
-            result = await routines.async_update(msg["id"], change)
+        if "routine_id" in msg:
+            result = await routines.async_update(msg["routine_id"], change)
         else:
             result = await routines.async_add({**change, "by": connection.user.name if connection.user else ""})
     except ValueError as err:
@@ -1384,7 +1385,7 @@ async def ws_routines_set(hass: HomeAssistant, connection: websocket_api.ActiveC
     connection.send_result(msg["id"], {"routine": result})
 
 
-@websocket_api.websocket_command({vol.Required("type"): WS_ROUTINES_DELETE, vol.Required("id"): cv.string})
+@websocket_api.websocket_command({vol.Required("type"): WS_ROUTINES_DELETE, vol.Required("routine_id"): cv.string})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_routines_delete(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
@@ -1393,7 +1394,7 @@ async def ws_routines_delete(hass: HomeAssistant, connection: websocket_api.Acti
     if routines is None:
         connection.send_error(msg["id"], "not_ready", "Scheduled actions aren't running")
         return
-    connection.send_result(msg["id"], {"removed": await routines.async_remove(msg["id"])})
+    connection.send_result(msg["id"], {"removed": await routines.async_remove(msg["routine_id"])})
 
 
 def _next_fields(nxt: Any) -> dict[str, Any]:

@@ -43,7 +43,7 @@ class SchedulesDataTest {
         assertEquals("church_drive/blind_schedule/set", scheduleToggle(items[0], false)!!.first)
         assertEquals("cover.b", scheduleToggle(items[0], false)!!.second.getString("entity"))
         assertEquals("church_drive/routines/set", scheduleToggle(items[1], true)!!.first)
-        assertEquals("r1", scheduleToggle(items[1], true)!!.second.getString("id"))
+        assertEquals("r1", scheduleToggle(items[1], true)!!.second.getString("routine_id"))
         assertNotNull(scheduleToggle(items[2], true))
     }
 }

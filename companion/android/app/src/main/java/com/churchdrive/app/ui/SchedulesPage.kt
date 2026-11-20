@@ -70,7 +70,7 @@ fun SchedulesPage(isAdmin: Boolean) {
                             )
                             if (open == key && item.source == "clive") PanelRow(
                                 CdVectors.Close, "Remove this", "Clive won't do it any more",
-                                onClick = { scope.launch { api?.ask("church_drive/routines/delete", JSONObject().put("id", item.id)); open = null; changed++ } },
+                                onClick = { scope.launch { api?.ask("church_drive/routines/delete", JSONObject().put("routine_id", item.id)); open = null; changed++ } },
                             )
                         }
                     }
