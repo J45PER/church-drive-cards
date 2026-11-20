@@ -8,10 +8,13 @@ set from a device's own card), and `tap` where tapping goes: {"to": "oneoff" | "
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any
 
 from .routines_logic import domain_of, occurrences
+
+_LOGGER = logging.getLogger(__name__)
 
 MAX_DAYS = 31
 KIND_OF_DOMAIN = {"cover": "blind", "light": "light", "scene": "light", "fan": "fan", "humidifier": "fan", "switch": "plug", "input_boolean": "plug", "climate": "heat"}
@@ -23,6 +26,11 @@ def kind_of(entity: str) -> str:
 
 def _item(at: datetime, title: str, kind: str, src: str, tap: dict[str, Any], *, by: str = "", card: str = "") -> dict[str, Any]:
     return {"at": at.replace(tzinfo=None).isoformat(timespec="minutes"), "date": at.date().isoformat(), "time": at.strftime("%H:%M"), "title": title, "kind": kind, "src": src, "by": by, "card": card, "tap": tap}
+
+
+def _dt(value: Any) -> datetime:
+    """A time that arrives as text (a websocket answer) or as a datetime (a state's attribute inside Home Assistant)."""
+    return value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
 
 
 def _at(day: Any, hhmm: str, tz: Any) -> datetime:
@@ -88,7 +96,7 @@ def from_tests(now: datetime, end: datetime, tests: list[dict[str, Any]]) -> lis
         at = t.get("at")
         if not at:
             continue
-        when = datetime.fromisoformat(at)
+        when = _dt(at)
         if when.tzinfo is None:
             when = when.replace(tzinfo=now.tzinfo)
         if now < when <= end:
@@ -140,12 +148,12 @@ def from_charging(now: datetime, end: datetime, charging: dict[str, Any] | None)
     out = []
     tap = {"to": "device", "entity": charging.get("entity", "")}
     for d in charging.get("dispatches", []):
-        start, stop = datetime.fromisoformat(d["start"]), datetime.fromisoformat(d["end"])
+        start, stop = _dt(d["start"]), _dt(d["end"])
         if now < start <= end:
             out.append(_item(start.astimezone(now.tzinfo), f"Car charging until {stop.astimezone(now.tzinfo).strftime('%H:%M')}", "car", "device", tap, card="Octopus"))
     if charging.get("plugged") and charging.get("smart") and charging.get("role") != "Primary" and charging.get("window_start"):
-        first = datetime.fromisoformat(charging["window_start"]).astimezone(now.tzinfo)
-        stop = datetime.fromisoformat(charging["window_end"]).astimezone(now.tzinfo) if charging.get("window_end") else None
+        first = _dt(charging["window_start"]).astimezone(now.tzinfo)
+        stop = _dt(charging["window_end"]).astimezone(now.tzinfo) if charging.get("window_end") else None
         for i in range(MAX_DAYS + 1):
             start = first + timedelta(days=i)
             if start > end:
@@ -200,9 +208,17 @@ def build(now: datetime, days: int, *, routines: list[dict[str, Any]], names: di
     """Everything due in the next `days` days (1 to 31), soonest first."""
     days = max(1, min(int(days), MAX_DAYS))
     end = now + timedelta(days=days)
+    def safely(source: Any, *args: Any) -> list[dict[str, Any]]:
+        """One source going wrong (an odd value from one integration) leaves its items out and the rest of the list intact."""
+        try:
+            return source(*args)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Upcoming: %s failed, leaving it out", getattr(source, "__name__", "a source"))
+            return []
+
     items = (
-        from_routines(now, end, routines, names) + from_blinds(now, end, blinds, words) + from_purifier(now, end, purifier)
-        + from_tests(now, end, tests) + from_overnight(now, end, overnight) + from_tasks(now, end, tasks)
-        + from_charging(now, end, charging) + from_automations(now, end, automations or [], known_automations or {})
+        safely(from_routines, now, end, routines, names) + safely(from_blinds, now, end, blinds, words) + safely(from_purifier, now, end, purifier)
+        + safely(from_tests, now, end, tests) + safely(from_overnight, now, end, overnight) + safely(from_tasks, now, end, tasks)
+        + safely(from_charging, now, end, charging) + safely(from_automations, now, end, automations or [], known_automations or {})
     )
     return sorted(items, key=lambda i: (i["at"], i["title"]))

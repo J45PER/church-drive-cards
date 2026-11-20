@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.174.1
+
+- **Fix.** Upcoming works again after 0.174.0 (car charging times could not be read, which stopped the whole list).
+
 ## 0.174.0
 
 - **Car charging and the battery report in Upcoming.** Upcoming now lists when the car will charge (Octopus's planned slots, or the cheap rate for a plugged-in car) and the weekly battery report. There is a Car choice under Show.
