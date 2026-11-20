@@ -43,9 +43,10 @@ fun parseUpcoming(result: Any?): List<UpcomingItem>? {
 enum class UpcomingShow(val label: String, val kinds: Set<String>?) {
     All("All", null),
     Actions("Actions", setOf("blind", "light", "fan", "plug")),
-    Reminders("Reminders", setOf("task")),
+    Reminders("Reminders", setOf("task", "report")),
     Alarms("Alarms", setOf("alarm")),
     Heating("Heating", setOf("heat")),
+    Car("Car", setOf("car")),
 }
 
 /** How far ahead to look: [days] is what the house is asked for, [only] keeps one day (0 today, 1 tomorrow). */
@@ -91,6 +92,7 @@ fun upcomingTone(kind: String): Tone = when (kind) {
     "heat" -> Tone.Heating
     "task" -> Tone.Tasks
     "alarm" -> Tone.Alarm
+    "car" -> Tone.Car
     else -> Tone.Grey
 }
 
@@ -102,6 +104,7 @@ fun upcomingIcon(kind: String): String = when (kind) {
     "heat" -> "cd:thermostat"
     "task" -> "cd:checklist"
     "alarm" -> "cd:shield-home"
+    "car" -> "cd:ev"
     else -> "cd:calendar-clock"
 }
 
