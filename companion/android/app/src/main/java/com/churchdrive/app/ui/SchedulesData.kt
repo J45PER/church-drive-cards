@@ -82,7 +82,7 @@ fun scheduleIcon(item: ScheduleItem): String = when (item.entity.substringBefore
 
 /** The message that switches a schedule on or off in the house, as (type, body), or null if it can't be (nothing to say it with). */
 fun scheduleToggle(item: ScheduleItem, enabled: Boolean): Pair<String, JSONObject>? = when (item.source) {
-    "clive" -> "church_drive/routines/set" to JSONObject().put("id", item.id).put("enabled", enabled)
+    "clive" -> "church_drive/routines/set" to JSONObject().put("routine_id", item.id).put("enabled", enabled)
     "device" -> "church_drive/blind_schedule/set" to JSONObject().put("entity", item.entity).put("enabled", enabled)
     "purifier" -> "church_drive/purifier_schedule/set" to JSONObject().put("enabled", enabled)
     else -> null

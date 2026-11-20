@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.172.1
+
+- **Fixes.** Clive's schedules now always go to the real device, and the Schedules page's switch and Remove work. Deleting a hybrid scene works again.
+
 ## 0.172.0
 
 - **Clive can schedule, and waits for your message.** Ask him to do something later or on repeat and the house does it at the time. The sidebar has a new Schedules page that lists everything scheduled: Clive's, and the schedules set from device cards. And if you pause after "Hey ...", he now listens again straight away instead of giving up.

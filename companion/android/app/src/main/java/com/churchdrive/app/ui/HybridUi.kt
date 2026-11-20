@@ -258,7 +258,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
                     if (result != null) onDone() else message = "The house didn't accept that${api?.lastErrorCode?.let { " ($it)" }.orEmpty()}."
                 }
             },
-        ) + (if (draft.id != null) listOf(TileItem("cd:bin", "Delete", false) { scope.launch { if (api?.ask("church_drive/hybrid/delete", JSONObject().put("id", draft.id)) != null) onDone() else message = "The house didn't delete it." } }) else emptyList()),
+        ) + (if (draft.id != null) listOf(TileItem("cd:bin", "Delete", false) { scope.launch { if (api?.ask("church_drive/hybrid/delete", JSONObject().put("hybrid_id", draft.id)) != null) onDone() else message = "The house didn't delete it." } }) else emptyList()),
         tone, ink, perRow = 3,
     )
 }
