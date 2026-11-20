@@ -114,6 +114,7 @@ fun CustomisePage(page: String, title: String, houseSections: List<PanelSpec>, e
     val order = effectiveSectionOrder(sections.map(::sectionId) + ownSections.map { "own:${it.id}" }, layout)
     var open by rememberSaveable(page) { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<OwnSection?>(null) }
+    var addingTo by remember { mutableStateOf<Pair<String, String>?>(null) }
     fun change(f: (PageLayout) -> PageLayout) = state.set(state.layout.changed(page, f))
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     FullPage("Customise $title", onClose) {
@@ -126,11 +127,13 @@ fun CustomisePage(page: String, title: String, houseSections: List<PanelSpec>, e
             val panel = sections.firstOrNull { it.title == id }
             if (mine == null && panel == null) return@forEachIndexed
             val shown = id !in layout.hidden
-            val isOpen = mine == null && editCards && open == id
+            val kind = if (mine == null) sectionKind(page, id) else null
+            val canOpen = mine == null && (editCards || kind != null)
+            val isOpen = canOpen && open == id
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 Row(
                     Modifier.fillMaxWidth()
-                        .clickable(enabled = mine != null || editCards, onClickLabel = if (mine != null) "Edit ${mine.title}" else if (isOpen) "Close $id" else "Open $id") {
+                        .clickable(enabled = mine != null || canOpen, onClickLabel = if (mine != null) "Edit ${mine.title}" else if (isOpen) "Close $id" else "Open $id") {
                             if (mine != null) editing = mine else open = if (isOpen) null else id
                         }.padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -151,8 +154,9 @@ fun CustomisePage(page: String, title: String, houseSections: List<PanelSpec>, e
                     val ids = cardIds(panel.cards).filterIndexed { i, _ -> panel.cards[i] in cards }
                     val byId = ids.zip(cards).toMap()
                     val cardOrder = effectiveCardOrder(ids, layout, id)
+                    val addedItems = layout.cards[id]?.added.orEmpty()
                     Column(Modifier.padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        cardOrder.forEachIndexed { ci, cid ->
+                        if (editCards) cardOrder.forEachIndexed { ci, cid ->
                             val card = byId[cid] ?: return@forEachIndexed
                             val hidden = cid in (layout.cards[id]?.hidden ?: emptySet())
                             Row(Modifier.fillMaxWidth().alpha(if (hidden) 0.55f else 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -162,6 +166,15 @@ fun CustomisePage(page: String, title: String, houseSections: List<PanelSpec>, e
                                 IconBox(if (hidden) "cd:eye-off" else "cd:eye", if (hidden) "Show" else "Hide") { change { toggledCard(it, id, cid) } }
                             }
                         }
+                        // What this person added to the section: each can be taken out again (the house's own cards can only be hidden).
+                        addedItems.forEach { item ->
+                            val label = item.entity?.let { entities[it]?.friendlyName ?: it } ?: item.card?.let { r -> resolveOwnCard(r, pages)?.let { c -> cardLabel(c) { entities[it]?.friendlyName } } } ?: "A card the house no longer has"
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("$label · added", style = MaterialTheme.typography.bodyLarge, maxLines = 1, modifier = Modifier.weight(1f))
+                                IconBox("cd:close", "Take out") { change { it.withoutAdded(id, item) } }
+                            }
+                        }
+                        if (kind != null) TileRow(listOf(TileItem("cd:plus", "Add to this section", false) { addingTo = id to kind }), toneColors(Tone.Grey), MaterialTheme.colorScheme.onSurface, perRow = 1)
                     }
                 }
             }
@@ -180,6 +193,9 @@ fun CustomisePage(page: String, title: String, houseSections: List<PanelSpec>, e
             toneColors(Tone.Grey), MaterialTheme.colorScheme.onSurface, perRow = 2,
         )
         Text("Sections and cards the house adds later show up at the end. Reset puts this page back as the house has it.", style = MaterialTheme.typography.bodySmall, color = muted)
+    }
+    addingTo?.let { (sectionTitle, kind) ->
+        AddToSectionPage(kind, entities, layout.cards[sectionTitle]?.added.orEmpty(), onAdd = { item -> change { it.withAdded(sectionTitle, item) } }) { addingTo = null }
     }
     editing?.let { section ->
         OwnSectionEditor(
@@ -266,5 +282,60 @@ private fun AddCardsPage(chosen: List<OwnCardRef>, entities: Map<String, EntityS
                 }
             }
         }
+    }
+}
+
+/**
+ * Adds to a house section: cards of the section's kind from the house's pages, or a single light or device of that kind (found by name). A card or
+ * item can be added to more than one section; one already added here shows as added.
+ */
+@Composable
+private fun AddToSectionPage(kind: String, entities: Map<String, EntityState>, added: List<AddedItem>, onAdd: (AddedItem) -> Unit, onClose: () -> Unit) {
+    val pages = LocalHousePages.current
+    val admin = LocalIsAdmin.current
+    var tab by rememberSaveable { mutableStateOf(0) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val cards = addableCards(pages, admin).filter { it.ref.page == kindPage(kind) }
+    val things = entities.values.filter { isOfKind(kind, it.entityId, it.attributes.optString("device_class").ifBlank { null }) }
+        .filter { query.isBlank() || it.friendlyName.contains(query, ignoreCase = true) || it.entityId.contains(query, ignoreCase = true) }
+        .sortedBy { it.friendlyName.lowercase() }.take(150)
+    FullPage("Add to this section", onClose) {
+        TileRow(
+            listOf(TileItem("cd:sliders", "Cards", tab == 0) { tab = 0 }, TileItem("cd:bulb-lit", "Single items", tab == 1) { tab = 1 }),
+            toneColors(Tone.Grey), MaterialTheme.colorScheme.onSurface, perRow = 2,
+        )
+        if (tab == 0) {
+            if (cards.isEmpty()) Text("No other cards of this kind yet.", style = MaterialTheme.typography.bodyMedium, color = muted)
+            cards.forEach { a ->
+                val item = AddedItem(card = a.ref)
+                AddRow(cardLabel(a.card) { entities[it]?.friendlyName }, a.ref.section, item in added) { onAdd(item) }
+            }
+        } else {
+            androidx.compose.material3.OutlinedTextField(
+                value = query, onValueChange = { query = it }, singleLine = true, label = { Text("Search by name") },
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
+            )
+            if (things.isEmpty()) Text("Nothing found.", style = MaterialTheme.typography.bodyMedium, color = muted)
+            things.forEach { e ->
+                val item = AddedItem(entity = e.entityId)
+                AddRow(e.friendlyName, e.entityId, item in added) { onAdd(item) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddRow(title: String, subtitle: String, added: Boolean, onAdd: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(enabled = !added, onClickLabel = "Add $title", onClick = onAdd).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        IconBox(if (added) "cd:check" else "cd:plus", if (added) "Added" else "Add", enabled = !added, onClick = onAdd)
     }
 }

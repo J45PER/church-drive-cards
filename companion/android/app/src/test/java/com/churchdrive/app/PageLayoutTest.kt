@@ -1,5 +1,6 @@
 package com.churchdrive.app
 
+import com.churchdrive.app.ui.AddedItem
 import com.churchdrive.app.ui.CardPrefs
 import com.churchdrive.app.ui.CardSpec
 import com.churchdrive.app.ui.OwnCardRef
@@ -27,6 +28,13 @@ import com.churchdrive.app.ui.reset
 import com.churchdrive.app.ui.toggledCard
 import com.churchdrive.app.ui.toggledSection
 import com.churchdrive.app.ui.userLayoutBody
+import com.churchdrive.app.ui.entityCard
+import com.churchdrive.app.ui.isOfKind
+import com.churchdrive.app.ui.kindPage
+import com.churchdrive.app.ui.resolveAdded
+import com.churchdrive.app.ui.sectionKind
+import com.churchdrive.app.ui.withAdded
+import com.churchdrive.app.ui.withoutAdded
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -213,5 +221,55 @@ class PageLayoutTest {
         assertEquals(Tone.Teal, ownTone("teal", listOf(heating), emptyMap()))
         assertEquals(Tone.Heating, ownTone("nonsense", listOf(heating), emptyMap()))
         assertEquals(Tone.Grey, ownTone("dynamic", emptyList(), emptyMap()))
+    }
+
+    @Test fun aHouseSectionKeepsWhatWasAddedToIt() {
+        val kitchen = OwnCardRef("lighting", "Ground Floor", cardIds(pages.getValue("lighting").first().cards).first())
+        val layout = PageLayout().withAdded("Security", AddedItem(entity = "lock.front")).withAdded("Security", AddedItem(card = kitchen))
+        assertEquals(2, layout.cards.getValue("Security").added.size)
+        assertEquals(layout, layout.withAdded("Security", AddedItem(entity = "lock.front")))
+        val out = applyPageLayout(listOf(panel("Security", card("tile", "entity" to "binary_sensor.door"))), layout, pages)
+        val extra = out.single().extra
+        assertEquals(listOf("tile", "custom:light-control-card"), extra.map { it.type })
+        assertEquals(1, out.single().cards.size)
+        assertTrue(layout.withoutAdded("Security", AddedItem(entity = "lock.front")).cards.getValue("Security").added.size == 1)
+    }
+
+    @Test fun aSingleItemGetsTheCardThatSuitsIt() {
+        assertEquals("custom:light-control-card", entityCard("light.hall").type)
+        assertEquals("light", entityCard("light.hall").config.getString("mode"))
+        assertEquals("custom:climate-card", entityCard("climate.lounge").type)
+        assertEquals("custom:fan-card", entityCard("fan.bedroom").type)
+        assertEquals("tile", entityCard("lock.front").type)
+        assertEquals("lock.front", resolveAdded(AddedItem(entity = "lock.front"), emptyMap())!!.config.getString("entity"))
+        assertNull(resolveAdded(AddedItem(card = OwnCardRef("lighting", "Gone", "x")), pages))
+    }
+
+    @Test fun eachSectionKnowsWhatKindOfThingItHolds() {
+        assertEquals("lights", sectionKind("home", "Lights"))
+        assertEquals("security", sectionKind("home", "Security"))
+        assertEquals("climate", sectionKind("climate", "Heating"))
+        assertEquals("security", sectionKind("security", "Doors & Motion"))
+        assertNull(sectionKind("home", "Car charging"))
+        assertEquals("lighting", kindPage("lights"))
+        assertNull(kindPage("energy"))
+    }
+
+    @Test fun onlyThingsOfTheRightKindCanBeAdded() {
+        assertTrue(isOfKind("lights", "light.hall", null))
+        assertTrue(!isOfKind("lights", "switch.hall", null))
+        assertTrue(isOfKind("security", "lock.front", null))
+        assertTrue(isOfKind("security", "binary_sensor.back_door", "door"))
+        assertTrue(!isOfKind("security", "binary_sensor.battery", "battery"))
+        assertTrue(isOfKind("climate", "sensor.lounge_temp", "temperature"))
+        assertTrue(!isOfKind("climate", "sensor.power", "power"))
+        assertTrue(isOfKind("cleaning", "vacuum.gregg", null))
+    }
+
+    @Test fun additionsRoundTripAndAnEmptySectionIsForgotten() {
+        val user = UserLayout().changed("home") { it.withAdded("Lights", AddedItem(entity = "light.hall")).withAdded("Lights", AddedItem(card = OwnCardRef("lighting", "Ground Floor", "x"))) }
+        assertEquals(user, parseUserLayout(userLayoutBody(user).getJSONObject("layout")))
+        val none = user.changed("home") { it.withoutAdded("Lights", AddedItem(entity = "light.hall")).withoutAdded("Lights", AddedItem(card = OwnCardRef("lighting", "Ground Floor", "x"))) }
+        assertTrue(none.pages.isEmpty())
     }
 }

@@ -45,7 +45,7 @@ fun PanelView(panel: PanelSpec, entities: Map<String, EntityState>, registry: Re
     }
     // A card marked `admin_only` is for administrators; a panel left with none of its cards is not shown to anyone else.
     val cards = visibleCards(panel.cards, LocalIsAdmin.current)
-    if (panel.cards.isNotEmpty() && cards.isEmpty()) return
+    if (panel.cards.isNotEmpty() && cards.isEmpty() && panel.extra.isEmpty()) return
     // The panel holding the alarm is the alarm's colour (blue home, red away), as on Home, whatever the dashboard says.
     val alarm = if (panel.cards.any { it.type.removeSuffix("-beta") == "custom:alarm-panel-card" }) {
         alarmTone(entities[panel.cards.first { it.type.removeSuffix("-beta") == "custom:alarm-panel-card" }.config.optString("entity").ifBlank { ALARM_ENTITY }]?.state)
@@ -53,6 +53,8 @@ fun PanelView(panel: PanelSpec, entities: Map<String, EntityState>, registry: Re
     DashboardPanel(panel, toneOverride = alarm) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             cards.forEach { CardView(it, entities, registry, call) }
+            // Lights, devices and cards this person added to the section.
+            panel.extra.forEach { CardView(it, entities, registry, call) }
         }
     }
 }

@@ -21,6 +21,8 @@ data class PanelSpec(
     val cards: List<CardSpec>,
     /** Set for one of a person's own sections (see [OwnSection]); null for the house's. */
     val ownId: String? = null,
+    /** Cards a person added to one of the house's sections (shown after its own cards; see [AddedItem]). */
+    val extra: List<CardSpec> = emptyList(),
 )
 
 /** Reads the panels of each page of a dashboard, by the page's path (`security`, `climate`...). */

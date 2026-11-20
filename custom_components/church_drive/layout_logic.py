@@ -18,6 +18,7 @@ MAX_IDS = 120
 MAX_ID_LENGTH = 160
 MAX_OWN_SECTIONS = 12
 MAX_OWN_CARDS = 40
+MAX_ADDED = 24
 MAX_TITLE = 24
 OWN_PAGES = ("home",)
 ICONS = (
@@ -28,6 +29,7 @@ TONES = ("auto", "dynamic", "lights", "heating", "air", "blue", "green", "amber"
 
 _PAGE = re.compile(r"^[a-z0-9_-]{1,24}$")
 _OWN_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+_ENTITY = re.compile(r"^[a-z0-9_]{1,24}\.[a-z0-9_]{1,80}$")
 
 
 def _ids(value: Any, limit: int = MAX_IDS) -> list[str]:
@@ -41,14 +43,32 @@ def _ids(value: Any, limit: int = MAX_IDS) -> list[str]:
     return out
 
 
-def _card_prefs(value: Any) -> dict[str, dict[str, list[str]]]:
-    out: dict[str, dict[str, list[str]]] = {}
+def clean_added(value: Any) -> list[dict[str, Any]]:
+    """Things a person added to a house section: a house card (its page, section and card id) or a single entity."""
+    out: list[dict[str, Any]] = []
+    for item in value if isinstance(value, list) else []:
+        if not isinstance(item, dict):
+            continue
+        if isinstance(item.get("entity"), str) and _ENTITY.match(item["entity"]):
+            clean: dict[str, Any] | None = {"entity": item["entity"]}
+        else:
+            ref = clean_own_card(item.get("card"))
+            clean = {"card": ref} if ref else None
+        if clean is not None and clean not in out:
+            out.append(clean)
+        if len(out) >= MAX_ADDED:
+            break
+    return out
+
+
+def _card_prefs(value: Any) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
     for section, prefs in (value.items() if isinstance(value, dict) else []):
         if not isinstance(section, str) or not section or len(section) > MAX_ID_LENGTH or not isinstance(prefs, dict):
             continue
-        order, hidden = _ids(prefs.get("order")), _ids(prefs.get("hidden"))
-        if order or hidden:
-            out[section] = {"order": order, "hidden": hidden}
+        order, hidden, added = _ids(prefs.get("order")), _ids(prefs.get("hidden")), clean_added(prefs.get("added"))
+        if order or hidden or added:
+            out[section] = {"order": order, "hidden": hidden, "added": added}
         if len(out) >= MAX_IDS:
             break
     return out
