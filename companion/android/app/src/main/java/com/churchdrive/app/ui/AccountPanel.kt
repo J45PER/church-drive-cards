@@ -102,6 +102,8 @@ fun AccountOverlay(
     experimentalContent: @Composable () -> Unit = {},
     /** The Activity log page (administrators): what people and the assistant did, and who came and went. */
     activityContent: @Composable () -> Unit = {},
+    /** Where Back goes from the in-app To-do page when it was opened from another page of the panel (Upcoming), else the account page. */
+    todoBackTo: String? = null,
     /** The Upcoming page: what the house does next at a set time, and the one-offs and routines behind it. */
     upcomingContent: @Composable () -> Unit = {},
     /** The page behind the sidebar, to blur (the bar's acrylic). Null keeps the sidebar solid. */
@@ -109,7 +111,7 @@ fun AccountOverlay(
     /** The height of the bottom bar: the sidebar stops above it, so the bar stays in reach. */
     bottomInset: Dp = 0.dp,
 ) {
-    SidebarHost(panel, onPanel, acrylic, bottomInset, back = ::panelParent, depth = ::panelDepth) { which ->
+    SidebarHost(panel, onPanel, acrylic, bottomInset, back = { p -> if (p == "todo" && todoBackTo != null) todoBackTo else panelParent(p) }, depth = ::panelDepth) { which ->
         when (which) {
             "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
             "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }

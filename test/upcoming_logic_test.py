@@ -55,7 +55,7 @@ class Sources(unittest.TestCase):
         self.assertEqual(build(blinds=blinds), [])
 
     def test_the_purifier_goes_to_auto_and_sleep(self):
-        p = {"enabled": True, "entity": "fan.p", "name": "Air Purifier", "schedules": [{"days": [4], "auto": "07:00", "sleep": "22:30"}]}
+        p = {"enabled": True, "entity": "fan.p", "name": "Air Purifier ", "schedules": [{"days": [4], "auto": "07:00", "sleep": "22:30"}]}
         items = build(purifier=p)
         self.assertEqual([(i["date"], i["time"], i["title"]) for i in items], [("2026-11-20", "22:30", "Air Purifier to Sleep"), ("2026-11-27", "07:00", "Air Purifier to Auto")])
 

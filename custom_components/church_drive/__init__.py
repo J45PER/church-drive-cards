@@ -1425,7 +1425,7 @@ def ws_schedules(hass: HomeAssistant, connection: websocket_api.ActiveConnection
 
     def friendly(entity: str) -> str:
         state = hass.states.get(entity)
-        return (state.attributes.get("friendly_name") if state else None) or entity
+        return str((state.attributes.get("friendly_name") if state else None) or entity).strip()
 
     blinds = _blind_schedule(hass)
     for entity, cfg in (blinds._cfg.items() if blinds else []):
@@ -1469,7 +1469,7 @@ async def ws_upcoming(hass: HomeAssistant, connection: websocket_api.ActiveConne
 
     def friendly(entity: str) -> str:
         state = hass.states.get(entity)
-        return (state.attributes.get("friendly_name") if state else None) or entity
+        return str((state.attributes.get("friendly_name") if state else None) or entity).strip()
 
     routines = _routines(hass)
     blinds_obj = _blind_schedule(hass)
