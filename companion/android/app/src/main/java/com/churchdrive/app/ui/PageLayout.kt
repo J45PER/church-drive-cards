@@ -9,7 +9,10 @@ import org.json.JSONObject
  * added in Home Assistant shows by default (at the end) and nothing a person arranged moves. On every page a person can reorder sections, hide
  * a house section and reorder or hide its cards; on Home they can also make their own sections, with cards from any page.
  */
-data class CardPrefs(val order: List<String> = emptyList(), val hidden: Set<String> = emptySet())
+/** Something a person added to a house section: a house card from any page (a reference), or a single light or device (its entity). */
+data class AddedItem(val card: OwnCardRef? = null, val entity: String? = null)
+
+data class CardPrefs(val order: List<String> = emptyList(), val hidden: Set<String> = emptySet(), val added: List<AddedItem> = emptyList())
 
 /** A house card in one of a person's own sections: where it is in the house's layout (its page, section and card id). */
 data class OwnCardRef(val page: String, val section: String, val card: String)
@@ -66,6 +69,21 @@ fun resolveOwnCard(ref: OwnCardRef, pages: Map<String, List<PanelSpec>>): CardSp
     return panel.cards.getOrNull(cardIds(panel.cards).indexOf(ref.card))
 }
 
+/** A card for a single light or device: a light's own card, a thermostat or fan's, or a plain tile. */
+fun entityCard(entity: String): CardSpec {
+    val config = org.json.JSONObject().put("entity", entity)
+    return when (entity.substringBefore('.')) {
+        "light" -> CardSpec("custom:light-control-card", config.put("mode", "light"))
+        "climate" -> CardSpec("custom:climate-card", config)
+        "fan" -> CardSpec("custom:fan-card", config)
+        else -> CardSpec("tile", config)
+    }
+}
+
+/** What a person added to a house section as a card: the house card it refers to (if the house still has it), or a card for the entity. */
+fun resolveAdded(item: AddedItem, pages: Map<String, List<PanelSpec>>): CardSpec? =
+    item.entity?.let { entityCard(it) } ?: item.card?.let { resolveOwnCard(it, pages) }
+
 /** A person's own sections as panels, their cards found in [pages] (the house's pages as the app lays them out). */
 fun ownPanels(layout: PageLayout?, pages: Map<String, List<PanelSpec>>): List<PanelSpec> =
     layout?.own.orEmpty().map { s ->
@@ -89,7 +107,7 @@ fun applyPageLayout(panels: List<PanelSpec>, layout: PageLayout?, pages: Map<Str
         val ids = cardIds(panel.cards)
         val entries = panel.cards.zip(ids)
         val ordered = orderedBy(entries, prefs.order) { it.second }.filter { it.second !in prefs.hidden }.map { it.first }
-        panel.copy(cards = ordered)
+        panel.copy(cards = ordered, extra = prefs.added.mapNotNull { resolveAdded(it, pages) })
     }
     return headers + kept
 }
@@ -116,6 +134,51 @@ fun addableCards(pages: Map<String, List<PanelSpec>>, admin: Boolean): List<Adda
             }
         }
     }
+
+/**
+ * What kind of thing a house section holds, which decides what a person can add to it: its cards of the same kind and single lights or devices of that
+ * kind. On Home the sections are named; on the other pages the whole page is one kind. Null where nothing can be added.
+ */
+fun sectionKind(page: String, title: String): String? = when (page) {
+    "home" -> when (title) { "Lights" -> "lights"; "Security" -> "security"; "Climate" -> "climate"; "Cleaning" -> "cleaning"; else -> null }
+    "security" -> "security"
+    "climate" -> "climate"
+    "cleaning" -> "cleaning"
+    "todo" -> "todo"
+    else -> null
+}
+
+/** The house page a kind's cards come from. */
+fun kindPage(kind: String): String? = when (kind) {
+    "lights" -> "lighting"; "security" -> "security"; "climate" -> "climate"; "cleaning" -> "cleaning"; "todo" -> "todo"; else -> null
+}
+
+private val SECURITY_CLASSES = setOf("door", "window", "motion", "occupancy", "smoke", "carbon_monoxide", "tamper", "garage_door", "opening", "lock", "vibration", "moisture")
+private val CLIMATE_CLASSES = setOf("temperature", "humidity", "aqi", "pm25", "pm10", "co2", "volatile_organic_compounds", "atmospheric_pressure")
+
+/** Whether a light or device is of [kind]: what a person can add to that kind of section as a single item. */
+fun isOfKind(kind: String, entityId: String, deviceClass: String?): Boolean {
+    val domain = entityId.substringBefore('.')
+    return when (kind) {
+        "lights" -> domain == "light"
+        "security" -> domain in setOf("alarm_control_panel", "lock", "camera", "siren") || (domain == "binary_sensor" && deviceClass in SECURITY_CLASSES)
+        "climate" -> domain in setOf("climate", "humidifier", "fan") || (domain == "sensor" && deviceClass in CLIMATE_CLASSES)
+        "cleaning" -> domain == "vacuum"
+        "todo" -> domain == "todo"
+        else -> false
+    }
+}
+
+fun PageLayout.withAdded(section: String, item: AddedItem): PageLayout {
+    val prefs = cards[section] ?: CardPrefs()
+    if (item in prefs.added) return this
+    return copy(cards = cards + (section to prefs.copy(added = prefs.added + item)))
+}
+
+fun PageLayout.withoutAdded(section: String, item: AddedItem): PageLayout {
+    val prefs = cards[section] ?: return this
+    return copy(cards = cards + (section to prefs.copy(added = prefs.added - item)))
+}
 
 /** The ids of the sections in the order they are shown for this person: their order first, then the rest. */
 fun effectiveSectionOrder(ids: List<String>, layout: PageLayout?): List<String> = orderedBy(ids, layout?.order.orEmpty()) { it }
@@ -151,7 +214,9 @@ fun toggledCard(layout: PageLayout, section: String, card: String): PageLayout {
 
 /** [layout] with [change] made to [page], forgetting a page left with no changes. */
 fun UserLayout.changed(page: String, change: (PageLayout) -> PageLayout): UserLayout {
-    val next = change(pages[page] ?: PageLayout())
+    val changedPage = change(pages[page] ?: PageLayout())
+    // A section left with no changes is forgotten, and so is a page left with none.
+    val next = changedPage.copy(cards = changedPage.cards.filterValues { it.order.isNotEmpty() || it.hidden.isNotEmpty() || it.added.isNotEmpty() })
     return UserLayout(if (next.isEmpty) pages - page else pages + (page to next))
 }
 
@@ -166,7 +231,14 @@ fun parseUserLayout(result: Any?): UserLayout? {
         val cardsJson = p.optJSONObject("cards")
         val cards = cardsJson?.keys()?.asSequence()?.associateWith { section ->
             val prefs = cardsJson.optJSONObject(section) ?: JSONObject()
-            CardPrefs(strings(prefs.optJSONArray("order")), strings(prefs.optJSONArray("hidden")).toSet())
+            val addedJson = prefs.optJSONArray("added")
+            val added = (0 until (addedJson?.length() ?: 0)).mapNotNull { i ->
+                val o = addedJson?.optJSONObject(i) ?: return@mapNotNull null
+                val card = o.optJSONObject("card")?.let { OwnCardRef(it.optString("page"), it.optString("section"), it.optString("card")) }
+                val entity = o.optString("entity").takeIf { it.isNotBlank() }
+                if (card == null && entity == null) null else AddedItem(card, entity)
+            }
+            CardPrefs(strings(prefs.optJSONArray("order")), strings(prefs.optJSONArray("hidden")).toSet(), added)
         } ?: emptyMap()
         val ownJson = p.optJSONArray("own")
         val own = (0 until (ownJson?.length() ?: 0)).mapNotNull { i ->
@@ -191,7 +263,13 @@ fun userLayoutBody(layout: UserLayout): JSONObject {
     val pages = JSONObject()
     layout.pages.forEach { (name, p) ->
         val cards = JSONObject()
-        p.cards.forEach { (section, prefs) -> cards.put(section, JSONObject().put("order", JSONArray(prefs.order)).put("hidden", JSONArray(prefs.hidden.toList()))) }
+        p.cards.forEach { (section, prefs) -> cards.put(
+            section,
+            JSONObject().put("order", JSONArray(prefs.order)).put("hidden", JSONArray(prefs.hidden.toList())).put(
+                "added",
+                JSONArray(prefs.added.map { a -> JSONObject().apply { a.entity?.let { put("entity", it) }; a.card?.let { c -> put("card", JSONObject().put("page", c.page).put("section", c.section).put("card", c.card)) } } }),
+            ),
+        ) }
         val own = JSONArray(p.own.map { s ->
             JSONObject().put("id", s.id).put("title", s.title).put("icon", s.icon).put("tone", s.tone).put("dynamic", s.dynamic)
                 .put("cards", JSONArray(s.cards.map { JSONObject().put("page", it.page).put("section", it.section).put("card", it.card) }))

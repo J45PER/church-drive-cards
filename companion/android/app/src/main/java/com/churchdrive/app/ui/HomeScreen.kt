@@ -378,6 +378,8 @@ private fun HomePage(
     val climate = entities[CLIMATE_ENTITY]
     val vacuum = entities[VACUUM_ENTITY]
     val byTitle = panels.filter { it.ownId == null }.associateBy { it.title }
+    // What this person added to a house section (a light, a device, a card): drawn under what the app draws for the section itself.
+    val extraByTitle = panels.filter { it.ownId == null }.associate { it.title to it.extra }
 
     /**
      * A Home panel: the icon is the nav bar's own for that page; the summary line and colour are the dashboard
@@ -404,7 +406,14 @@ private fun HomePage(
             summary = summary,
             iconSlot = iconSlot,
             onClick = page?.let { { onOpen(it) } },
-            content = content,
+            content = {
+                val extra = extraByTitle[title].orEmpty()
+                if (extra.isEmpty()) content()
+                else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    content()
+                    extra.forEach { CardView(it, entities, registry, call) }
+                }
+            },
         )
     }
 

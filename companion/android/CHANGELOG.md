@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.170.0
+
+- **Add to the house's sections.** Open a section in Customise this page and choose Add to this section: cards of the same kind from the house's pages, or any single light or device of that kind (more rooms, zones or lights in Lights; other locks, sensors and cameras in Security; and so on), found by name. What you add shows under the section's own cards and can be taken out again; the house's own cards can still only be hidden.
+
 ## 0.169.0
 
 - **Your own layout.** A Customise this page button on Home, Security, Climate, Cleaning and To-do lets you order the sections, switch them on or off, and (where the cards come from the dashboard) hide and reorder a section's cards. On Home you can make your own sections with cards from any page, with an icon and a colour (Auto, Dynamic or a palette). It is kept in the house against your Home Assistant user, so a new phone looks the same; Reset puts a page, or every page, back as the house has it. Lighting, Devices and Energy keep the house's layout for now.
