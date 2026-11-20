@@ -123,7 +123,8 @@ private fun CardContent(card: CardSpec, entities: Map<String, EntityState>, regi
         "custom:security-zone-card" -> ZoneCard(card.config, entities, call)
         "custom:climate-card" -> ClimateRoomCard(card.config, entities, call)
         "custom:climate-zone-card" -> ClimateZoneCard(card.config, entities, call)
-        "custom:overnight-heating-card" -> OvernightHeatingCard(entities, call)
+        // The overnight schedule is on Heating details (press and hold a thermostat), not on this page; the dashboard keeps its own card.
+        "custom:overnight-heating-card" -> Unit
         "custom:fan-card" -> FanCard(card.config, entities, call)
         "custom:air-purifier-card" -> AirPurifierCard(card.config, entities, call)
         // The purifier's schedule is on the purifier card (what's next) and its device page (the editor), not a card of its own.

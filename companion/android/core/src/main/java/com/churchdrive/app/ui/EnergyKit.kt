@@ -907,16 +907,18 @@ fun GridCard(
     fold: androidx.compose.runtime.MutableState<Boolean>? = null,
     /** Where the fold arrow's cell starts, in cells from the top (0 for the title row). */
     arrowTop: Float = 0f,
+    /** Pressing and holding the card does this instead of opening [deviceEntity]'s device page (a thermostat opens Heating details). */
+    onHold: (() -> Unit)? = null,
     body: @Composable GridScope.() -> Unit,
 ) {
     val openDevice = LocalOpenDevice.current
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Card(
         modifier = modifier.fillMaxWidth().then(
-            if (deviceEntity == null) Modifier
+            if (deviceEntity == null && onHold == null) Modifier
             else Modifier.androidxLongPress {
                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                deviceEntity?.let { openDevice(it) }
+                if (onHold != null) onHold() else deviceEntity?.let { openDevice(it) }
             },
         ),
         shape = RoundedCornerShape(28.dp),

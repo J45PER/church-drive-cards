@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.175.0
+
+- **Heating details.** Press and hold a thermostat to open each thermostat's status and the overnight schedule (moved from the Climate page). The Clive settings pane is now acrylic.
+
 ## 0.174.1
 
 - **Fix.** Upcoming works again after 0.174.0 (car charging times could not be read, which stopped the whole list).

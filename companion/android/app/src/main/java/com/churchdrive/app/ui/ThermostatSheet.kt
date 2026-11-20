@@ -147,7 +147,8 @@ fun ThermostatSheet(title: String, zone: ZoneControl, tone: ToneColors, call: Ca
     val now = System.currentTimeMillis()
     val lo = zone.lowValue
     val hi = zone.highValue
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)) {
+        AcrylicSheet()
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -209,7 +210,8 @@ fun ThermostatSheet(title: String, zone: ZoneControl, tone: ToneColors, call: Ca
 fun RoomRangeSheet(title: String, low: EntityState, high: EntityState, tone: ToneColors, call: CallService, onDismiss: () -> Unit) {
     val lo = low.state.toDoubleOrNull()
     val hi = high.state.toDoubleOrNull()
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)) {
+        AcrylicSheet()
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -222,6 +224,24 @@ fun RoomRangeSheet(title: String, low: EntityState, high: EntityState, tone: Ton
             if (lo != null && hi != null) {
                 RangeRow("Comfortable from", lo, tone) { v -> call("input_number", "set_value", low.entityId, data("value" to minOf(v, hi - 1.0))) }
                 RangeRow("Comfortable up to", hi, tone) { v -> call("input_number", "set_value", high.entityId, data("value" to maxOf(v, lo + 1.0))) }
+            }
+        }
+    }
+}
+
+/**
+ * Makes the sheet it is called in acrylic: its window blurs what is behind it (Android 12 and later), under the sheet's translucent colour. On older
+ * phones the sheet is just translucent.
+ */
+@Composable
+@android.annotation.SuppressLint("NewApi")
+internal fun AcrylicSheet() {
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.SideEffect {
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { w ->
+                w.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                w.attributes = w.attributes.also { it.blurBehindRadius = 48 }
             }
         }
     }
