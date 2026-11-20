@@ -82,3 +82,36 @@ fun whitePresets(min: Int, max: Int): List<Pair<String, Int>> =
 fun kelvinWord(k: Int): String = when {
     k < 2400 -> "Candle"; k < 3200 -> "Warm"; k < 4500 -> "Neutral"; k < 5600 -> "Daylight"; else -> "Cool"
 }
+
+/** The white scenes in Church Drive's library, in the order a light's White section shows them. */
+val WHITE_SCENES = listOf("bright", "cool_bright", "dimmed", "read", "concentrate", "energise", "relax", "rest", "nightlight")
+
+/** Most colours a person can keep. */
+const val MAX_SAVED_COLOURS = 8
+
+/** A brightness bar moves in 5% steps, from 5% to 100%: the nearest step to [fraction] (0 to 1), as a percentage. */
+fun snapBrightness(fraction: Float): Int = ((fraction * 100f / 5f).roundToInt() * 5).coerceIn(5, 100)
+
+/** Saved colours as hue and saturation pairs, kept as "hue,sat;hue,sat". Anything unreadable is left out. */
+fun decodeSavedColours(text: String?): List<Pair<Double, Double>> =
+    (text ?: "").split(';').mapNotNull { part ->
+        val bits = part.split(',')
+        val h = bits.getOrNull(0)?.toDoubleOrNull()
+        val s = bits.getOrNull(1)?.toDoubleOrNull()
+        if (bits.size == 2 && h != null && s != null) h to s else null
+    }.take(MAX_SAVED_COLOURS)
+
+fun encodeSavedColours(colours: List<Pair<Double, Double>>): String =
+    colours.joinToString(";") { "${"%.1f".format(java.util.Locale.ROOT, it.first)},${"%.1f".format(java.util.Locale.ROOT, it.second)}" }
+
+/** Whether two hue and saturation pairs are the same colour to the eye (a few degrees of hue, a few points of saturation). */
+fun sameColour(a: Pair<Double, Double>, b: Pair<Double, Double>): Boolean {
+    val dh = Math.abs(a.first - b.first).let { if (it > 180) 360 - it else it }
+    return dh < 3.0 && Math.abs(a.second - b.second) < 3.0
+}
+
+/** [colour] added to the saved ones (up to [MAX_SAVED_COLOURS]), or taken out when it is already saved. */
+fun toggleSavedColour(saved: List<Pair<Double, Double>>, colour: Pair<Double, Double>): List<Pair<Double, Double>> =
+    if (saved.any { sameColour(it, colour) }) saved.filterNot { sameColour(it, colour) }
+    else if (saved.size >= MAX_SAVED_COLOURS) saved
+    else saved + colour
