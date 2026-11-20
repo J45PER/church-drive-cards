@@ -117,5 +117,22 @@ class CarAndAutomations(unittest.TestCase):
         self.assertEqual(up.time_automation_runs(helper, NOW, datetime(2026, 12, 30, tzinfo=timezone.utc)), [])
 
 
+class HomeAssistantValues(unittest.TestCase):
+    """Inside Home Assistant a state's time attributes are datetime objects, not text: the live failure on 0.174.0."""
+
+    def test_charging_times_may_be_datetimes(self):
+        charging = {"entity": "select.zappi_charge_mode", "plugged": True, "smart": True, "role": "Additional",
+                    "window_start": datetime(2026, 11, 20, 23, 30, tzinfo=timezone.utc), "window_end": datetime(2026, 11, 21, 6, 0, tzinfo=timezone.utc),
+                    "dispatches": [{"start": datetime(2026, 11, 21, 4, 30, tzinfo=timezone.utc), "end": datetime(2026, 11, 21, 5, 30, tzinfo=timezone.utc)}]}
+        titles = [i["title"] for i in build(charging=charging) if i["kind"] == "car"]
+        self.assertIn("Car charging until 05:30", titles)
+        self.assertIn("Car charging at the cheap rate until 06:00", titles)
+
+    def test_one_bad_source_leaves_the_rest(self):
+        r = routine("cover.roller_blind", "open", {"kind": "once", "at": "2026-11-21T08:15"})
+        items = build(routines=[r], charging={"entity": "x", "dispatches": [{"start": 5, "end": object()}]})
+        self.assertEqual([i["time"] for i in items], ["08:15"])
+
+
 if __name__ == "__main__":
     unittest.main()
