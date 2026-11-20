@@ -517,11 +517,12 @@ fun ClimateCard(
     }
     if (fold.value) {
         GridCard(tone.container, ink, 2.5f, title, deviceEntity = climate?.entityId, fold = fold) {
+            // The status pill stays on the title row when the card is folded, as when it's open.
+            Box(Modifier.at(3f, 0.25f, 4f, 0.5f), contentAlignment = Alignment.CenterEnd) { StatusPill(climateStatusWord(climate), tone) }
             Dial(1f, 1.5f, 1f)
             val firstBtn = 8f - items.size
             Column(Modifier.at(2f, 0.9f, firstBtn - 2f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
                 Text("${temp(cur)}° room", style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
-                Text(climateStatusWord(climate), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
             }
             (quick ?: DEFAULT_QUICK).forEachIndexed { i, q ->
                 SmallModeButton(quickSettingIcon(q), isSelected(q), tone, ink, false, Modifier.atCentre(firstBtn + i, 1.5f, 0.8f, 0.8f), enabled, q.name) { applyQuick(q) }
