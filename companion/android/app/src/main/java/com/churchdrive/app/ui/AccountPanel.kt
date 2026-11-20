@@ -116,6 +116,7 @@ fun AccountOverlay(
             "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
             "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
             "activity" -> AdminPage("Activity log", { onPanel("account") }) { activityContent() }
+            "schedules" -> AdminPage("Schedules", { onPanel("account") }) { SchedulesPage(isAdmin) }
             else -> if (which.startsWith("manager:")) {
                 managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                     AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
@@ -169,6 +170,8 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, managerPages: List<
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
         PanelCard { PanelRow(CdVectors.BatteryCharging, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
+        // Schedules, for everyone: what Clive was asked to do later or on repeat, and the schedules set from device cards.
+        PanelCard { PanelRow(CdVectors.History, "Schedules", "What Clive and the device cards have scheduled", onClick = { onOpen("schedules") }, leading = { HaIcon("mdi:calendar-clock", CdVectors.History, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) }) }
         // The activity log (administrators): what people and the assistant did, and who came and went.
         if (isAdmin) {
             PanelCard { PanelRow(CdVectors.History, "Activity log", "What people and the assistant did, and who came and went", onClick = { onOpen("activity") }) }

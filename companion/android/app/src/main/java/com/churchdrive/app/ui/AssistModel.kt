@@ -39,6 +39,10 @@ private const val WAKE_QUIET_SECONDS = 600
 /** The longest one wake word run (and the question and answer after it) may last before the house ends it. */
 private const val WAKE_RUN_SECONDS = 1_800
 
+/** A wake word that heard nothing within this long of the wake word is listened for again once; the second listen waits this long in quiet. */
+private const val WAKE_RETRY_WITHIN_MS = 8_000L
+private const val RETRY_SILENCE_SECONDS = 1.4
+
 class AssistModel(private val context: Context, private val api: HaApi, private val base: String) {
     var state by mutableStateOf(AssistState.Idle)
         private set
@@ -110,6 +114,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     /** Quiet follow-up listens already retried for this answer: he asked "anything else?", so give the person a second go before closing. */
     private var autoRetries = 0
+
+    /** When the wake word was last heard, and whether the listening after it has already been retried once. */
+    private var wokeAt = 0L
+    private var wakeRetried = false
 
     // The wake word loop.
     private var wakeEnabled = false
@@ -336,6 +344,26 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         state = AssistState.Waiting
     }
 
+    /** Listens for the message only (no wake word), with the house's speech-to-text, for when the first listen after the wake word heard nothing. */
+    private fun beginMessageRun() {
+        val params = JSONObject()
+            .put("start_stage", "stt")
+            .put("end_stage", "tts")
+            .put("input", JSONObject().put("sample_rate", MicStream.RATE).put("silence_seconds", RETRY_SILENCE_SECONDS))
+            .put("timeout", WAKE_RUN_SECONDS)
+        conversationId?.let { params.put("conversation_id", it) }
+        answered = false
+        said = ""
+        notice = ""
+        subscription = startRun(params)
+        if (subscription < 0) {
+            state = AssistState.Idle
+            notice = "Can't reach the house right now."
+            return
+        }
+        state = AssistState.Listening
+    }
+
     private fun startMic() {
         val id = handlerId ?: return
         // Never two at once: one left running would hold the microphone and send to a run that has gone.
@@ -385,6 +413,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             }
             is AssistEvent.Woke -> if (e.word != null) {
                 note("wake word heard")
+                wokeAt = SystemClock.elapsedRealtime()
+                wakeRetried = false
                 partial = ""
                 notice = ""
                 notUnderstood = null
@@ -440,6 +470,15 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         note("error ${e.code}")
         // The house stops a wake-word run every so often when nothing was said; that is only a quiet restart, so he stays "waiting"
         // (the settings row and the top bar's microphone would otherwise flicker for the moment between the two runs).
+        // The house's silence detector can count the end of "Hey ..." as the start of the message, and then end it at the pause before the real words:
+        // nothing was heard a moment after the wake word, so listen again (a run that starts at speech-to-text, with more patience) instead of giving up.
+        if (e.code == "stt-no-text-recognized" && !wakeRetried && panelOpen && SystemClock.elapsedRealtime() - wokeAt < WAKE_RETRY_WITHIN_MS) {
+            wakeRetried = true
+            note("retry listening after the wake word")
+            stopVoiceRun()
+            beginMessageRun()
+            return
+        }
         val quietRestart = (e.code == "wake-word-timeout" || e.code == "timeout") && wakeEnabled && state == AssistState.Waiting
         stopVoiceRun()
         when {

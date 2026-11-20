@@ -227,6 +227,58 @@
           "description": "Remind each person when they arrive home."
         }
       }
+    },
+    "schedule_action": {
+      "name": "Schedule an action",
+      "description": "Do something to a device later, once or on repeat (Clive's way to schedule).",
+      "fields": {
+        "entity_id": {
+          "name": "Devices",
+          "description": "The devices."
+        },
+        "action": {
+          "name": "Action",
+          "description": "On, off, open, close, or set to a value."
+        },
+        "value": {
+          "name": "Value",
+          "description": "For set: a position or brightness or speed in percent, or degrees for a thermostat."
+        },
+        "name": {
+          "name": "Name",
+          "description": "What to call it."
+        },
+        "at": {
+          "name": "At",
+          "description": "A one-off time, such as 2026-11-21 08:15 (the house's time)."
+        },
+        "time": {
+          "name": "Time",
+          "description": "A time of day to repeat, such as 07:00."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Days to repeat on, such as mon, tue or weekdays; every day if left out."
+        }
+      }
+    },
+    "list_schedules": {
+      "name": "List scheduled actions",
+      "description": "What is scheduled, soonest first."
+    },
+    "cancel_schedule": {
+      "name": "Cancel a scheduled action",
+      "description": "Remove a scheduled action by its name or id.",
+      "fields": {
+        "which": {
+          "name": "Which",
+          "description": "Its name, a word from it, or its id."
+        },
+        "all": {
+          "name": "All matches",
+          "description": "Remove every match."
+        }
+      }
     }
   }
 }

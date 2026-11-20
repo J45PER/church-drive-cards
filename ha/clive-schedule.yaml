@@ -1,0 +1,99 @@
+# Script script.clive_schedule: Clive's way to do something later or on repeat (church_drive.schedule_action; the house runs it, even with every phone off). Exposed to Assist. A copy of the live script.
+alias: Schedule an action
+description: 'Use this whenever someone wants something done LATER or on REPEAT: "open the bedroom blind at 8:15 tomorrow", "turn the landing light off at 11pm every night", "heating down at 10 on weekdays". It works for blinds, lights, switches, fans, humidifiers, thermostats and scenes, never locks or the alarm (say plainly that you can''t). Do the job now with the normal tools if they want it now. For a one-off give the time and the day (today, tomorrow or a date); for a routine give the time and repeat_days. Several devices can go in one. It returns "say": your whole reply is the text in "say", nothing before or after it. Never claim it is scheduled unless the result says ok.'
+fields:
+  entity_id:
+    description: The device or devices, such as cover.hayleys_bedroom_blind. Use the entity ids you can see.
+    name: Devices
+    required: true
+    selector:
+      entity:
+        multiple: true
+  action:
+    description: on, off, open, close, or set (set needs a value). Blinds open and close; lights, switches, fans and humidifiers go on and off.
+    name: Action
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options: [on, off, open, close, set]
+  value:
+    description: For set only, a number. A blind's position or a light's brightness or a fan's speed in percent, or a thermostat's temperature in degrees.
+    name: Value
+    required: false
+    selector:
+      number:
+        min: 0
+        max: 100
+        mode: box
+  time:
+    description: The time of day, 24 hour, such as 08:15 or 23:00.
+    name: Time
+    required: true
+    selector:
+      text:
+  day:
+    description: For a one-off, today, tomorrow or a date such as 2026-11-25. Leave out for a routine; for a one-off with no day, the next time that clock time comes round is used.
+    name: Day
+    required: false
+    selector:
+      text:
+  repeat_days:
+    description: To repeat, which days, such as daily, weekdays, weekends, or a list like mon, wed, fri. Leave out for a one-off.
+    name: Repeat on
+    required: false
+    selector:
+      text:
+  name:
+    description: A short name for it, such as "Open the bedroom blind". Optional.
+    name: Name
+    required: false
+    selector:
+      text:
+icon: mdi:calendar-clock
+mode: parallel
+max: 5
+sequence:
+- variables:
+    clock: '{{ time | string | trim }}'
+    stamp: >-
+      {%- set hh = clock.split(':')[0] | int(0) -%}{%- set mm = (clock.split(':')[1] if ':' in clock else '0') | int(0) -%}
+      {%- set d = (day | default('') | string | lower | trim) -%}
+      {%- if d == 'today' -%}{%- set date = now().date() -%}
+      {%- elif d == 'tomorrow' -%}{%- set date = (now() + timedelta(days=1)).date() -%}
+      {%- elif d != '' -%}{%- set date = as_datetime(d).date() if as_datetime(d) is not none else none -%}
+      {%- else -%}{%- set date = now().date() -%}{%- endif -%}
+      {%- if date is none -%}{%- else -%}
+      {%- set at = today_at('%02d:%02d' % (hh, mm)) -%}
+      {%- set base = date.isoformat() ~ ' ' ~ '%02d:%02d' % (hh, mm) -%}
+      {%- if d == '' and at < now() -%}{{ ((now() + timedelta(days=1)).date().isoformat()) ~ ' ' ~ '%02d:%02d' % (hh, mm) }}{%- else -%}{{ base }}{%- endif -%}{%- endif -%}
+    repeating: '{{ (repeat_days | default('''') | string | trim) != '''' }}'
+- if:
+  - condition: template
+    value_template: '{{ repeating }}'
+  then:
+  - action: church_drive.schedule_action
+    data:
+      entity_id: '{{ entity_id }}'
+      action: '{{ action }}'
+      value: '{{ value | default(none) }}'
+      name: '{{ name | default('''') }}'
+      time: '{{ clock }}'
+      days: '{{ repeat_days }}'
+    response_variable: outcome
+  else:
+  - action: church_drive.schedule_action
+    data:
+      entity_id: '{{ entity_id }}'
+      action: '{{ action }}'
+      value: '{{ value | default(none) }}'
+      name: '{{ name | default('''') }}'
+      at: '{{ stamp }}'
+    response_variable: outcome
+- variables:
+    result:
+      ok: '{{ outcome.ok }}'
+      say: >-
+        {%- if outcome.ok -%}Scheduled: {{ outcome.scheduled }}.{%- else -%}I couldn't schedule that: {{ outcome.error }}.{%- endif -%}
+- response_variable: result
+  stop: Done
