@@ -19,6 +19,8 @@ data class PanelSpec(
     val colorTemplate: String?,
     val summaryTemplate: String?,
     val cards: List<CardSpec>,
+    /** Set for one of a person's own sections (see [OwnSection]); null for the house's. */
+    val ownId: String? = null,
 )
 
 /** Reads the panels of each page of a dashboard, by the page's path (`security`, `climate`...). */

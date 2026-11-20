@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.169.0
+
+- **Your own layout.** A Customise this page button on Home, Security, Climate, Cleaning and To-do lets you order the sections, switch them on or off, and (where the cards come from the dashboard) hide and reorder a section's cards. On Home you can make your own sections with cards from any page, with an icon and a colour (Auto, Dynamic or a palette). It is kept in the house against your Home Assistant user, so a new phone looks the same; Reset puts a page, or every page, back as the house has it. Lighting, Devices and Energy keep the house's layout for now.
+
 ## 0.168.0
 
 - **Saved colours live in the house.** The colours kept for a light's colour settings (up to eight) are the same on every phone. Clive Admin has a Saved colours page in the account panel to take them out or add one with a colour wheel. Colours already saved on a phone are sent up the first time the house has none.

@@ -289,12 +289,15 @@ fun HomeScreen(
             androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
             AdaptiveColumns {
             if (page == Page.Home) {
-                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else go(it) }, onOpenTask = openTask)
+                val houseHome = panels["home"].orEmpty()
+                CustomisablePage("home", "Home", houseHome, entities, editCards = false, own = true) { shown ->
+                    HomePage(lights, areaNames, shown, houseHome.isEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else go(it) }, onOpenTask = openTask)
+                }
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
                 androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
-                    SecurityPage(panels["security"].orEmpty(), entities, registry, call)
+                    CustomisablePage("security", "Security", panels["security"].orEmpty(), entities) { shown -> SecurityPage(shown, entities, registry, call) }
                 }
             } else if (page == Page.Devices) {
                 // The TVs and speakers this person may use (DeviceAccess); the devices and services are in Clive Admin.
@@ -308,7 +311,10 @@ fun HomeScreen(
                     Page.Cleaning -> "cleaning"
                     else -> "todo"
                 }
-                DashboardPage(panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities, registry, call)
+                CustomisablePage(
+                    key, when (page) { Page.Climate -> "Climate"; Page.Cleaning -> "Cleaning"; else -> "To-do" },
+                    panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities,
+                ) { shown -> DashboardPage(shown, entities, registry, call) }
             }
             }
             }
@@ -360,6 +366,7 @@ private fun HomePage(
     lights: LightLayout,
     areaNames: Map<String, String>,
     panels: List<PanelSpec>,
+    houseEmpty: Boolean,
     entities: Map<String, EntityState>,
     registry: Registry,
     call: CallService,
@@ -370,7 +377,7 @@ private fun HomePage(
     val alarm = entities[ALARM_ENTITY]
     val climate = entities[CLIMATE_ENTITY]
     val vacuum = entities[VACUUM_ENTITY]
-    val byTitle = panels.associateBy { it.title }
+    val byTitle = panels.filter { it.ownId == null }.associateBy { it.title }
 
     /**
      * A Home panel: the icon is the nav bar's own for that page; the summary line and colour are the dashboard
@@ -408,8 +415,17 @@ private fun HomePage(
     AssistantPauseCard(entities, call)
     // "Which car is plugged in?", only while a plugged-in car is waiting for an answer: above the panels (Security first).
     CarConfirmCard(entities, call)
-    val titles = panels.map { it.title }.ifEmpty { listOf("Security", "Climate", "Lights", "Cleaning", "Car charging") }
-    titles.forEach { title ->
+    // With every section switched off in this person's layout there is nothing to show; the built-in list is only for a dashboard that hasn't loaded.
+    val sections = if (panels.isEmpty() && !houseEmpty) emptyList() else panels.ifEmpty {
+        listOf("Security", "Climate", "Lights", "Cleaning", "Car charging").map { PanelSpec(it, null, null, null, null, emptyList()) }
+    }
+    sections.forEach { section ->
+        // One of this person's own sections: the cards they chose, from any page.
+        if (section.ownId != null) {
+            OwnHomePanel(section, entities, registry, call)
+            return@forEach
+        }
+        val title = section.title
         when (title) {
             "Security" -> HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
                 // Who's home is on the alarm card here too, for administrators, as on the Security page.

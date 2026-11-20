@@ -184,6 +184,7 @@ class MainActivity : ComponentActivity() {
                         val savedColours = com.churchdrive.app.ui.rememberSavedColoursState(vm.haApi, legacyColours) {
                             appContext.getSharedPreferences("church_drive_light", android.content.Context.MODE_PRIVATE).edit().remove("saved_colours").apply()
                         }
+                        val userLayout = com.churchdrive.app.ui.rememberUserLayoutState(vm.haApi)
                         CompositionLocalProvider(
                             com.churchdrive.app.ui.LocalAssistant provides assistantCtl,
                             // The Security page's status lines and base station tiles, shown on its Details pages.
@@ -191,6 +192,8 @@ class MainActivity : ComponentActivity() {
                             LocalSceneLooks provides sceneLooks,
                             com.churchdrive.app.ui.LocalHybrids provides hybrids,
                             com.churchdrive.app.ui.LocalSavedColours provides savedColours,
+                            com.churchdrive.app.ui.LocalUserLayout provides userLayout,
+                            com.churchdrive.app.ui.LocalHousePages provides panels,
                             LocalTemplates provides vm.templates,
                             LocalBaseUrl provides vm.baseUrl,
                             LocalCameraHost provides vm.cameraHost,
