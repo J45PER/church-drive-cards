@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.Registry
 
 /** The colour of an own section left on Auto: the colour of what is inside it (its first card). */
 fun autoTone(cards: List<CardSpec>): Tone = when (cards.firstOrNull()?.type?.removeSuffix("-beta")) {
