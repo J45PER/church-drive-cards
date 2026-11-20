@@ -3,6 +3,7 @@ package com.churchdrive.app.ui
 import com.churchdrive.app.ha.EntityState
 import org.json.JSONObject
 import java.time.OffsetDateTime
+import kotlin.math.roundToInt
 
 /** A room type with its comfortable range in °C (the dashboard's Climate Zone card types). */
 data class RoomType(val name: String, val low: Double, val high: Double)
@@ -136,7 +137,11 @@ data class ForecastDay(
 )
 
 /** One hour of the forecast (forecast_type "hourly"; Met Office/met.no give about the next 48 hours). */
-data class ForecastHour(val timeMs: Long, val temperature: Double?, val condition: String, val rain: Double?, val wind: Double?, val bearing: Double?)
+data class ForecastHour(
+    val timeMs: Long, val temperature: Double?, val condition: String, val rain: Double?, val wind: Double?, val bearing: Double?,
+    /** Humidity (%), cloud cover (%) and UV index, where the forecast has them. */
+    val humidity: Double? = null, val cloud: Double? = null, val uv: Double? = null,
+)
 
 private fun JSONObject.forecastNum(key: String) = if (has(key) && !isNull(key)) optDouble(key).takeIf { !it.isNaN() } else null
 
@@ -161,12 +166,19 @@ fun parseHourlyForecast(event: JSONObject): List<ForecastHour> {
     return (0 until a.length()).mapNotNull { i ->
         val o = a.optJSONObject(i) ?: return@mapNotNull null
         val time = o.forecastTime() ?: return@mapNotNull null
-        ForecastHour(time, o.forecastNum("temperature"), o.optString("condition"), o.forecastNum("precipitation"), o.forecastNum("wind_speed"), o.forecastNum("wind_bearing"))
+        ForecastHour(
+            time, o.forecastNum("temperature"), o.optString("condition"), o.forecastNum("precipitation"), o.forecastNum("wind_speed"), o.forecastNum("wind_bearing"),
+            o.forecastNum("humidity"), o.forecastNum("cloud_coverage"), o.forecastNum("uv_index"),
+        )
     }
 }
 
 /** A part of a day in an opened forecast day: its weather (the most common in those hours), temperatures, rain and strongest wind. */
-data class DayPart(val name: String, val condition: String, val low: Double?, val high: Double?, val rain: Double, val wind: Double?, val bearing: Double?)
+data class DayPart(
+    val name: String, val condition: String, val low: Double?, val high: Double?, val rain: Double, val wind: Double?, val bearing: Double?,
+    /** Average humidity and cloud cover (%) and the strongest UV index in those hours. */
+    val humidity: Double? = null, val cloud: Double? = null, val uv: Double? = null,
+)
 
 /**
  * A day's hours as Morning (06-12), Afternoon (12-18), Evening (18-24) and Night (that night, 00-06 the next day), leaving out a
@@ -187,8 +199,52 @@ fun dayParts(hours: List<ForecastHour>, dayMs: Long, zone: java.time.ZoneId = ja
         val temps = inPart.mapNotNull { it.temperature }
         val windiest = inPart.filter { it.wind != null }.maxByOrNull { it.wind!! }
         val condition = inPart.groupingBy { it.condition }.eachCount().maxByOrNull { it.value }!!.key
-        DayPart(name, condition, temps.minOrNull(), temps.maxOrNull(), inPart.sumOf { it.rain ?: 0.0 }, windiest?.wind, windiest?.bearing)
+        DayPart(
+            name, condition, temps.minOrNull(), temps.maxOrNull(), inPart.sumOf { it.rain ?: 0.0 }, windiest?.wind, windiest?.bearing,
+            inPart.mapNotNull { it.humidity }.average().takeIf { !it.isNaN() }, inPart.mapNotNull { it.cloud }.average().takeIf { !it.isNaN() },
+            inPart.mapNotNull { it.uv }.maxOrNull(),
+        )
     }
+}
+
+/** The UV index in a word: Low below 3, Moderate to 5, High to 7, Very high to 10, then Extreme. */
+fun uvWord(uv: Double): String = when {
+    uv < 3 -> "Low"
+    uv < 6 -> "Moderate"
+    uv < 8 -> "High"
+    uv < 11 -> "Very high"
+    else -> "Extreme"
+}
+
+/** Wind in km/h as a word (the forecast's own unit is checked by the caller): Calm, Light, Moderate, Strong or Very strong. */
+fun windWord(kmh: Double): String = when {
+    kmh < 6 -> "Calm"
+    kmh < 20 -> "Light"
+    kmh < 40 -> "Moderate"
+    kmh < 60 -> "Strong"
+    else -> "Very strong"
+}
+
+/** How much rain, in a word, for [mm] over a day: Dry, Light, Some, Heavy. */
+fun rainWord(mm: Double?): String = when {
+    mm == null || mm < 0.05 -> "Dry"
+    mm < 2 -> "Light rain"
+    mm < 10 -> "Some rain"
+    else -> "Heavy rain"
+}
+
+/**
+ * A day with no hours behind it (the daily forecast only), in a sentence of what it holds: the weather, how wet, and the wind, such as
+ * "Partly cloudy. Dry. Light wind from the E." The wind words are only used when the forecast gives km/h.
+ */
+fun dayDescription(day: ForecastDay, windUnit: String): String {
+    val weather = day.condition.replace('-', ' ').replaceFirstChar { it.uppercase() }
+    val wet = rainWord(day.rain) + (day.rain?.takeIf { it >= 0.05 }?.let { " (${"%.1f".format(it)} mm)" } ?: "")
+    val wind = day.wind?.let { w ->
+        val dir = day.bearing?.let { " from the ${compassPoint(it)}" }.orEmpty()
+        if (windUnit.trim().equals("km/h", ignoreCase = true)) "${windWord(w)} wind$dir" else "Wind ${w.roundToInt()} ${windUnit.trim()}$dir".replace("  ", " ")
+    }
+    return listOfNotNull(weather.takeIf { it.isNotBlank() }, wet, wind).joinToString(". ") + "."
 }
 
 /** A wind direction in degrees as a compass point ("N", "NE"... "NW"): where the wind comes from. */
