@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.183.1
+
+- **Presence bar, room icon and scenes.** The presence bar now runs the full width of the card from the start of the slider to the end of the power button, thicker, with the status ("Someone's in", "Off in 12 s", "Nobody in") written inside it, and the same on the light's settings page. The Cloakroom card shows its room icon again, not the Govee light's. A room's settings show exactly the scenes its expanded card shows (the room's, then the ones you made), not every scene in the library.
+
 ## 0.183.0
 
 - **Roles in themes and presence on lights.** Lights have a role in themes, and a presence-triggered light shows who's in. Each light has a role (Primary, Ambient or Tertiary) on its settings page (administrators; a light with no role is Primary). A theme now gives each role its own look: Primary lights a white or colour, Ambient lights a colour, gradient or dynamic scene, Tertiary lights a colour or gradient, and each light does what it can. Sensor time slots can play a theme. A light a presence sensor looks after shows "Someone's in", "Off in 12 s" with a draining bar, or "Nobody in" on its card and settings page; the bar is always there so the card keeps its size. Existing themes with a look for each named light are rebuilt by editing them.

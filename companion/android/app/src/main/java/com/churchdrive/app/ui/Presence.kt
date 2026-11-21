@@ -5,8 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
@@ -14,7 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -88,10 +92,11 @@ fun rememberRemaining(p: Presence?): Int? {
     return p?.remaining(maxOf(now, p.receivedAt))
 }
 
-/** The countdown bar: a thin track that is always there (so the card never changes size), filled by [fraction]. */
+/** The countdown bar: a thick track that is always there (so the card never changes size), filled by [fraction], with [text] inside it. */
 @Composable
-fun PresenceBar(fraction: Float, colour: Color, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(6.dp).background(colour.copy(alpha = 0.18f), RoundedCornerShape(3.dp))) {
-        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().background(colour, RoundedCornerShape(3.dp)))
+fun PresenceBar(fraction: Float, text: String, colour: Color, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colour.copy(alpha = 0.12f)), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().background(colour.copy(alpha = 0.32f)))
+        Text(text, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelLarge, color = colour, maxLines = 1)
     }
 }
