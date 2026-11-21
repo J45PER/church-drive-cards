@@ -90,6 +90,8 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val on = head?.state == "on"
     val tone = toneColors(if (on) Tone.Lights else Tone.Grey)
     val expandable = room.rows.isNotEmpty() || room.scenes.isNotEmpty()
+    // Pressing and holding the card (not just its slider) opens the room's light details, as the slider does; a light with nothing to set keeps its device page.
+    var cardSettings by remember { mutableStateOf(false) }
 
     // On the card grid: the room's pill is 1.5 rows tall, half a row down, with the arrow in column 8; opened, each light is a pill the same height two rows
     // apart (a nested one starts half a cell further in), then the scenes in rows of up to three with a quarter cell between them (a short last row's tiles stretch).
@@ -111,7 +113,10 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
         hybridRows.isEmpty() -> scenesEnd + 0.5f
         else -> hybridTop + 0.75f + 1.25f * hybridRows.size - 0.25f + 0.5f
     }
-    GridCard(tone.container, tone.onContainer, rows, "", deviceEntity = room.head, fold = if (expandable) collapsed else null, arrowTop = 0.5f) {
+    GridCard(
+        tone.container, tone.onContainer, rows, "", deviceEntity = room.head, fold = if (expandable) collapsed else null, arrowTop = 0.5f,
+        onHold = if (opensSettings(head)) ({ cardSettings = true }) else null,
+    ) {
         LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1f), entities,
             tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell, scenes = room.scenes)
         if (!open && showHint) {
@@ -161,6 +166,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
             }
         }
     }
+    if (cardSettings && head != null) LightSettings(room.head, roomTitle(room, head, areaNames), entities, call, room.scenes) { cardSettings = false }
 }
 
 /** A scene as a tile: its colours as a gradient, an icon and its name; the playing scene has a ring. */
@@ -211,7 +217,7 @@ private fun securityLabelled(registry: com.churchdrive.app.ha.Registry, id: Stri
 
 /**
  * The dashboard's combined control: a pill filled to the light's brightness and tinted with its live
- * colour. Tap to switch it on or off; drag across it to set brightness (lights that can't dim just switch).
+ * colour. The button at its end switches the light on or off; drag across the slider (only while on) to set brightness.
  * [name] is the title, or the light's own name when null.
  */
 @Composable
@@ -262,12 +268,14 @@ fun LightPill(
 
     fun level(x: Float) = (x / widthPx).coerceIn(0.01f, 1f)
 
+    // The right-hand end is its own power button; the slider beside it only responds while the light is on (holding it still opens the light's settings).
+    Row(modifier = modifier.fillMaxWidth().height(pillHeight), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(pillHeight)
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
             .clip(shape)
-            .background(tone.onContainer.copy(alpha = 0.10f))
+            .background(tone.onContainer.copy(alpha = if (on) 0.10f else 0.06f))
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }
             .pointerInput(entityId, light?.available, on) {
                 detectTapGestures(
@@ -280,11 +288,10 @@ fun LightPill(
                             settings = true
                         }
                     },
-                    onTap = { if (light?.available == true && System.currentTimeMillis() - pressedAt >= 120L) call("light", if (on) "turn_off" else "turn_on", entityId, data()) },
                 )
             }
-            .pointerInput(entityId, dimmable) {
-                if (dimmable) {
+            .pointerInput(entityId, dimmable, on) {
+                if (dimmable && on) {
                     detectHorizontalDragGestures(
                         onDragStart = { drag = level(it.x) },
                         onDragEnd = {
@@ -319,6 +326,17 @@ fun LightPill(
             )
             Text(status, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
         }
+    }
+    Box(
+        Modifier.size(pillHeight).clip(shape)
+            .background(if (on) tint else tone.onContainer.copy(alpha = 0.14f))
+            .clickable(enabled = light?.available == true, onClickLabel = if (on) "Turn off" else "Turn on") {
+                call("light", if (on) "turn_off" else "turn_on", entityId, data())
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        HaIcon("cd:power", CdVectors.Bulb, if (on) tone.onAccent else MaterialTheme.colorScheme.onSurface, 26.dp)
+    }
     }
     if (settings && entities != null) LightSettings(entityId, name, entities, call, scenes) { settings = false }
 }
