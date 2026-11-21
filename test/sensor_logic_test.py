@@ -83,6 +83,44 @@ class Dark(unittest.TestCase):
         self.assertFalse(sl.should_act_on_presence({**item, "on_action": "none"}, 23 * 60, None, True))
 
 
+class Slots(unittest.TestCase):
+    SLOTS = [
+        {"start": "07:00", "end": "18:00", "on_action": "on", "pct": 100},
+        {"start": "18:00", "end": "23:00", "on_action": "scene", "scene": "relax"},
+        {"start": "23:00", "end": "07:00", "on_action": "on", "pct": 10},
+    ]
+
+    def test_a_slot_needs_its_times_and_a_scene_needs_its_name(self):
+        item = sl.clean_sensor({**CLOAK, "slots": [*self.SLOTS, {"start": "09:00", "end": "09:00"}, {"start": "08:00", "end": "09:00", "on_action": "scene"}, "junk"]})
+        self.assertEqual(len(item["slots"]), 3)
+        self.assertEqual(item["slots"][1]["scene"], "relax")
+        self.assertEqual(item["slots"][0]["pct"], 100)
+
+    def test_no_more_than_six_are_kept(self):
+        many = [{"start": f"{h:02d}:00", "end": f"{h:02d}:30", "on_action": "on"} for h in range(10)]
+        self.assertEqual(len(sl.clean_sensor({**CLOAK, "slots": many})["slots"]), 6)
+
+    def test_the_slot_that_covers_the_time_decides(self):
+        item = sl.clean_sensor({**CLOAK, "slots": self.SLOTS})
+        self.assertEqual(sl.pick_look(item, 12 * 60), {"on_action": "on", "scene": "", "pct": 100})
+        self.assertEqual(sl.pick_look(item, 20 * 60)["scene"], "relax")
+        self.assertEqual(sl.pick_look(item, 2 * 60)["pct"], 10)
+
+    def test_a_time_no_slot_covers_uses_the_sensors_own_look(self):
+        item = sl.clean_sensor({**CLOAK, "pct": 40, "slots": [{"start": "18:00", "end": "23:00", "on_action": "scene", "scene": "relax"}]})
+        self.assertEqual(sl.pick_look(item, 9 * 60), {"on_action": "on", "scene": "", "pct": 40})
+
+    def test_a_slot_that_does_nothing_stops_the_light_coming_on(self):
+        item = sl.clean_sensor({**CLOAK, "slots": [{"start": "09:00", "end": "17:00", "on_action": "none"}]})
+        self.assertFalse(sl.should_act_on_presence(item, 12 * 60, None, False))
+        self.assertTrue(sl.should_act_on_presence(item, 20 * 60, None, False))
+
+    def test_the_summary_counts_the_slots(self):
+        item = sl.clean_sensor({**CLOAK, "slots": self.SLOTS})
+        self.assertIn("3 time slots", sl.summary(item))
+        self.assertIn("1 time slot", sl.summary(sl.clean_sensor({**CLOAK, "slots": self.SLOTS[:1]})))
+
+
 class Words(unittest.TestCase):
     def test_the_summary(self):
         item = sl.clean_sensor(CLOAK)

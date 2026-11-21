@@ -1,6 +1,9 @@
 package com.churchdrive.app
 
 import com.churchdrive.app.ui.SENSOR_DELAYS
+import com.churchdrive.app.ui.SensorSlot
+import com.churchdrive.app.ui.newSensorSlot
+import com.churchdrive.app.ui.slotLookText
 import com.churchdrive.app.ui.SensorAction
 import com.churchdrive.app.ui.delayText
 import com.churchdrive.app.ui.parseSensorActions
@@ -89,5 +92,30 @@ class SensorDataTest {
         assertEquals("a1", changed.getString("action_id"))
         assertTrue(!changed.has("sensor"))
         assertTrue(changed.isNull("window"))
+    }
+
+    @Test fun timeSlotsAreReadAndSent() {
+        val o = JSONObject(
+            """{"actions":[{"id":"a1","sensor":"binary_sensor.x","name":"X","lights":["light.a"],"on_action":"on","pct":40,"slots":[
+              {"start":"18:00","end":"23:00","on_action":"scene","scene":"relax","pct":0},{"start":"23:00","end":"07:00","on_action":"on","pct":10}]}],"sensors":[]}"""
+        )
+        val action = parseSensorActions(o)!!.actions.single()
+        assertEquals(40, action.pct)
+        assertEquals(listOf("18:00", "23:00"), action.slots.map { it.start })
+        assertEquals("relax", action.slots[0].scene)
+        assertEquals(10, action.slots[1].pct)
+        val body = sensorBody("a1", "binary_sensor.x", "X", listOf("light.a"), "on", "", "off", 60, 20, false, 30, "", null, null, true, 40, action.slots)
+        assertEquals(40, body.getInt("pct"))
+        assertEquals(2, body.getJSONArray("slots").length())
+        assertEquals("relax", body.getJSONArray("slots").getJSONObject(0).getString("scene"))
+    }
+
+    @Test fun aSlotIsDescribedByWhatItDoes() {
+        val name = { k: String -> k.replaceFirstChar { it.uppercase() } }
+        assertEquals("Scene · Relax", slotLookText(SensorSlot("18:00", "23:00", "scene", "relax", 0), name))
+        assertEquals("Turn on · 10%", slotLookText(SensorSlot("23:00", "07:00", "on", "", 10), name))
+        assertEquals("Turn on", slotLookText(SensorSlot("07:00", "18:00", "on", "", 0), name))
+        assertEquals("Nothing", slotLookText(SensorSlot("09:00", "17:00", "none", "", 0), name))
+        assertEquals("scene", newSensorSlot().onAction)
     }
 }

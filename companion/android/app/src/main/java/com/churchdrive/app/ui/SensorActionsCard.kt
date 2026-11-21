@@ -71,6 +71,9 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
     var windowStart by remember(key) { mutableStateOf(action?.windowStart ?: "22:00") }
     var windowEnd by remember(key) { mutableStateOf(action?.windowEnd ?: "06:00") }
     var enabled by remember(key) { mutableStateOf(action?.enabled ?: true) }
+    var pct by remember(key) { mutableIntStateOf(action?.pct ?: 0) }
+    var slots by remember(key) { mutableStateOf(action?.slots ?: emptyList()) }
+    var openSlot by remember(key) { mutableStateOf<Int?>(null) }
     var chosen by remember(key) { mutableStateOf(action?.lights ?: emptyList()) }
     var hueOff by remember(key) { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
@@ -121,6 +124,60 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
         )
         if (onAction == "scene") {
             TileRow(WHITE_SCENES.map { k -> TileItem("", LightScene(k, "").name, scene == k) { scene = k } }, tone, ink)
+        }
+        if (onAction == "on") {
+            StepLine("Brightness", if (pct == 0) "As it is" else "$pct%", ink, tone, { pct = (pct - 10).coerceAtLeast(0) }, { pct = (pct + 10).coerceAtMost(100) })
+        }
+
+        Text("Different at different times", style = MaterialTheme.typography.titleSmall, color = ink)
+        Text(
+            "Give part of the day its own look. The first slot that covers the time decides, and any other time uses the choice above.",
+            style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f),
+        )
+        fun setSlot(i: Int, next: SensorSlot) { slots = slots.mapIndexed { j, x -> if (j == i) next else x }; message = null }
+        slots.forEachIndexed { i, slot ->
+            if (openSlot == i) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StepLine("From", slot.start, ink, tone, { setSlot(i, slot.copy(start = stepTime(slot.start, -1, 30) ?: slot.start)) }, { setSlot(i, slot.copy(start = stepTime(slot.start, 1, 30) ?: slot.start)) })
+                    StepLine("Until", slot.end, ink, tone, { setSlot(i, slot.copy(end = stepTime(slot.end, -1, 30) ?: slot.end)) }, { setSlot(i, slot.copy(end = stepTime(slot.end, 1, 30) ?: slot.end)) })
+                    TileRow(
+                        listOf(
+                            TileItem("cd:power", "Turn on", slot.onAction == "on") { setSlot(i, slot.copy(onAction = "on")) },
+                            TileItem("cd:sun", "Scene", slot.onAction == "scene") { setSlot(i, slot.copy(onAction = "scene", scene = slot.scene.ifBlank { WHITE_SCENES.first() })) },
+                            TileItem("cd:close", "Nothing", slot.onAction == "none") { setSlot(i, slot.copy(onAction = "none")) },
+                        ),
+                        tone, ink,
+                    )
+                    if (slot.onAction == "scene") {
+                        TileRow(WHITE_SCENES.map { k -> TileItem("", LightScene(k, "").name, slot.scene == k) { setSlot(i, slot.copy(scene = k)) } }, tone, ink)
+                    }
+                    if (slot.onAction == "on") {
+                        StepLine("Brightness", if (slot.pct == 0) "As it is" else "${slot.pct}%", ink, tone, { setSlot(i, slot.copy(pct = (slot.pct - 10).coerceAtLeast(0))) }, { setSlot(i, slot.copy(pct = (slot.pct + 10).coerceAtMost(100))) })
+                    }
+                    TileRow(
+                        listOf(
+                            TileItem("cd:bin", "Remove", false) { slots = slots.filterIndexed { j, _ -> j != i }; openSlot = null },
+                            TileItem("cd:check", "Done", false) { openSlot = null },
+                        ),
+                        tone, ink,
+                    )
+                }
+            } else {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f))
+                        .clickable(onClickLabel = "Change this time slot") { openSlot = i }.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("${slot.start}–${slot.end}", style = MaterialTheme.typography.titleSmall, color = ink)
+                        Text(slotLookText(slot) { LightScene(it, "").name }, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f))
+                    }
+                    HaIcon("cd:chevron-right", CdVectors.Info, ink.copy(alpha = 0.7f), 22.dp)
+                }
+            }
+        }
+        if (slots.size < MAX_SENSOR_SLOTS) {
+            TileRow(listOf(TileItem("cd:plus", "Add a time slot", false) { slots = slots + newSensorSlot(); openSlot = slots.lastIndex }), tone, ink)
         }
 
         Text("When the room is empty", style = MaterialTheme.typography.titleSmall, color = ink)
@@ -176,7 +233,7 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
                             val body = sensorBody(
                                 action?.id, sensor.entityId, action?.name?.takeIf { it.isNotBlank() } ?: sensor.name.removeSuffix(" Sensor").trim(), chosen, onAction, scene, offAction,
                                 offDelay, dimPct, onlyDark, darkLux, luxEntity ?: "", if (windowOn) windowStart else null,
-                                if (windowOn) windowEnd else null, enabled,
+                                if (windowOn) windowEnd else null, enabled, pct, slots,
                             )
                             val result = api?.ask("church_drive/sensor_actions/set", body)
                             saving = false
@@ -211,7 +268,10 @@ private fun StepLine(label: String, value: String, ink: androidx.compose.ui.grap
 @Composable
 private fun SensorSettingRow(setting: SensorSetting, entities: Map<String, EntityState>, call: CallService, tone: ToneColors, ink: androidx.compose.ui.graphics.Color) {
     val state = entities[setting.entityId]?.state
-    if (setting.kind == "select") {
+    if (setting.kind == "switch") {
+        val on = state == "on"
+        SwitchLine(setting.name, on, ink) { call("switch", if (it) "turn_on" else "turn_off", setting.entityId, data()) }
+    } else if (setting.kind == "select") {
         Text(setting.name, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
         TileRow(
             setting.options.map { o -> TileItem("", o.replaceFirstChar { it.uppercase() }, state == o) { call("select", "select_option", setting.entityId, data("option" to o)) } },

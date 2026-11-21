@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.180.0
+
+- **Time slots for a sensor, and no more duplicate sensors.** A sensor's action can have different looks at different times of day (day bright, evening a scene, night dim): add time slots in the sensor's editor, the first one that covers the time decides, and any other time uses the sensor's own look, which can now set a brightness. A Hue sensor's own switches (Motion sensor enabled, Light sensor enabled) show in its settings. The Sensor actions list no longer includes Ring cameras' motion or Hue rooms, only the sensors themselves.
+
 ## 0.179.0
 
 - **A light's settings page follows the approved design.** A room's lights are listed in one card ("LIGHTS"), each with its type as well as its level and a chevron. A room with a ring of segments, like the Cloakroom, shows the dial: the main light in the middle and a piece of the ring per segment, each in its colour; tap the middle or a piece to edit it. The ring (Up light) opens as one light with the colour controls. In the hybrid scene editor, Gradient is only offered to lights that can do one, and Dynamic only to Hue lights.

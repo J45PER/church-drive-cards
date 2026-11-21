@@ -9,7 +9,10 @@ A sensor action says what lights do when a presence or motion sensor sees someon
 `on_action` is on, scene (the Church Drive scene named in `scene`) or none; `off_action` is off, dim (to `dim_pct`) or none, `off_delay`
 seconds after the sensor last saw anyone. `only_dark` limits the "someone's there" action to when it is dark: below `dark_lux` on
 `lux_sensor`, or, with no light-level sensor, while the sun is down. `window` ({"start": "22:00", "end": "06:00"}) limits it to a
-time of day. Times are the house's local time.
+time of day. `slots` give the "someone's there" action a different look at different times of day: each is
+{"start": "18:00", "end": "23:00", "on_action": "scene", "scene": "relax", "pct": 0}, the first one that covers the time wins, and any
+other time uses the sensor's own `on_action`, `scene` and `pct` (a brightness percentage, 0 to leave the light's level alone). Times are the
+house's local time.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from typing import Any
 
 MAX_SENSORS = 40
 MAX_LIGHTS = 12
+MAX_SLOTS = 6
 ON_ACTIONS = ("on", "scene", "none")
 OFF_ACTIONS = ("off", "dim", "none")
 _TIME = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
@@ -37,6 +41,23 @@ def clean_window(value: Any) -> dict[str, str] | None:
     return {"start": start, "end": end} if start and end and start != end else None
 
 
+def clean_slots(value: Any) -> list[dict[str, Any]]:
+    """The time slots from what was sent: each needs a start and an end that differ; a bad one is dropped, and no more than MAX_SLOTS are kept."""
+    out: list[dict[str, Any]] = []
+    for raw in value if isinstance(value, (list, tuple)) else []:
+        if not isinstance(raw, dict):
+            continue
+        window = clean_window(raw)
+        if window is None:
+            continue
+        action = raw.get("on_action") if raw.get("on_action") in ON_ACTIONS else "on"
+        scene = str(raw.get("scene") or "").strip()[:60]
+        if action == "scene" and not scene:
+            continue
+        out.append({**window, "on_action": action, "scene": scene if action == "scene" else "", "pct": _int(raw.get("pct"), 0, 100, 0)})
+    return out[:MAX_SLOTS]
+
+
 def _int(value: Any, low: int, high: int, default: int) -> int:
     try:
         return max(low, min(high, int(float(value))))
@@ -48,7 +69,7 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
     """A sensor action from what was sent (over `old` when it is a change); ValueError says what's wrong."""
     base = {
         "sensor": "", "name": "", "lights": [], "on_action": "on", "scene": "", "off_action": "off", "off_delay": 60, "dim_pct": 20,
-        "only_dark": False, "dark_lux": 30, "lux_sensor": "", "window": None, "enabled": True,
+        "only_dark": False, "dark_lux": 30, "lux_sensor": "", "window": None, "enabled": True, "pct": 0, "slots": [],
     }
     item = {**base, **(old or {}), **{k: v for k, v in raw.items() if k in base}}
     sensor = str(item["sensor"]).strip()
@@ -78,6 +99,8 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
         "lux_sensor": lux if lux.startswith("sensor.") else "",
         "window": clean_window(item["window"]),
         "enabled": bool(item["enabled"]),
+        "pct": _int(item["pct"], 0, 100, 0),
+        "slots": clean_slots(item["slots"]),
     }
 
 
@@ -113,9 +136,17 @@ def is_dark(item: dict[str, Any], lux: float | None, sun_down: bool) -> bool:
     return sun_down
 
 
+def pick_look(item: dict[str, Any], now_minutes: int) -> dict[str, Any]:
+    """What to do for someone being seen at this time of day: the first time slot that covers it, else the sensor's own look."""
+    for slot in item["slots"]:
+        if in_window(now_minutes, slot):
+            return {"on_action": slot["on_action"], "scene": slot["scene"], "pct": slot["pct"]}
+    return {"on_action": item["on_action"], "scene": item["scene"], "pct": item["pct"]}
+
+
 def should_act_on_presence(item: dict[str, Any], now_minutes: int, lux: float | None, sun_down: bool) -> bool:
     """Whether someone being seen should do the "someone's there" action now."""
-    if not item["enabled"] or item["on_action"] == "none":
+    if not item["enabled"] or pick_look(item, now_minutes)["on_action"] == "none":
         return False
     if item["only_dark"] and not is_dark(item, lux, sun_down):
         return False
@@ -134,6 +165,8 @@ def summary(item: dict[str, Any]) -> str:
         parts.append(f"off after {delay_text(item['off_delay'])}")
     elif item["off_action"] == "dim":
         parts.append(f"dims to {item['dim_pct']}% after {delay_text(item['off_delay'])}")
+    if item["slots"]:
+        parts.append(f"{len(item['slots'])} time slot{'s' if len(item['slots']) != 1 else ''}")
     if item["only_dark"]:
         parts.append("when it's dark")
     if item["window"]:

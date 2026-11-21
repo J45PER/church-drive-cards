@@ -1441,6 +1441,8 @@ def ws_sensor_actions(hass: HomeAssistant, connection: websocket_api.ActiveConne
         vol.Optional("dark_lux"): vol.Coerce(int),
         vol.Optional("lux_sensor"): vol.Any(None, cv.string),
         vol.Optional("window"): vol.Any(None, dict),
+        vol.Optional("pct"): vol.Coerce(int),
+        vol.Optional("slots"): [dict],
         vol.Optional("enabled"): bool,
     }
 )
