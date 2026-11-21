@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.181.1
+
+- **Fix: the Govee down light is white only.** A colour sent to the down light lights the whole fitting, ring included, and a later white command switches the ring off, so the down light now offers only white tones (and its scenes) in the light's settings and in hybrid scenes. Colour the ring or its segments for colour.
+
 ## 0.181.0
 
 - **Light cards and light settings, reworked.** Every light on a card has its own power button beside its slider (the slider only works while the light is on), and pressing and holding a room card opens the room's light details, like the slider does. The details page follows the approved mockups: sections are always open, the top bar is a status bar with its own power squircle, tapping a light in a room shows its settings under the list (tap the bar to close them), and a light with parts is one light on its card. The Govee Cloakroom's parts are one circle: the main light in the middle (tap to pick, press and hold to switch, drag round it for brightness) and a rounded wedge for each segment, with unpicked parts dimmed and off parts plain; a level bar and the picked part's colours sit under it. Administrators can make their own scenes from a room's Scenes (New scene: name, up to five colours, brightness, Hue animation), and press and hold one to change or delete it. Hybrid scenes can use custom colours and gradients, a gradient light has a Gradient tab, and Sensor actions and Light routines open their own pages.
