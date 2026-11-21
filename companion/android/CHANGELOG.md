@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.181.5
+
+- **Fix: the fitting's first record.** When the house first sees the Cloakroom light it now takes the ring as off if the device is off (Home Assistant keeps reporting the segments as on from the last command sent), and the app asks again for the fitting if the house answers before the Govee lights are back after a restart, so the dial uses the record without waiting for a change.
+
 ## 0.181.4
 
 - **The Govee fitting is kept as one thing.** The house now keeps its own record of the Cloakroom light's main light and each ring segment (`church_drive/fitting`, `church_drive.set_fitting`), because Home Assistant only reports one colour for the whole device and the segments' colours are only the last thing sent. The dial in a light's settings draws that record (so the middle is no longer blue with the ring off when the light is white under a coloured ring) and its taps, drags and bars change it. A white tone on the main light keeps a coloured ring (the white goes as RGB and the ring's colours are put back), a colour on the main light paints the whole fitting (or keeps the ring's colours, as a switch), and hybrid scenes and the sensor action set the fitting through the same record, so everything is switched off with one device command instead of 13 segment commands first. Segments are still sent to Govee one at a time, which is slow.

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.181.5
+
+- **No change to this app.** The phone app asks again for the Govee fitting after a restart.
+
 ## 0.181.4
 
 - **No change to this app.** The Govee fitting's dial is in the phone app.
