@@ -47,8 +47,8 @@ val HYBRID_GRADIENTS = listOf(
     "Rose" to listOf("#ff6bbd", "#b36bff", "#5b8cfd"),
 )
 
-/** The looks a light can be given: each only offers what it can do. */
-fun hybridKindsFor(kind: LightKind, canGradient: Boolean = true, canDynamic: Boolean = true): List<String> = when (kind) {
+/** The looks a light can be given: each only offers what it can do. A fitting's ring is one light with one colour or one gradient. */
+fun hybridKindsFor(kind: LightKind, canGradient: Boolean = true, canDynamic: Boolean = true, ring: Boolean = false): List<String> = if (ring) listOf("leave", "off", "colour", "gradient") else when (kind) {
     LightKind.Switch -> listOf("leave", "off")
     LightKind.Dim, LightKind.White -> listOf("leave", "off", "white")
     LightKind.Colour -> HYBRID_KINDS.filter { (it != "gradient" || canGradient) && (it != "dynamic" || canDynamic) }

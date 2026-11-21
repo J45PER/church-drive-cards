@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.182.1
+
+- Same version as the phone app.
+
 ## 0.182.0
 
 - No changes for the Admin app in this release.

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.182.1
+
+- **Themes can split the main light and the ring.** In a hybrid scene a Govee fitting's ring is one light, not 13: it takes Leave, Off, one colour or a gradient, and the main light beside it takes white or a colour. The ring takes about 15 to 25 seconds to change because Govee needs one command per segment.
+
 ## 0.182.0
 
 - **The Cloakroom is one light again.** The ring dial and the fitting model from 0.181.4 are removed (a cloakroom doesn't need a coloured ring and a separate white main light, and Home Assistant can't tell what each part is doing). The Cloakroom card and its settings now follow the Govee's own light: one command to switch it, dim it or set its white tone or colour, where the room group sent a command to each of the 13 ring segments, and its room scenes (Bright, Dimmed, Relax, Nightlight and your own) go to that light. Its Down light and Up light rows are no longer on the card. In the house the Cloakroom's presence sensor now switches that same light, so it goes off after its delay at once. The page for it still has brightness, white or colour, scenes, hybrid scenes and New scene.
