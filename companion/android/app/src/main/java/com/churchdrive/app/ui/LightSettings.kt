@@ -61,6 +61,17 @@ import kotlin.math.roundToInt
 
 private fun rgbColour(c: IntArray) = Color(c[0], c[1], c[2])
 
+/**
+ * The light to take a fitting's colour from. A room's group light shows whichever of its lights reported last, and for a Govee fitting that is often a
+ * segment of the ring (red, say) while the main light is white, so a group with a ring takes the colour of its main light.
+ */
+internal fun colourSource(light: EntityState?, entities: Map<String, EntityState>?): EntityState? {
+    if (light == null || entities == null) return light
+    val members = light.lightMembers().mapNotNull { entities[it] }
+    if (members.size < 2 || members.none { isSegmentGroup(it) }) return light
+    return members.firstOrNull { !isSegmentGroup(it) && it.state == "on" } ?: members.firstOrNull { !isSegmentGroup(it) } ?: light
+}
+
 private fun brightnessOf(light: EntityState): Int =
     ((light.num("brightness") ?: 255.0) / 255.0 * 100).roundToInt().coerceIn(1, 100)
 
@@ -98,7 +109,7 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
     val members = light.lightMembers()
     val memberStates = members.mapNotNull { entities[it] }
     val grouped = members.size > 1 && !isSegmentGroup(light)
-    val tint = tintOf(light, MaterialTheme.colorScheme.onSurfaceVariant)
+    val tint = tintOf(colourSource(light, entities) ?: light, MaterialTheme.colorScheme.onSurfaceVariant)
     var selected by rememberSaveable(light.entityId) { mutableStateOf<String?>(null) }
     val status = when {
         !light.available -> "Unavailable"
@@ -123,7 +134,7 @@ private fun LightDetails(light: EntityState, entities: Map<String, EntityState>,
     val members = light.lightMembers()
     val memberStates = members.mapNotNull { entities[it] }
     val grouped = members.size > 1 && !isSegmentGroup(light)
-    val tint = tintOf(light, MaterialTheme.colorScheme.onSurfaceVariant)
+    val tint = tintOf(colourSource(light, entities) ?: light, MaterialTheme.colorScheme.onSurfaceVariant)
     if (!grouped) {
         LightControls(light, light.lightKind(), light.hasWhiteMode(), call, tone, grey, tint)
         return
@@ -179,13 +190,15 @@ private fun PowerBar(light: EntityState, on: Boolean, tint: Color, status: Strin
 /** A power button on its own: a squircle in [tint] when on (grey when off), with the same corners as the sliders. */
 @Composable
 internal fun PowerSquircle(on: Boolean, tint: Color, enabled: Boolean, label: String, size: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    val asked = rememberPending<Boolean>(on)
+    val shown = asked.value(on)
     Box(
         Modifier.size(size).clip(RoundedCornerShape(18.dp))
-            .background(if (on) tint else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
-            .clickable(enabled = enabled, onClickLabel = label, onClick = onClick),
+            .background(if (shown) tint else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
+            .clickable(enabled = enabled, onClickLabel = label) { asked.ask(!shown); onClick() },
         contentAlignment = Alignment.Center,
     ) {
-        HaIcon("cd:power", CdVectors.Bulb, if (on) Color(0xFF1B1F27) else MaterialTheme.colorScheme.onSurface, 26.dp)
+        HaIcon("cd:power", CdVectors.Bulb, if (shown) Color(0xFF1B1F27) else MaterialTheme.colorScheme.onSurface, 26.dp)
     }
 }
 
@@ -389,8 +402,9 @@ private fun BarSlider(
     snap: ((Float) -> Float)? = null, valueOf: ((Float) -> String)? = null,
 ) {
     var drag by remember(fraction) { mutableStateOf<Float?>(null) }
+    val asked = rememberPending<Float>(fraction)
     var width by remember { mutableStateOf(1) }
-    val shown = drag ?: fraction
+    val shown = drag ?: asked.asked ?: fraction
     fun at(x: Float): Float = (x / width).coerceIn(0f, 1f).let { snap?.invoke(it) ?: it }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -401,11 +415,11 @@ private fun BarSlider(
             modifier = Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(18.dp))
                 .background(if (thumbOnly) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh)
                 .onSizeChanged { width = it.width.coerceAtLeast(1) }
-                .pointerInput(Unit) { detectTapGestures { onSet(at(it.x)) } }
+                .pointerInput(Unit) { detectTapGestures { asked.ask(at(it.x)); onSet(at(it.x)) } }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { drag = at(it.x) },
-                        onDragEnd = { drag?.let(onSet); drag = null },
+                        onDragEnd = { drag?.let { asked.ask(it); onSet(it) }; drag = null },
                         onDragCancel = { drag = null },
                     ) { change, _ -> drag = at(change.position.x) }
                 },
@@ -689,6 +703,14 @@ private fun GoveeParts(main: EntityState, ring: EntityState, segments: List<Enti
             "Tap a segment to pick it, or the ring to pick the main light; tap again to let go. Press and hold the middle to switch the main light.",
             style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.fillMaxWidth(),
         )
+        // Pick every segment at once, or put back any that were switched off.
+        TileRow(
+            listOf(
+                TileItem("cd:bulb-group", "Whole ring", sel == "ring") { sel = if (sel == "ring") null else "ring" },
+                TileItem("cd:sun", "All segments on", false) { segments.filter { !segmentOn(it) }.forEach { toggleSegment(it) } },
+            ),
+            tone, ink, perRow = 2,
+        )
         val target = when (sel) {
             null -> null
             "main" -> main
@@ -727,8 +749,9 @@ private fun GoveeParts(main: EntityState, ring: EntityState, segments: List<Enti
 @Composable
 private fun PartBar(name: String, icon: String, on: Boolean, level: Int, colour: Color, onLevel: (Int) -> Unit) {
     var drag by remember(level) { mutableStateOf<Float?>(null) }
+    val asked = rememberPending<Float>(level)
     var width by remember { mutableIntStateOf(1) }
-    val shown = drag ?: (if (on) level / 100f else 0f)
+    val shown = drag ?: asked.asked ?: (if (on) level / 100f else 0f)
     fun at(x: Float) = ((x / width * 20).roundToInt() * 5).coerceIn(5, 100) / 100f
     Box(
         Modifier.fillMaxWidth().height(Ui.TallTileHeight).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = if (on) 0.10f else 0.06f))
@@ -736,7 +759,7 @@ private fun PartBar(name: String, icon: String, on: Boolean, level: Int, colour:
             .pointerInput(on) {
                 detectHorizontalDragGestures(
                     onDragStart = { drag = at(it.x) },
-                    onDragEnd = { drag?.let { onLevel((it * 100).roundToInt()) }; drag = null },
+                    onDragEnd = { drag?.let { asked.ask(it); onLevel((it * 100).roundToInt()) }; drag = null },
                     onDragCancel = { drag = null },
                 ) { change, _ -> drag = at(change.position.x) }
             },

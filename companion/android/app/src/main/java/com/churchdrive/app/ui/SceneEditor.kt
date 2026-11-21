@@ -93,7 +93,7 @@ fun SceneEditorPage(initial: SceneDraft, onClose: () -> Unit) {
                 TileItem("cd:check", "Save", true) {
                     if (sceneProblem(draft) != null) return@TileItem
                     scope.launch {
-                        if (api?.ask("church_drive/scene/save", sceneSaveBody(draft)) != null) { refresh(); onClose() } else message = "The house didn't save it."
+                        if (api == null) message = "Not connected to the house." else if (api.ask("church_drive/scene/save", sceneSaveBody(draft)) != null) { refresh(); onClose() } else message = "The house didn't save it${api.lastErrorCode?.let { " ($it)" }.orEmpty()}."
                     }
                 },
             ) + (if (initial.key != null) listOf(TileItem("cd:bin", "Delete", false) {
