@@ -113,7 +113,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     }
     GridCard(tone.container, tone.onContainer, rows, "", deviceEntity = room.head, fold = if (expandable) collapsed else null, arrowTop = 0.5f) {
         LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1f), entities,
-            tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell)
+            tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell, scenes = room.scenes)
         if (!open && showHint) {
             Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.at(0.5f, 1.55f, 7f, 0.5f), color = tone.onContainer.copy(alpha = 0.7f))
         }
@@ -226,6 +226,8 @@ fun LightPill(
     /** For a room: its lights. The room's own colour is the group's last one, which lingers after a room turns to plain white or has only switches on, so the pill takes the colour of a light that is on and showing one, else the theme. */
     tintFrom: List<String>? = null,
     pillHeight: androidx.compose.ui.unit.Dp = Ui.TallTileHeight,
+    /** For a room: its scenes (the card's list), shown in its settings with the hybrid scenes. */
+    scenes: List<LightScene> = emptyList(),
 ) {
     val on = light?.state == "on"
     val haptic = LocalHapticFeedback.current
@@ -318,7 +320,7 @@ fun LightPill(
             Text(status, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
         }
     }
-    if (settings && entities != null) LightSettings(entityId, name, entities, call) { settings = false }
+    if (settings && entities != null) LightSettings(entityId, name, entities, call, scenes) { settings = false }
 }
 
 /** The one-line "Hold for colours" hint: shown under the first light that has settings, until someone has held one. */

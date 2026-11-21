@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.177.0
+
+- **A room's settings show its scenes.** Press and hold a room (the Cloakroom, say) and its settings now list the room's own scenes, the same list as on its card, above its hybrid scenes. The long effects list on the Govee light is gone from a light's settings.
+
 ## 0.176.0
 
 - **Light effects.** A light that has effects (the Govee Cloakroom light's sunrise, candlelight, twinkle and the rest) now shows an Effects row in its settings, with None to stop one. The Cloakroom light is linked to the Cloakroom room and the Ground Floor summary.
