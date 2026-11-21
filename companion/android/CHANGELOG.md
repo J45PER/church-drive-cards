@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.181.2
 
-- **Light controls answer at once.** A slider or power button now shows what you asked for straight away and keeps it until the light reports back, instead of jumping back and then forward a second later (light cards, a light's settings and the Govee level bar; other sliders and buttons follow). A Govee fitting's room bar and pill take their colour from the main light, not from whichever segment reported last (it showed red). The Govee dial has a Whole ring button to pick every segment at once, and an All segments on button. A scene that can't be saved now says why.
+- **Light controls answer at once.** A slider or power button now shows what you asked for straight away and keeps it until the light reports back, instead of jumping back and then forward a second later (light cards, a light's settings and the Govee level bar; other sliders and buttons follow). A Govee fitting's room bar and pill take their colour from the main light, not from whichever segment reported last (it showed red). The Govee dial has a Whole ring button to pick every segment at once, and an All segments on button. A scene that can't be saved now says why. The hybrid scenes list tries again until the house answers and refreshes at once after a save or delete (it could stay empty).
 
 ## 0.181.1
 

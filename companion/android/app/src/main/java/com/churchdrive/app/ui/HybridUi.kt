@@ -45,6 +45,11 @@ import com.churchdrive.app.ha.data
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
+/** Asks the house for the hybrid scenes again; set while [rememberHybridList] is on screen. */
+object HybridRefresh {
+    var trigger: (() -> Unit)? = null
+}
+
 /** Every hybrid scene and which one is playing where, kept up to date by [rememberHybridList]; empty until the house answers. */
 val LocalHybrids = compositionLocalOf { HybridList() }
 
@@ -53,7 +58,21 @@ val LocalHybrids = compositionLocalOf { HybridList() }
 fun rememberHybridList(api: HaApi?): HybridList {
     val state = remember { mutableStateOf(HybridList()) }
     var changed by remember { mutableIntStateOf(0) }
-    LaunchedEffect(api, changed) { parseHybrids(api?.ask("church_drive/hybrids", JSONObject()))?.let { state.value = it } }
+    // The first ask can come before the line to the house is up; try again until it answers, so the list is never left empty.
+    LaunchedEffect(api, changed) {
+        var tries = 0
+        while (tries < 8) {
+            val list = parseHybrids(api?.ask("church_drive/hybrids", JSONObject()))
+            if (list != null) { state.value = list; break }
+            tries++
+            kotlinx.coroutines.delay(1500L * tries)
+        }
+    }
+    // Saving or deleting a hybrid asks again at once, without waiting for the house to say it changed.
+    DisposableEffect(Unit) {
+        HybridRefresh.trigger = { changed++ }
+        onDispose { HybridRefresh.trigger = null }
+    }
     DisposableEffect(api) {
         val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_hybrids_changed")) { changed++ } ?: -1
         onDispose { if (sub >= 0) api?.close(sub) }
@@ -321,10 +340,10 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
                 if (problem != null) message = problem
                 else scope.launch {
                     val result = api?.ask("church_drive/hybrid/save", hybridSaveBody(draft, head))
-                    if (result != null) onDone() else message = "The house didn't accept that${api?.lastErrorCode?.let { " ($it)" }.orEmpty()}."
+                    if (result != null) { HybridRefresh.trigger?.invoke(); onDone() } else message = "The house didn't accept that${api?.lastErrorCode?.let { " ($it)" }.orEmpty()}."
                 }
             },
-        ) + (if (draft.id != null) listOf(TileItem("cd:bin", "Delete", false) { scope.launch { if (api?.ask("church_drive/hybrid/delete", JSONObject().put("hybrid_id", draft.id)) != null) onDone() else message = "The house didn't delete it." } }) else emptyList()),
+        ) + (if (draft.id != null) listOf(TileItem("cd:bin", "Delete", false) { scope.launch { if (api?.ask("church_drive/hybrid/delete", JSONObject().put("hybrid_id", draft.id)) != null) { HybridRefresh.trigger?.invoke(); onDone() } else message = "The house didn't delete it." } }) else emptyList()),
         tone, ink, perRow = 3,
     )
 }
