@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.183.2
+
+- **Automation cards and the already-on setting.** The Lights page's Light routines and Sensor actions cards are a fixed size, with no fold arrow and no hint: each shows its title and count and the next two (routines by time, sensors by name with a short note). A sensor action can play a theme as well as a scene, at any time of day. New setting on a sensor action: Switch off even if it was already on. With it off, a light that was already on when someone came in is left on when they go; it is on for the Cloakroom.
+
 ## 0.183.1
 
 - **Presence bar, room icon and scenes.** The presence bar now runs the full width of the card from the start of the slider to the end of the power button, thicker, with the status ("Someone's in", "Off in 12 s", "Nobody in") written inside it, and the same on the light's settings page. The Cloakroom card shows its room icon again, not the Govee light's. A room's settings show exactly the scenes its expanded card shows (the room's, then the ones you made), not every scene in the library.

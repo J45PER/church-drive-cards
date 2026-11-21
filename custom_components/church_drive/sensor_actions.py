@@ -49,6 +49,8 @@ class SensorActions:
         self._unsub: Callable[[], None] | None = None
         self._timers: dict[str, Callable[[], None]] = {}
         self._due: dict[str, float] = {}
+        # Which sensor actions found their light already on when someone came in (kept until the room empties).
+        self._was_on: dict[str, bool] = {}
         self._migrated = False
         self._unsub_started: Callable[[], None] | None = None
 
@@ -181,15 +183,22 @@ class SensorActions:
                 continue
             if new.state == "on":
                 self._cancel(item["id"])
+                self._was_on.setdefault(item["id"], self._any_on(item))
                 self.hass.async_create_task(self._async_present(item))
             elif new.state == "off":
                 self._cancel(item["id"])
-                if item["off_action"] != "none":
+                if item["off_action"] == "none":
+                    self._was_on.pop(item["id"], None)
+                else:
                     sid = item["id"]
                     # A @callback, so Home Assistant runs it on the event loop: a plain lambda runs on a worker thread, where creating the off task is refused
                     # and the light would turn on but never off.
                     self._due[sid] = time.monotonic() + item["off_delay"]
                     self._timers[sid] = async_call_later(self.hass, item["off_delay"], callback(lambda _now, sid=sid: self._on_empty(sid)))
+
+    def _any_on(self, item: dict[str, Any]) -> bool:
+        states = (self.hass.states.get(light) for light in item["lights"])
+        return any(state is not None and state.state == "on" for state in states)
 
     @callback
     def _on_empty(self, sid: str) -> None:
@@ -230,6 +239,9 @@ class SensorActions:
                 await self._call("light", "turn_on", data, item)
 
     async def _async_empty(self, item: dict[str, Any]) -> None:
+        # A light that was already on when someone came in is left on, unless this action is set to switch it off anyway.
+        if self._was_on.pop(item["id"], False) and not item["off_if_on"]:
+            return
         for light in item["lights"]:
             if item["off_action"] == "dim":
                 await self._call("light", "turn_on", {"entity_id": light, "brightness_pct": item["dim_pct"]}, item)

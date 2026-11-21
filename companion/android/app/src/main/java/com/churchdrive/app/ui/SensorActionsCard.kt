@@ -75,6 +75,9 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
     var enabled by remember(key) { mutableStateOf(action?.enabled ?: true) }
     var pct by remember(key) { mutableIntStateOf(action?.pct ?: 0) }
     var slots by remember(key) { mutableStateOf(action?.slots ?: emptyList()) }
+    var offIfOn by remember(key) { mutableStateOf(action?.offIfOn ?: false) }
+    val themes = LocalHybrids.current.hybrids
+    val themeName = { id: String -> themes.firstOrNull { it.id == id }?.name ?: "A theme" }
     var openSlot by remember(key) { mutableStateOf<Int?>(null) }
     var chosen by remember(key) { mutableStateOf(action?.lights ?: emptyList()) }
     var hueOff by remember(key) { mutableStateOf(false) }
@@ -119,13 +122,18 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
         TileRow(
             listOf(
                 TileItem("cd:power", "Turn on", onAction == "on") { onAction = "on" },
-                TileItem("cd:sun", "Scene", onAction == "scene") { onAction = "scene" },
+                TileItem("cd:sun", "Scene", onAction == "scene") { onAction = "scene"; if (scene !in WHITE_SCENES) scene = WHITE_SCENES.first() },
+                TileItem("cd:animation-play", "Theme", onAction == "hybrid") { onAction = "hybrid"; if (themes.none { it.id == scene }) scene = themes.firstOrNull()?.id ?: "" },
                 TileItem("cd:close", "Nothing", onAction == "none") { onAction = "none" },
             ),
-            tone, ink,
+            tone, ink, perRow = 2,
         )
         if (onAction == "scene") {
             TileRow(WHITE_SCENES.map { k -> TileItem("", LightScene(k, "").name, scene == k) { scene = k } }, tone, ink)
+        }
+        if (onAction == "hybrid") {
+            if (themes.isEmpty()) Text("No themes yet. Make one in a room's settings.", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+            else TileRow(themes.map { t -> TileItem(t.icon, t.name, scene == t.id) { scene = t.id } }, tone, ink, perRow = 2)
         }
         if (onAction == "on") {
             StepLine("Brightness", if (pct == 0) "As it is" else "$pct%", ink, tone, { pct = (pct - 10).coerceAtLeast(0) }, { pct = (pct + 10).coerceAtMost(100) })
@@ -145,11 +153,16 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
                     TileRow(
                         listOf(
                             TileItem("cd:power", "Turn on", slot.onAction == "on") { setSlot(i, slot.copy(onAction = "on")) },
-                            TileItem("cd:sun", "Scene", slot.onAction == "scene") { setSlot(i, slot.copy(onAction = "scene", scene = slot.scene.ifBlank { WHITE_SCENES.first() })) },
+                            TileItem("cd:sun", "Scene", slot.onAction == "scene") { setSlot(i, slot.copy(onAction = "scene", scene = slot.scene.takeIf { it in WHITE_SCENES } ?: WHITE_SCENES.first())) },
+                            TileItem("cd:animation-play", "Theme", slot.onAction == "hybrid") { setSlot(i, slot.copy(onAction = "hybrid", scene = slot.scene.takeIf { s -> themes.any { it.id == s } } ?: themes.firstOrNull()?.id.orEmpty())) },
                             TileItem("cd:close", "Nothing", slot.onAction == "none") { setSlot(i, slot.copy(onAction = "none")) },
                         ),
-                        tone, ink,
+                        tone, ink, perRow = 2,
                     )
+                    if (slot.onAction == "hybrid") {
+                        if (themes.isEmpty()) Text("No themes yet. Make one in a room's settings.", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+                        else TileRow(themes.map { t -> TileItem(t.icon, t.name, slot.scene == t.id) { setSlot(i, slot.copy(scene = t.id)) } }, tone, ink, perRow = 2)
+                    }
                     if (slot.onAction == "scene") {
                         TileRow(WHITE_SCENES.map { k -> TileItem("", LightScene(k, "").name, slot.scene == k) { setSlot(i, slot.copy(scene = k)) } }, tone, ink)
                     }
@@ -172,7 +185,7 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text("${slot.start}–${slot.end}", style = MaterialTheme.typography.titleSmall, color = ink)
-                        Text(slotLookText(slot) { LightScene(it, "").name }, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f))
+                        Text(slotLookText(slot) { if (slot.onAction == "hybrid") themeName(it) else LightScene(it, "").name }, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f))
                     }
                     HaIcon("cd:chevron-right", CdVectors.Info, ink.copy(alpha = 0.7f), 22.dp)
                 }
@@ -193,6 +206,9 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
         )
         if (offAction != "none") {
             StepLine("After", delayText(offDelay), ink, tone, { offDelay = stepDelay(offDelay, -1) }, { offDelay = stepDelay(offDelay, 1) })
+        }
+        if (offAction != "none") {
+            SwitchLine("Switch off even if it was already on", offIfOn, ink) { offIfOn = it }
         }
         if (offAction == "dim") {
             StepLine("Dim to", "$dimPct%", ink, tone, { dimPct = (dimPct - 5).coerceAtLeast(5) }, { dimPct = (dimPct + 5).coerceAtMost(100) })
@@ -235,7 +251,7 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
                             val body = sensorBody(
                                 action?.id, sensor.entityId, action?.name?.takeIf { it.isNotBlank() } ?: sensor.name.removeSuffix(" Sensor").trim(), chosen, onAction, scene, offAction,
                                 offDelay, dimPct, onlyDark, darkLux, luxEntity ?: "", if (windowOn) windowStart else null,
-                                if (windowOn) windowEnd else null, enabled, pct, slots,
+                                if (windowOn) windowEnd else null, enabled, pct, slots, offIfOn,
                             )
                             val result = api?.ask("church_drive/sensor_actions/set", body)
                             saving = false
@@ -302,7 +318,6 @@ fun SensorActionsCard(entities: Map<String, EntityState>, call: CallService) {
     var data by remember { mutableStateOf<SensorActionsData?>(null) }
     var changed by remember { mutableIntStateOf(0) }
     var page by remember { mutableStateOf(false) }
-    val fold = rememberFold("grid-fold|sensor-actions-summary", folded = false)
     LaunchedEffect(api, changed) { parseSensorActions(api?.ask("church_drive/sensor_actions", JSONObject()))?.let { data = it } }
     DisposableEffect(api) {
         val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_sensor_actions_changed")) { changed++ } ?: -1
@@ -311,24 +326,11 @@ fun SensorActionsCard(entities: Map<String, EntityState>, call: CallService) {
     val all = data ?: return
     if (all.sensors.isEmpty()) return
     val tone = toneColors(Tone.Lights)
-    val ink = tone.onContainer
-    val active = all.actions.count { it.enabled }
-    Box(Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { page = true }) }) {
-        EntityCard(tone.container, ink) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Sensor actions", style = MaterialTheme.typography.headlineSmall, color = ink, modifier = Modifier.weight(1f))
-                Box(Modifier.size(Ui.TileHeight).clip(RoundedCornerShape(50)).clickable(onClickLabel = if (fold.value) "Expand" else "Collapse") { fold.value = !fold.value }, contentAlignment = Alignment.Center) {
-                    Icon(if (fold.value) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null, tint = ink.copy(alpha = 0.6f))
-                }
-            }
-            StatusPill(if (active == 1) "1 sensor set up" else "$active of ${all.sensors.size} sensors set up", tone)
-            Text(
-                all.actions.firstOrNull { it.enabled }?.let { "${it.name}: ${it.summary}" } ?: "No sensor switches lights yet.",
-                style = MaterialTheme.typography.bodyLarge, color = ink,
-            )
-            if (!fold.value) Text("Press and hold to open", style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f))
-        }
-    }
+    val on = all.actions.filter { it.enabled }
+    AutomationCard(
+        "Sensor actions", if (on.size == 1) "1 sensor set up" else "${on.size} of ${all.sensors.size} sensors set up",
+        on.map { it.name to it.summary.substringAfter(" · ", it.summary) }, "No sensor switches lights yet.", tone,
+    ) { page = true }
     if (page) SensorActionsPage(all, entities, call, onClose = { page = false }) { changed++ }
 }
 

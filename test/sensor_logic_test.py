@@ -140,3 +140,11 @@ class HybridSlots(unittest.TestCase):
         self.assertEqual(len(item["slots"]), 1)
         self.assertEqual(sl.pick_look(item, 23 * 60 + 30), {"on_action": "hybrid", "scene": "h123", "pct": 0})
         self.assertIn("theme", sl.summary({**item, "on_action": "hybrid", "scene": "h1"}))
+
+
+class OffIfOn(unittest.TestCase):
+    def test_a_light_already_on_is_left_on_unless_the_action_says_otherwise(self):
+        self.assertFalse(sl.clean_sensor(CLOAK)["off_if_on"])
+        self.assertTrue(sl.clean_sensor({**CLOAK, "off_if_on": True})["off_if_on"])
+        item = sl.clean_sensor(CLOAK)
+        self.assertTrue(sl.clean_sensor({"off_delay": 30}, item)["off_if_on"] is False)
