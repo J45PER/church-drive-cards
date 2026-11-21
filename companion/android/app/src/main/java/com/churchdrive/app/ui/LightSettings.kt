@@ -710,8 +710,14 @@ private fun GoveeParts(main: EntityState, ring: EntityState, segments: List<Enti
                     Text(if (on) "Switch off (goes dark)" else "Switch on", Modifier.weight(1f).align(Alignment.CenterVertically), style = MaterialTheme.typography.bodyMedium, color = muted)
                 }
             }
-            LightSection(if (isMain) "cd:bulb-lit" else "cd:bulb-group", name, if (isMain) "White and colour" else if (isRing) "${segments.size} segments together" else "One segment of the ring", col) {
-                ColourTabs(target, target.hasWhiteMode(), false, colourTab, { colourTab = it }, gradient, { gradient = it }, call, tone, ink)
+            LightSection(if (isMain) "cd:bulb-lit" else "cd:bulb-group", name, if (isMain) "White tones" else if (isRing) "${segments.size} segments together" else "One segment of the ring", col) {
+                if (isMain) {
+                    // The Govee sends a colour to the whole fitting, ring included, so the down light is white only: colour is the ring's.
+                    WhiteControls(target, call, tone)
+                    Text("The down light is white only. Colour the ring or its segments for colour.", style = MaterialTheme.typography.bodySmall, color = muted)
+                } else {
+                    ColourTabs(target, false, false, 1, { colourTab = it }, gradient, { gradient = it }, call, tone, ink)
+                }
             }
         }
     }

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.181.1
+
+- **No change to this app.** The Govee down light is white only in the phone app's light settings.
+
 ## 0.181.0
 
 - **Light cards and light settings reworked.** No change to this app; a power button beside every light's slider, press and hold on a room card for its details, a Govee dial of one circle, tap a light in a room to show its settings under the list, and administrators can make their own scenes. See the phone app's notes.

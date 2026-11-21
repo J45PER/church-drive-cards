@@ -14,8 +14,8 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .apply import async_apply
-from .hybrid_logic import clean_all, clean_hybrid, clean_look, for_target, gradient_spec, rgb_of
-from .library import Library, hex_to_xy
+from .hybrid_logic import clean_all, clean_hybrid, clean_look, for_target, gradient_spec, kelvin_rgb, play_order, ring_is_colourful, rgb_of
+from .library import Library, hex_to_xy, xy_to_hex
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,11 +64,19 @@ class Hybrids:
         hybrid = next((h for h in self._items if h["id"] == hybrid_id), None)
         if hybrid is None:
             raise ValueError("That hybrid scene is gone")
-        for entity, look in hybrid["looks"].items():
+        looks = hybrid["looks"]
+        rings = {e for e in looks if self._is_ring(e)}
+        group = self.hass.states.get(hybrid["target"])
+        siblings = set(group.attributes.get("entity_id") or []) if group is not None else set()
+        # A Govee fitting in colour mode shows its own colour on the light beside the ring, so with a coloured ring that light is set first and
+        # its white is sent as the same white in RGB (a white-mode command would switch the ring off).
+        as_colour = {e for e in looks if e not in rings and e in siblings and rings & siblings} if ring_is_colourful(looks, rings) else set()
+        for entity in play_order(list(looks), rings):
+            look = looks[entity]
             if self.hass.states.get(entity) is None:
                 continue
             try:
-                await self._async_look(entity, look, context)
+                await self._async_look(entity, look, context, as_colour=entity in as_colour)
             except Exception as err:  # noqa: BLE001 - one light that doesn't answer mustn't stop the others
                 _LOGGER.warning("Hybrid scene %s: %s didn't take its look: %s", hybrid["name"], entity, err)
         self._active[hybrid["target"]] = hybrid["id"]
@@ -83,7 +91,13 @@ class Hybrids:
             if self.hass.states.get(entity) is not None:
                 await self._async_look(entity, look, context)
 
-    async def _async_look(self, entity: str, look: dict[str, Any], context: Context | None) -> None:
+    def _is_ring(self, entity: str) -> bool:
+        """A ring of segments: a group made only of a fitting's segment lights."""
+        state = self.hass.states.get(entity)
+        members = (state.attributes.get("entity_id") if state is not None else None) or []
+        return len(members) > 1 and all("_segment_" in m for m in members)
+
+    async def _async_look(self, entity: str, look: dict[str, Any], context: Context | None, as_colour: bool = False) -> None:
         kind = look["t"]
         if kind == "leave":
             return
@@ -94,6 +108,15 @@ class Hybrids:
             if found is None:
                 _LOGGER.warning("Hybrid scene: no scene called %s", look["v"])
                 return
+            if as_colour and kind == "white":
+                spec = found[1]
+                rgb = kelvin_rgb(1_000_000 / spec["mirek"]) if "mirek" in spec else rgb_of(xy_to_hex(tuple(spec["xy"]))) if "xy" in spec else None
+                if rgb is not None:
+                    await self.hass.services.async_call(
+                        "light", "turn_on", {"entity_id": entity, "rgb_color": rgb, "brightness": max(1, round(spec["brightness"] * 255 / 100))},
+                        blocking=True, context=context,
+                    )
+                    return
             await async_apply(self.hass, [entity], found[0], found[1], context)
         elif kind == "colour":
             await self.hass.services.async_call("light", "turn_on", {"entity_id": entity, "rgb_color": rgb_of(look["v"])}, blocking=True, context=context)

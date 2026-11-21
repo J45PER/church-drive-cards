@@ -98,3 +98,23 @@ class HelpersTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlayOrderTest(unittest.TestCase):
+    def test_a_ring_is_played_last(self):
+        self.assertEqual(h.play_order(["light.up", "light.down"], {"light.up"}), ["light.down", "light.up"])
+        self.assertEqual(h.play_order(["light.down", "light.up"], {"light.up"}), ["light.down", "light.up"])
+
+    def test_only_a_coloured_ring_counts(self):
+        rings = {"light.up"}
+        self.assertTrue(h.ring_is_colourful({"light.up": {"t": "gradient", "v": ["#000000", "#ffffff"]}}, rings))
+        self.assertFalse(h.ring_is_colourful({"light.up": {"t": "off"}}, rings))
+        self.assertFalse(h.ring_is_colourful({"light.down": {"t": "white", "v": "bright"}}, rings))
+
+    def test_a_warm_white_is_orange_and_a_cool_one_is_blue(self):
+        warm = h.kelvin_rgb(2700)
+        cool = h.kelvin_rgb(6500)
+        self.assertEqual(warm[0], 255)
+        self.assertGreater(warm[0], warm[2])
+        self.assertGreater(cool[2], warm[2])
+        self.assertTrue(all(0 <= c <= 255 for c in warm + cool))
