@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any, Callable
 
 from homeassistant.core import Event, HomeAssistant, callback
@@ -47,6 +48,7 @@ class SensorActions:
         self._items: dict[str, dict[str, Any]] = {}
         self._unsub: Callable[[], None] | None = None
         self._timers: dict[str, Callable[[], None]] = {}
+        self._due: dict[str, float] = {}
         self._migrated = False
         self._unsub_started: Callable[[], None] | None = None
 
@@ -102,6 +104,25 @@ class SensorActions:
         if sensors:
             self._unsub = async_track_state_change_event(self.hass, sensors, self._on_change)
 
+    def presence(self) -> dict[str, dict[str, Any]]:
+        """For each light a sensor action looks after: whether someone is there, and, once the room has emptied, how many seconds until the light goes off."""
+        out: dict[str, dict[str, Any]] = {}
+        now = time.monotonic()
+        for item in self._items.values():
+            if not item["enabled"]:
+                continue
+            state = self.hass.states.get(item["sensor"])
+            due = self._due.get(item["id"])
+            info = {
+                "present": state is not None and state.state == "on",
+                "off_in": max(0, round(due - now)) if due is not None else None,
+                "delay": item["off_delay"] if item["off_action"] != "none" else 0,
+                "sensor": item["name"],
+            }
+            for light in item["lights"]:
+                out[light] = info
+        return out
+
     # ---- what's set ----------------------------------------------------------
 
     def _view(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -144,6 +165,7 @@ class SensorActions:
     # ---- running ---------------------------------------------------------------
 
     def _cancel(self, sid: str) -> None:
+        self._due.pop(sid, None)
         cancel = self._timers.pop(sid, None)
         if cancel:
             cancel()
@@ -166,11 +188,13 @@ class SensorActions:
                     sid = item["id"]
                     # A @callback, so Home Assistant runs it on the event loop: a plain lambda runs on a worker thread, where creating the off task is refused
                     # and the light would turn on but never off.
+                    self._due[sid] = time.monotonic() + item["off_delay"]
                     self._timers[sid] = async_call_later(self.hass, item["off_delay"], callback(lambda _now, sid=sid: self._on_empty(sid)))
 
     @callback
     def _on_empty(self, sid: str) -> None:
         self._timers.pop(sid, None)
+        self._due.pop(sid, None)
         item = self._items.get(sid)
         state = self.hass.states.get(item["sensor"]) if item else None
         if item and item["enabled"] and state is not None and state.state == "off":
@@ -194,6 +218,9 @@ class SensorActions:
             return
         look = pick_look(item, minutes)
         for light in item["lights"]:
+            if look["on_action"] == "hybrid":
+                await self._call("church_drive", "apply_hybrid", {"id": look["scene"]}, item)
+                return
             if look["on_action"] == "scene":
                 await self._call("church_drive", "apply_scene", {"entity_id": light, "scene": look["scene"]}, item)
             else:

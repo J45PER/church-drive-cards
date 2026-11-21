@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.183.0
+
+- **Roles in themes and presence on lights.** Lights have a role in themes, and a presence-triggered light shows who's in. Each light has a role (Primary, Ambient or Tertiary) on its settings page (administrators; a light with no role is Primary). A theme now gives each role its own look: Primary lights a white or colour, Ambient lights a colour, gradient or dynamic scene, Tertiary lights a colour or gradient, and each light does what it can. Sensor time slots can play a theme. A light a presence sensor looks after shows "Someone's in", "Off in 12 s" with a draining bar, or "Nobody in" on its card and settings page; the bar is always there so the card keeps its size. Existing themes with a look for each named light are rebuilt by editing them.
+
 ## 0.182.1
 
 - **Themes can split the main light and the ring.** In a hybrid scene a Govee fitting's ring is one light, not 13: it takes Leave, Off, one colour or a gradient, and the main light beside it takes white or a colour. The ring takes about 15 to 25 seconds to change because Govee needs one command per segment.

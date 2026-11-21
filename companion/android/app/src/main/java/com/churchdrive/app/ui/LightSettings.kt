@@ -128,6 +128,16 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
         device, on, tint, if (grouped && selected != null) "$status · tap to close ${entities[selected]?.friendlyName.orEmpty()}" else status, call,
         onBar = if (grouped && selected != null) ({ selected = null }) else null,
     )
+    // A light a presence sensor looks after: whether someone is in, the countdown to switching it off, and the sensor. The bar is always there.
+    val presence = LocalPresence.current.let { it[light.entityId] ?: it[device.entityId] }
+    val remaining = rememberRemaining(presence)
+    if (presence != null) {
+        Text(
+            "${presenceLine(presence, remaining)} · ${presence.sensor}${if (presence.delay > 0) " · off ${presence.delay} s after" else ""}",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        PresenceBar(presenceFraction(presence, remaining), tint)
+    }
     LightDetails(light, entities, call, scenes, selected) { selected = it }
 }
 
@@ -142,6 +152,7 @@ private fun LightDetails(light: EntityState, entities: Map<String, EntityState>,
     val tint = tintOf(colourSource(light, entities) ?: light, MaterialTheme.colorScheme.onSurfaceVariant)
     if (!grouped) {
         LightControls(light, light.lightKind(), light.hasWhiteMode(), call, tone, grey, tint)
+        LightRolesSection(listOf(light))
         return
     }
     // A room with a ring of segments (the Cloakroom's Govee) is one device: its own light is the whole thing, and the group would send a command
@@ -151,6 +162,7 @@ private fun LightDetails(light: EntityState, entities: Map<String, EntityState>,
     if (ring != null && main != null) {
         LightControls(main, main.lightKind(), main.hasWhiteMode(), call, tone, grey, tint)
         HybridSection(light, memberStates, call, tone, tint, true) {}
+        LightRolesSection(memberStates)
         return
     } else {
         Text("LIGHTS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -172,6 +184,7 @@ private fun LightDetails(light: EntityState, entities: Map<String, EntityState>,
     }
     if (scenes.isNotEmpty()) ScenesSection(scenes, light.entityId, tint, call)
     HybridSection(light, memberStates, call, tone, tint, true) {}
+    LightRolesSection(memberStates)
 }
 
 /** The page's top bar: the light's colour and its state, and beside it, on its own, the power squircle in the light's colour. Only the squircle switches the light. */

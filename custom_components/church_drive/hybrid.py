@@ -14,8 +14,9 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .apply import async_apply
-from .hybrid_logic import clean_all, clean_hybrid, clean_look, for_target, gradient_spec, kelvin_rgb, play_order, ring_is_colourful, rgb_of
+from .hybrid_logic import clean_all, clean_hybrid, clean_look, expand_roles, for_target, gradient_spec, kelvin_rgb, play_order, ring_is_colourful, rgb_of
 from .library import Library, hex_to_xy, xy_to_hex
+from .light_roles import LightRoles
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,8 +27,9 @@ EVENT_CHANGED = "church_drive_hybrids_changed"
 class Hybrids:
     """The saved hybrid scenes, and which one is playing on each target."""
 
-    def __init__(self, hass: HomeAssistant, library: Library) -> None:
+    def __init__(self, hass: HomeAssistant, library: Library, roles: LightRoles | None = None) -> None:
         self.hass = hass
+        self.roles = roles
         self._library = library
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.hybrids")
         self._items: list[dict[str, Any]] = []
@@ -64,10 +66,14 @@ class Hybrids:
         hybrid = next((h for h in self._items if h["id"] == hybrid_id), None)
         if hybrid is None:
             raise ValueError("That hybrid scene is gone")
-        looks = hybrid["looks"]
-        rings = {e for e in looks if self._is_ring(e)}
         group = self.hass.states.get(hybrid["target"])
         siblings = set(group.attributes.get("entity_id") or []) if group is not None else set()
+        # A theme made of roles gives each light of the room the look of its role; a look named for one light still wins.
+        members = sorted(siblings) if siblings else [hybrid["target"]]
+        role_of = self.roles.role if self.roles is not None else (lambda _e: "primary")
+        looks = {e: look for e, look in expand_roles(hybrid.get("roles") or {}, members, role_of).items() if self._can(e, look["t"])}
+        looks.update(hybrid["looks"])
+        rings = {e for e in looks if self._is_ring(e)}
         # A Govee fitting in colour mode shows its own colour on the light beside the ring, so with a coloured ring that light is set first and
         # its white is sent as the same white in RGB (a white-mode command would switch the ring off).
         as_colour = {e for e in looks if e not in rings and e in siblings and rings & siblings} if ring_is_colourful(looks, rings) else set()
@@ -90,6 +96,21 @@ class Hybrids:
         for entity in entities:
             if self.hass.states.get(entity) is not None:
                 await self._async_look(entity, look, context)
+
+    def _can(self, entity: str, kind: str) -> bool:
+        """Whether a light can take a look of this kind: a colour needs a colour light, and a white needs one that dims."""
+        state = self.hass.states.get(entity)
+        if state is None:
+            return False
+        modes = set(state.attributes.get("supported_color_modes") or [])
+        members = state.attributes.get("entity_id")
+        if members:  # a group: it can if any of its lights can
+            return any(self._can(m, kind) for m in members)
+        if kind in ("colour", "gradient", "dynamic"):
+            return bool(modes & {"xy", "hs", "rgb", "rgbw", "rgbww"})
+        if kind == "white":
+            return bool(modes - {"onoff"})
+        return True
 
     def _is_ring(self, entity: str) -> bool:
         """A ring of segments: a group made only of a fitting's segment lights."""

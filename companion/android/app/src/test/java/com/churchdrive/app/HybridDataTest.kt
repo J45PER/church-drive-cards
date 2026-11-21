@@ -43,6 +43,23 @@ class HybridDataTest {
         assertTrue(list.of("light.hall").isEmpty())
     }
 
+    @Test fun aThemeOfRolesIsReadAndSent() {
+        val o = JSONObject(
+            """{"hybrids":[{"id":"t","name":"Late glow","target":"light.cloakroom","looks":{},"roles":{
+              "primary":{"t":"off"},"ambient":{"t":"colour","v":"#8a4a12"},"boss":{"t":"off"}}}],
+             "roles":{"light.cloakroom_up_light":"ambient","light.x":"boss"}}""",
+        )
+        val list = parseHybrids(o)!!
+        val theme = list.hybrids.single()
+        assertEquals(setOf("primary", "ambient"), theme.roles.keys)
+        assertEquals("ambient", list.roleOf("light.cloakroom_up_light"))
+        assertEquals("primary", list.roleOf("light.cloakroom_down_light"))
+        assertEquals("primary", list.roleOf("light.x"))
+        val body = hybridSaveBody(HybridDraft(null, "Late glow", "cd:moon", emptyMap(), theme.roles), "light.cloakroom").getJSONObject("hybrid")
+        assertEquals("#8a4a12", body.getJSONObject("roles").getJSONObject("ambient").getString("v"))
+        assertNull(hybridProblem(HybridDraft(null, "x", "cd:moon", emptyMap(), theme.roles)))
+    }
+
     @Test fun nothingBackMeansNoList() {
         assertNull(parseHybrids(null))
         assertEquals(0, parseHybrids(JSONObject("{}"))!!.hybrids.size)

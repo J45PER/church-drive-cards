@@ -118,3 +118,34 @@ class PlayOrderTest(unittest.TestCase):
         self.assertGreater(warm[0], warm[2])
         self.assertGreater(cool[2], warm[2])
         self.assertTrue(all(0 <= c <= 255 for c in warm + cool))
+
+
+class RolesTest(unittest.TestCase):
+    ROLES = {"primary": {"t": "white", "v": "relax"}, "ambient": {"t": "gradient", "v": ["#3ec6ff", "#b36bff"]}}
+
+    def test_a_theme_can_be_made_of_roles_alone(self):
+        out = h.clean_hybrid({"name": "Evening", "target": "light.room", "roles": self.ROLES})
+        self.assertEqual(out["roles"], self.ROLES)
+        self.assertEqual(out["looks"], {})
+
+    def test_a_role_only_takes_looks_it_can_do(self):
+        with self.assertRaises(ValueError):
+            h.clean_hybrid({"name": "x", "target": "light.room", "roles": {"primary": {"t": "gradient", "v": ["#000000", "#ffffff"]}}})
+        with self.assertRaises(ValueError):
+            h.clean_hybrid({"name": "x", "target": "light.room", "roles": {"tertiary": {"t": "dynamic", "v": "soho"}}})
+        with self.assertRaises(ValueError):
+            h.clean_hybrid({"name": "x", "target": "light.room", "roles": {"nope": {"t": "off"}}})
+
+    def test_roles_that_all_leave_do_nothing(self):
+        with self.assertRaises(ValueError):
+            h.clean_hybrid({"name": "x", "target": "light.room", "roles": {"primary": {"t": "leave"}}})
+
+    def test_old_hybrids_have_no_roles(self):
+        self.assertEqual(h.clean_hybrid(GOOD)["roles"], {})
+
+    def test_lights_take_the_look_of_their_role(self):
+        roles = {"light.ring": "ambient"}
+        out = h.expand_roles(self.ROLES, ["light.down", "light.ring"], lambda e: roles.get(e, "primary"))
+        self.assertEqual(out["light.down"]["t"], "white")
+        self.assertEqual(out["light.ring"]["t"], "gradient")
+        self.assertEqual(h.expand_roles({"primary": {"t": "off"}}, ["light.ring"], lambda e: roles.get(e, "primary")), {})
