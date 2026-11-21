@@ -33,6 +33,9 @@ data class SensorInfo(
     val isHue: Boolean get() = platform == "hue"
 }
 
+/** One time slot: from [start] to [end] (it may run past midnight) someone being seen does [onAction] (on, scene or none), at [pct] brightness (0 leaves it). */
+data class SensorSlot(val start: String, val end: String, val onAction: String, val scene: String, val pct: Int)
+
 data class SensorAction(
     val id: String,
     val sensor: String,
@@ -50,6 +53,8 @@ data class SensorAction(
     val windowEnd: String?,
     val enabled: Boolean,
     val summary: String,
+    val pct: Int = 0,
+    val slots: List<SensorSlot> = emptyList(),
 )
 
 data class SensorActionsData(val actions: List<SensorAction>, val sensors: List<SensorInfo>) {
@@ -72,7 +77,13 @@ fun parseSensorActions(result: Any?): SensorActionsData? {
                 offDelay = o.optInt("off_delay", 60), dimPct = o.optInt("dim_pct", 20), onlyDark = o.optBoolean("only_dark"),
                 darkLux = o.optInt("dark_lux", 30), luxSensor = o.optString("lux_sensor"),
                 windowStart = w?.optString("start")?.takeIf { it.isNotBlank() }, windowEnd = w?.optString("end")?.takeIf { it.isNotBlank() },
-                enabled = o.optBoolean("enabled", true), summary = o.optString("summary"),
+                enabled = o.optBoolean("enabled", true), summary = o.optString("summary"), pct = o.optInt("pct", 0),
+                slots = o.optJSONArray("slots")?.let { a ->
+                    (0 until a.length()).mapNotNull { j ->
+                        val x = a.optJSONObject(j) ?: return@mapNotNull null
+                        SensorSlot(x.optString("start"), x.optString("end"), x.optString("on_action", "on"), x.optString("scene"), x.optInt("pct", 0))
+                    }
+                }.orEmpty(),
             )
         }
     }.orEmpty()
@@ -139,6 +150,7 @@ fun sensorProblem(lights: List<String>, scene: String, onAction: String, needsHu
 fun sensorBody(
     actionId: String?, sensor: String, name: String, lights: List<String>, onAction: String, scene: String, offAction: String, offDelay: Int,
     dimPct: Int, onlyDark: Boolean, darkLux: Int, luxSensor: String, windowStart: String?, windowEnd: String?, enabled: Boolean,
+    pct: Int = 0, slots: List<SensorSlot> = emptyList(),
 ): JSONObject = JSONObject()
     .also { if (actionId != null) it.put("action_id", actionId) else it.put("sensor", sensor) }
     .put("name", name)
@@ -153,3 +165,17 @@ fun sensorBody(
     .put("lux_sensor", luxSensor)
     .put("window", if (windowStart != null && windowEnd != null) JSONObject().put("start", windowStart).put("end", windowEnd) else JSONObject.NULL)
     .put("enabled", enabled)
+    .put("pct", pct)
+    .put("slots", JSONArray(slots.map { JSONObject().put("start", it.start).put("end", it.end).put("on_action", it.onAction).put("scene", it.scene).put("pct", it.pct) }))
+
+/** "Turn on · 100%", "Scene · Relax", "Nothing": what a time slot does. */
+fun slotLookText(slot: SensorSlot, sceneName: (String) -> String): String = when (slot.onAction) {
+    "scene" -> "Scene · ${sceneName(slot.scene)}"
+    "none" -> "Nothing"
+    else -> if (slot.pct > 0) "Turn on · ${slot.pct}%" else "Turn on"
+}
+
+/** A new slot starts as the evening, relaxed. */
+fun newSensorSlot(): SensorSlot = SensorSlot("18:00", "23:00", "scene", "relax", 0)
+
+const val MAX_SENSOR_SLOTS = 6

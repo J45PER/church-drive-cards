@@ -22,7 +22,7 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .sensor_logic import MAX_SENSORS, clean_sensor, clean_sensors, should_act_on_presence, summary
+from .sensor_logic import MAX_SENSORS, clean_sensor, clean_sensors, pick_look, should_act_on_presence, summary
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +34,8 @@ SENSOR_CLASSES = {"motion", "occupancy", "presence"}
 NOT_SENSORS_MODELS = {"Service Group", "Room", "Zone", "Hue Bridge", "Bridge"}
 NOT_SENSORS_PLATFORMS = {"ring", "church_drive", "template", "ibeacon"}
 NOT_SENSORS_WORDS = ("keypad", "camera", "doorbell", "driveway")
+# A device that is a camera or doorbell (it has a camera entity, or is made by Ring) is not a sensor, whatever platform its motion comes through.
+NOT_SENSORS_MAKERS = {"Ring"}
 
 
 class SensorActions:
@@ -185,13 +187,18 @@ class SensorActions:
 
     async def _async_present(self, item: dict[str, Any]) -> None:
         now = dt_util.now()
-        if not should_act_on_presence(item, now.hour * 60 + now.minute, self._lux(item), self._sun_down()):
+        minutes = now.hour * 60 + now.minute
+        if not should_act_on_presence(item, minutes, self._lux(item), self._sun_down()):
             return
+        look = pick_look(item, minutes)
         for light in item["lights"]:
-            if item["on_action"] == "scene":
-                await self._call("church_drive", "apply_scene", {"entity_id": light, "scene": item["scene"]}, item)
+            if look["on_action"] == "scene":
+                await self._call("church_drive", "apply_scene", {"entity_id": light, "scene": look["scene"]}, item)
             else:
-                await self._call("light", "turn_on", {"entity_id": light}, item)
+                data: dict[str, Any] = {"entity_id": light}
+                if look["pct"]:
+                    data["brightness_pct"] = look["pct"]
+                await self._call("light", "turn_on", data, item)
 
     async def _async_empty(self, item: dict[str, Any]) -> None:
         for light in item["lights"]:
@@ -219,6 +226,7 @@ class SensorActions:
                 by_device.setdefault(entry.device_id, []).append(entry)
         taken = {i["sensor"]: i["id"] for i in self._items.values()}
         out: list[dict[str, Any]] = []
+        seen: set[str] = set()
         for entry in ents.entities.values():
             if entry.domain != "binary_sensor" or entry.disabled_by or entry.hidden_by or not entry.device_id:
                 continue
@@ -229,8 +237,11 @@ class SensorActions:
             if any(w in entry.entity_id for w in NOT_SENSORS_WORDS):
                 continue
             device = devs.async_get(entry.device_id)
-            if device is None or device.model in NOT_SENSORS_MODELS:
+            if device is None or device.model in NOT_SENSORS_MODELS or device.manufacturer in NOT_SENSORS_MAKERS:
                 continue
+            if any(e.domain == "camera" for e in by_device.get(entry.device_id, [])) or entry.device_id in seen:
+                continue
+            seen.add(entry.device_id)
             readings: dict[str, Any] = {}
             settings: list[dict[str, Any]] = []
             for other in by_device.get(entry.device_id, []):
@@ -246,6 +257,8 @@ class SensorActions:
                         "state": s.state, "min": s.attributes.get("min"), "max": s.attributes.get("max"), "step": s.attributes.get("step"),
                         "unit": s.attributes.get("unit_of_measurement"),
                     })
+                elif other.domain == "switch" and other.platform == entry.platform and other.entity_category != er.EntityCategory.DIAGNOSTIC:
+                    settings.append({"entity_id": other.entity_id, "kind": "switch", "name": other.name or other.original_name or other.entity_id, "state": s.state})
                 elif other.domain == "select" and other.entity_category != er.EntityCategory.DIAGNOSTIC:
                     settings.append({
                         "entity_id": other.entity_id, "kind": "select", "name": other.name or other.original_name or other.entity_id,
