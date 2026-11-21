@@ -474,7 +474,7 @@ private fun SegmentDial(main: EntityState, segments: List<EntityState>, tint: Co
                 detectTapGestures { pos ->
                     val c = Offset(size.width / 2f, size.height / 2f)
                     val r = hypot(pos.x - c.x, pos.y - c.y)
-                    val outer = size.minDimension / 2f
+                    val outer = minOf(size.width, size.height) / 2f
                     if (r < outer * 0.62f) onMain()
                     else if (n > 0) {
                         val angle = (Math.toDegrees(atan2((pos.y - c.y).toDouble(), (pos.x - c.x).toDouble())) + 90.0 + 360.0) % 360.0
