@@ -301,7 +301,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
             if (isOpen) {
                 Column(Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     TileRow(
-                        hybridKindsFor(hybridLightKind(m, members), m.entityId in all.gradientLights, m.entityId in all.hueLights).map { kind -> TileItem(hybridKindIcon(kind), hybridKindLabel(kind), look.kind == kind) { if (look.kind != kind) setLook(hybridDefaultLook(kind)) } },
+                        hybridKindsFor(m.lightKind(), m.entityId in all.gradientLights, m.entityId in all.hueLights, ring = isSegmentGroup(m)).map { kind -> TileItem(hybridKindIcon(kind), hybridKindLabel(kind), look.kind == kind) { if (look.kind != kind) setLook(hybridDefaultLook(kind)) } },
                         tone, ink, perRow = 3,
                     )
                     when (look.kind) {
@@ -347,10 +347,3 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
         tone, ink, perRow = 3,
     )
 }
-
-/**
- * The kind a light is offered as in a hybrid scene. A Govee fitting sends a colour to the whole fitting, ring and all, so in a room that has a ring of
- * segments its own main light is white only: colour comes from the ring.
- */
-internal fun hybridLightKind(light: EntityState, siblings: List<EntityState>): LightKind =
-    if (light.lightKind() == LightKind.Colour && light.lightMembers().size <= 1 && siblings.any { it.entityId != light.entityId && isSegmentGroup(it) }) LightKind.White else light.lightKind()

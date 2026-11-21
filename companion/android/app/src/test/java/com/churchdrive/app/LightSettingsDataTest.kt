@@ -77,17 +77,8 @@ class LightSettingsDataTest {
     private fun named(id: String, vararg attrs: Pair<String, Any>) =
         EntityState(id, "on", JSONObject().apply { attrs.forEach { put(it.first, it.second) } })
 
-    @Test fun aGoveeMainLightIsWhiteOnlyInAHybridScene() {
-        val colour = modes("color_temp", "rgb")
-        val main = named("light.cloakroom_down_light", colour)
-        val ring = named(
-            "light.cloakroom_up_light", modes("rgb"),
-            "entity_id" to JSONArray(listOf("light.cloakroom_cloakroom_light_segment_001", "light.cloakroom_cloakroom_light_segment_002")),
-        )
-        val lamp = named("light.lamp", colour)
-        assertEquals(LightKind.White, com.churchdrive.app.ui.hybridLightKind(main, listOf(main, ring)))
-        // The ring itself, and a colour light in a room with no ring, keep their colour.
-        assertEquals(LightKind.Colour, com.churchdrive.app.ui.hybridLightKind(ring, listOf(main, ring)))
-        assertEquals(LightKind.Colour, com.churchdrive.app.ui.hybridLightKind(lamp, listOf(lamp, named("light.other", colour))))
+    @Test fun aRingIsOneLightWithOneColourOrGradientInAHybridScene() {
+        assertEquals(listOf("leave", "off", "colour", "gradient"), com.churchdrive.app.ui.hybridKindsFor(LightKind.Colour, ring = true))
+        assertEquals(listOf("leave", "off", "white", "colour"), com.churchdrive.app.ui.hybridKindsFor(LightKind.Colour, canGradient = false, canDynamic = false))
     }
 }
