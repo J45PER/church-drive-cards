@@ -171,6 +171,8 @@ from .const import (
     WS_REMINDER_SET,
     WS_REMINDERS,
     WS_LIBRARY,
+    WS_LIGHT_ROLE_SET,
+    WS_PRESENCE,
     WS_PEOPLE,
     WS_PEOPLE_ASSIGN,
     WS_NOTICES_MISSED,
@@ -195,6 +197,7 @@ from .maps import GoogleTiles, MapTileView
 from .health import DeviceHealth
 from .hue import async_light_abilities, async_sync
 from .hybrid import Hybrids
+from .light_roles import LightRoles
 from .saved_colours import SavedColours
 from .layouts import Layouts
 from .library import Library, normalise
@@ -525,7 +528,28 @@ def ws_hybrids(hass: HomeAssistant, connection: websocket_api.ActiveConnection, 
         abilities = async_light_abilities(hass)
     except Exception:  # noqa: BLE001 - the list of hybrid scenes must come even if the Hue bridge doesn't answer
         abilities = {"hue": [], "gradient": []}
-    connection.send_result(msg["id"], {**_hybrids(hass).listing(msg.get("target")), "can": abilities})
+    connection.send_result(msg["id"], {**_hybrids(hass).listing(msg.get("target")), "can": abilities, "roles": hass.data[DOMAIN]["light_roles"].all()})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_PRESENCE})
+@callback
+def ws_presence(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """For each light a presence sensor looks after: is someone there, and how long until it goes off."""
+    actions = hass.data.get(DOMAIN, {}).get("sensor_actions")
+    connection.send_result(msg["id"], {"lights": actions.presence() if actions is not None else {}})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_LIGHT_ROLE_SET, vol.Required("entity_id"): cv.entity_id, vol.Required("role"): cv.string})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_light_role_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Give a light its role in themes: primary, ambient or tertiary (administrators)."""
+    try:
+        await hass.data[DOMAIN]["light_roles"].async_set(msg["entity_id"], msg["role"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], {"roles": hass.data[DOMAIN]["light_roles"].all()})
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_HYBRID_SAVE, vol.Required("hybrid"): dict})
@@ -2061,7 +2085,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_light_role_set, ws_presence, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -2081,7 +2105,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     library = Library(hass)
     await library.async_load()
     data["library"] = library
-    hybrids = Hybrids(hass, library)
+    light_roles = LightRoles(hass)
+    await light_roles.async_load()
+    data["light_roles"] = light_roles
+    hybrids = Hybrids(hass, library, light_roles)
     await hybrids.async_load()
     data["hybrids"] = hybrids
     saved_colours = SavedColours(hass)

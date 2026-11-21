@@ -24,7 +24,7 @@ from typing import Any
 MAX_SENSORS = 40
 MAX_LIGHTS = 12
 MAX_SLOTS = 6
-ON_ACTIONS = ("on", "scene", "none")
+ON_ACTIONS = ("on", "scene", "hybrid", "none")
 OFF_ACTIONS = ("off", "dim", "none")
 _TIME = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
@@ -52,9 +52,9 @@ def clean_slots(value: Any) -> list[dict[str, Any]]:
             continue
         action = raw.get("on_action") if raw.get("on_action") in ON_ACTIONS else "on"
         scene = str(raw.get("scene") or "").strip()[:60]
-        if action == "scene" and not scene:
+        if action in ("scene", "hybrid") and not scene:
             continue
-        out.append({**window, "on_action": action, "scene": scene if action == "scene" else "", "pct": _int(raw.get("pct"), 0, 100, 0)})
+        out.append({**window, "on_action": action, "scene": scene if action in ("scene", "hybrid") else "", "pct": _int(raw.get("pct"), 0, 100, 0)})
     return out[:MAX_SLOTS]
 
 
@@ -81,8 +81,8 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
         raise ValueError("Choose a light for it to switch")
     on_action = item["on_action"] if item["on_action"] in ON_ACTIONS else "on"
     scene = str(item["scene"] or "").strip()
-    if on_action == "scene" and not scene:
-        raise ValueError("Choose which scene to play")
+    if on_action in ("scene", "hybrid") and not scene:
+        raise ValueError("Choose which scene or theme to play")
     lux = str(item["lux_sensor"] or "").strip()
     return {
         "id": (old or {}).get("id") or secrets.token_hex(4),
@@ -160,7 +160,7 @@ def delay_text(seconds: int) -> str:
 def summary(item: dict[str, Any]) -> str:
     """One line for the card: "Light follows presence · off after 1 min · when it's dark"."""
     parts = []
-    parts.append({"on": "Light follows presence", "scene": "Plays a scene when someone's there", "none": "Does nothing when someone's there"}[item["on_action"]])
+    parts.append({"on": "Light follows presence", "scene": "Plays a scene when someone's there", "hybrid": "Plays a theme when someone's there", "none": "Does nothing when someone's there"}[item["on_action"]])
     if item["off_action"] == "off":
         parts.append(f"off after {delay_text(item['off_delay'])}")
     elif item["off_action"] == "dim":

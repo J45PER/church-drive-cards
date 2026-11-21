@@ -132,3 +132,11 @@ class Words(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HybridSlots(unittest.TestCase):
+    def test_a_time_slot_can_play_a_theme(self):
+        item = sl.clean_sensor({**CLOAK, "slots": [{"start": "23:00", "end": "02:00", "on_action": "hybrid", "scene": "h123"}, {"start": "02:00", "end": "06:00", "on_action": "hybrid"}]})
+        self.assertEqual(len(item["slots"]), 1)
+        self.assertEqual(sl.pick_look(item, 23 * 60 + 30), {"on_action": "hybrid", "scene": "h123", "pct": 0})
+        self.assertIn("theme", sl.summary({**item, "on_action": "hybrid", "scene": "h1"}))

@@ -9,7 +9,8 @@ import org.json.JSONObject
  */
 data class HybridLook(val kind: String, val value: String? = null, val colours: List<String> = emptyList())
 
-data class Hybrid(val id: String, val name: String, val icon: String, val target: String, val looks: Map<String, HybridLook>)
+/** A theme gives each role (see [LIGHT_ROLES]) a look, so it works whichever lights a room gives that role; [looks] is the older kind, one look per named light. */
+data class Hybrid(val id: String, val name: String, val icon: String, val target: String, val looks: Map<String, HybridLook>, val roles: Map<String, HybridLook> = emptyMap())
 
 /** What the house answered: every hybrid scene, and which one is playing on each room (by the room's group light). */
 data class HybridList(
@@ -18,8 +19,30 @@ data class HybridList(
     /** The lights that are Hue (they can play a dynamic scene) and the ones that can really do a gradient, which the other lights are not offered. */
     val hueLights: Set<String> = emptySet(),
     val gradientLights: Set<String> = emptySet(),
+    /** The role each light has in themes ("ambient", "tertiary"); a light that isn't here is Primary. */
+    val roles: Map<String, String> = emptyMap(),
 ) {
+    fun roleOf(light: String): String = roles[light] ?: "primary"
+
     fun of(target: String): List<Hybrid> = hybrids.filter { it.target == target }
+}
+
+/** The roles a light can have in themes, in the order they are offered, with what each is for. */
+val LIGHT_ROLES = listOf("primary", "ambient", "tertiary")
+
+fun lightRoleLabel(role: String): String = when (role) { "ambient" -> "Ambient"; "tertiary" -> "Tertiary"; else -> "Primary" }
+
+fun lightRoleHint(role: String): String = when (role) {
+    "ambient" -> "Rings, strips and lamps that set the mood"
+    "tertiary" -> "Anything else a room needs, such as a fitting's other lights"
+    else -> "The main light of the room"
+}
+
+/** The looks a role can be given: the main light a white or a colour, the others a colour, a gradient and (for ambient) a dynamic scene. */
+fun hybridKindsForRole(role: String): List<String> = when (role) {
+    "ambient" -> listOf("leave", "off", "colour", "gradient", "dynamic")
+    "tertiary" -> listOf("leave", "off", "colour", "gradient")
+    else -> listOf("leave", "off", "white", "colour")
 }
 
 val HYBRID_KINDS = listOf("leave", "off", "white", "colour", "gradient", "dynamic")
@@ -47,8 +70,8 @@ val HYBRID_GRADIENTS = listOf(
     "Rose" to listOf("#ff6bbd", "#b36bff", "#5b8cfd"),
 )
 
-/** The looks a light can be given: each only offers what it can do. A fitting's ring is one light with one colour or one gradient. */
-fun hybridKindsFor(kind: LightKind, canGradient: Boolean = true, canDynamic: Boolean = true, ring: Boolean = false): List<String> = if (ring) listOf("leave", "off", "colour", "gradient") else when (kind) {
+/** The looks a light can be given: each only offers what it can do. */
+fun hybridKindsFor(kind: LightKind, canGradient: Boolean = true, canDynamic: Boolean = true): List<String> = when (kind) {
     LightKind.Switch -> listOf("leave", "off")
     LightKind.Dim, LightKind.White -> listOf("leave", "off", "white")
     LightKind.Colour -> HYBRID_KINDS.filter { (it != "gradient" || canGradient) && (it != "dynamic" || canDynamic) }
@@ -82,10 +105,12 @@ fun parseHybrid(o: JSONObject?): Hybrid? {
     val id = o.optString("id").takeIf { it.isNotBlank() } ?: return null
     val name = o.optString("name").takeIf { it.isNotBlank() } ?: return null
     val target = o.optString("target").takeIf { it.isNotBlank() } ?: return null
-    val looksJson = o.optJSONObject("looks") ?: return null
-    val looks = looksJson.keys().asSequence().mapNotNull { k -> parseLook(looksJson.optJSONObject(k))?.let { k to it } }.toMap()
-    if (looks.isEmpty()) return null
-    return Hybrid(id, name, o.optString("icon").takeIf { it in HYBRID_ICONS } ?: "cd:palette", target, looks)
+    val looksJson = o.optJSONObject("looks")
+    val looks = looksJson?.keys()?.asSequence()?.mapNotNull { k -> parseLook(looksJson.optJSONObject(k))?.let { k to it } }?.toMap().orEmpty()
+    val rolesJson = o.optJSONObject("roles")
+    val roles = rolesJson?.keys()?.asSequence()?.filter { it in LIGHT_ROLES }?.mapNotNull { k -> parseLook(rolesJson.optJSONObject(k))?.let { k to it } }?.toMap().orEmpty()
+    if (looks.isEmpty() && roles.isEmpty()) return null
+    return Hybrid(id, name, o.optString("icon").takeIf { it in HYBRID_ICONS } ?: "cd:palette", target, looks, roles)
 }
 
 /** The house's answer to `church_drive/hybrids`, or null if it didn't answer. */
@@ -97,7 +122,9 @@ fun parseHybrids(result: Any?): HybridList? {
     val active = activeJson?.keys()?.asSequence()?.associateWith { activeJson.optString(it) } ?: emptyMap()
     val can = o.optJSONObject("can")
     fun ids(key: String): Set<String> = can?.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() }.orEmpty()
-    return HybridList(hybrids, active, ids("hue"), ids("gradient"))
+    val rolesJson = o.optJSONObject("roles")
+    val roles = rolesJson?.keys()?.asSequence()?.associateWith { rolesJson.optString(it) }?.filterValues { it in LIGHT_ROLES }.orEmpty()
+    return HybridList(hybrids, active, ids("hue"), ids("gradient"), roles)
 }
 
 /** A "#rrggbb" colour as hue (0 to 360) and saturation (0 to 100), the pair the colour wheel and the saved colours use; null if it isn't a colour. */
@@ -122,22 +149,23 @@ const val MIN_GRADIENT_POINTS = 2
 const val MAX_GRADIENT_POINTS = 5
 
 /** What a hybrid is being made or changed into: [id] is null for a new one. */
-data class HybridDraft(val id: String?, val name: String, val icon: String, val looks: Map<String, HybridLook>)
+data class HybridDraft(val id: String?, val name: String, val icon: String, val looks: Map<String, HybridLook>, val roles: Map<String, HybridLook> = emptyMap())
 
-fun HybridDraft.toHybrid(target: String) = Hybrid(id ?: "", name, icon, target, looks)
+fun HybridDraft.toHybrid(target: String) = Hybrid(id ?: "", name, icon, target, looks, roles)
 
 /** The body of `church_drive/hybrid/save` for [draft] in the room [target]. */
 fun hybridSaveBody(draft: HybridDraft, target: String): JSONObject {
-    val looks = JSONObject()
-    draft.looks.forEach { (entity, look) ->
-        looks.put(entity, JSONObject().put("t", look.kind).apply {
-            when (look.kind) {
-                "white", "dynamic", "colour" -> put("v", look.value ?: "")
-                "gradient" -> put("v", JSONArray(look.colours))
-            }
-        })
+    fun lookJson(look: HybridLook) = JSONObject().put("t", look.kind).apply {
+        when (look.kind) {
+            "white", "dynamic", "colour" -> put("v", look.value ?: "")
+            "gradient" -> put("v", JSONArray(look.colours))
+        }
     }
-    val hybrid = JSONObject().put("name", draft.name.trim()).put("icon", draft.icon).put("target", target).put("looks", looks)
+    val looks = JSONObject()
+    draft.looks.forEach { (entity, look) -> looks.put(entity, lookJson(look)) }
+    val roles = JSONObject()
+    draft.roles.forEach { (role, look) -> roles.put(role, lookJson(look)) }
+    val hybrid = JSONObject().put("name", draft.name.trim()).put("icon", draft.icon).put("target", target).put("looks", looks).put("roles", roles)
     draft.id?.let { hybrid.put("id", it) }
     return JSONObject().put("hybrid", hybrid)
 }
@@ -145,7 +173,7 @@ fun hybridSaveBody(draft: HybridDraft, target: String): JSONObject {
 /** Why a draft can't be saved yet, or null. */
 fun hybridProblem(draft: HybridDraft): String? = when {
     draft.name.isBlank() -> "Give it a name."
-    draft.looks.values.none { it.kind != "leave" } -> "Every light is set to Leave, so this would do nothing."
+    (draft.looks.values + draft.roles.values).none { it.kind != "leave" } -> "Every light is set to Leave, so this would do nothing."
     else -> null
 }
 
@@ -159,7 +187,7 @@ fun hexToArgb(hex: String): Int? {
 
 /** A hybrid's tile: the colours of its first two lights that do something, as a hard split (one colour if only one does). */
 fun hybridTileColours(hybrid: Hybrid, looks: SceneLooks): List<Int> {
-    val cs = hybrid.looks.values.mapNotNull { look ->
+    val cs = (hybrid.roles.values + hybrid.looks.values).mapNotNull { look ->
         when (look.kind) {
             "colour" -> look.value?.let(::hexToArgb)
             "gradient" -> look.colours.firstOrNull()?.let(::hexToArgb)

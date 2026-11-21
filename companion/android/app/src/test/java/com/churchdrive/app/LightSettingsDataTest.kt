@@ -77,8 +77,9 @@ class LightSettingsDataTest {
     private fun named(id: String, vararg attrs: Pair<String, Any>) =
         EntityState(id, "on", JSONObject().apply { attrs.forEach { put(it.first, it.second) } })
 
-    @Test fun aRingIsOneLightWithOneColourOrGradientInAHybridScene() {
-        assertEquals(listOf("leave", "off", "colour", "gradient"), com.churchdrive.app.ui.hybridKindsFor(LightKind.Colour, ring = true))
-        assertEquals(listOf("leave", "off", "white", "colour"), com.churchdrive.app.ui.hybridKindsFor(LightKind.Colour, canGradient = false, canDynamic = false))
+    @Test fun eachRoleOffersOnlyWhatItCanDo() {
+        assertEquals(listOf("leave", "off", "white", "colour"), com.churchdrive.app.ui.hybridKindsForRole("primary"))
+        assertEquals(listOf("leave", "off", "colour", "gradient", "dynamic"), com.churchdrive.app.ui.hybridKindsForRole("ambient"))
+        assertEquals(listOf("leave", "off", "colour", "gradient"), com.churchdrive.app.ui.hybridKindsForRole("tertiary"))
     }
 }

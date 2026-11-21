@@ -154,7 +154,7 @@ internal fun HybridSection(head: EntityState, members: List<EntityState>, call: 
     var draft by remember { mutableStateOf<HybridDraft?>(null) }
     val playing = mine.firstOrNull { it.id == all.active[head.entityId] }
     LightSection(
-        "cd:animation-play", "Hybrid scenes", playing?.let { "Playing · ${it.name}" } ?: if (mine.isEmpty()) "One tap, a different look on each light" else "${mine.size} saved",
+        "cd:animation-play", "Hybrid scenes", playing?.let { "Playing · ${it.name}" } ?: if (mine.isEmpty()) "One tap, a different look for each kind of light" else "${mine.size} saved",
         tint, open, onToggle,
     ) {
         val d = draft
@@ -166,11 +166,11 @@ internal fun HybridSection(head: EntityState, members: List<EntityState>, call: 
             }
             HybridTileGrid(
                 mine, playing?.id, { playHybrid(call, it) },
-                onEdit = if (admin) ({ hy: Hybrid -> draft = HybridDraft(hy.id, hy.name, hy.icon, hy.looks) }) else null,
-                onNew = if (admin) ({ draft = HybridDraft(null, "", "cd:palette", members.associate { it.entityId to HybridLook("leave") }) }) else null,
+                onEdit = if (admin) ({ hy: Hybrid -> draft = HybridDraft(hy.id, hy.name, hy.icon, emptyMap(), LIGHT_ROLES.associateWith { hy.roles[it] ?: HybridLook("leave") }) }) else null,
+                onNew = if (admin) ({ draft = HybridDraft(null, "", "cd:palette", emptyMap(), LIGHT_ROLES.associateWith { HybridLook("leave") }) }) else null,
             )
             Text(
-                "A hybrid scene gives each light in the room its own look in one tap.${if (admin) " Press and hold a tile to change it." else ""}",
+                "A theme gives each kind of light in the room (Primary, Ambient, Tertiary) its own look in one tap.${if (admin) " Press and hold a tile to change it." else ""}",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -279,29 +279,31 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
     )
     Text("Icon", style = MaterialTheme.typography.labelMedium, color = muted)
     TileRow(HYBRID_ICONS.map { icon -> TileItem(icon, icon.removePrefix("cd:"), draft.icon == icon, showLabel = false) { draft = draft.copy(icon = icon) } }, tone, ink, perRow = 6)
-    Text("Each light", style = MaterialTheme.typography.labelMedium, color = muted)
-    members.forEach { m ->
-        val look = draft.looks[m.entityId] ?: HybridLook("leave")
-        val isOpen = openLight == m.entityId
-        fun setLook(next: HybridLook) { draft = draft.copy(looks = draft.looks + (m.entityId to next)); message = null }
+    Text("Each kind of light", style = MaterialTheme.typography.labelMedium, color = muted)
+    LIGHT_ROLES.forEach { role ->
+        val look = draft.roles[role] ?: HybridLook("leave")
+        val isOpen = openLight == role
+        val count = members.count { all.roleOf(it.entityId) == role }
+        val title = lightRoleLabel(role)
+        fun setLook(next: HybridLook) { draft = draft.copy(roles = draft.roles + (role to next)); message = null }
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
             Row(
-                Modifier.fillMaxWidth().clickable(onClickLabel = if (isOpen) "Close ${m.friendlyName}" else "Open ${m.friendlyName}") { openLight = if (isOpen) null else m.entityId }.padding(vertical = 10.dp),
+                Modifier.fillMaxWidth().clickable(onClickLabel = if (isOpen) "Close $title" else "Open $title") { openLight = if (isOpen) null else role }.padding(vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                HaIcon(m.str("icon"), CdVectors.Bulb, ink, 22.dp)
+                HaIcon("cd:bulb-lit", CdVectors.Bulb, ink, 22.dp)
                 Column(Modifier.weight(1f)) {
-                    Text(m.friendlyName, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                    Text(hybridLookText(look) { sceneNameOf(looks, it) }, style = MaterialTheme.typography.bodySmall, color = muted)
+                    Text("$title lights", style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                    Text("${hybridLookText(look) { sceneNameOf(looks, it) }} · $count light${if (count == 1) "" else "s"} here", style = MaterialTheme.typography.bodySmall, color = muted)
                 }
                 HaIcon("cd:chevron", CdVectors.Bulb, muted, 20.dp, Modifier.rotate(if (isOpen) 180f else 0f))
             }
             if (isOpen) {
                 Column(Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     TileRow(
-                        hybridKindsFor(m.lightKind(), m.entityId in all.gradientLights, m.entityId in all.hueLights, ring = isSegmentGroup(m)).map { kind -> TileItem(hybridKindIcon(kind), hybridKindLabel(kind), look.kind == kind) { if (look.kind != kind) setLook(hybridDefaultLook(kind)) } },
+                        hybridKindsForRole(role).map { kind -> TileItem(hybridKindIcon(kind), hybridKindLabel(kind), look.kind == kind) { if (look.kind != kind) setLook(hybridDefaultLook(kind)) } },
                         tone, ink, perRow = 3,
                     )
                     when (look.kind) {
@@ -316,7 +318,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
                                     row.forEach { hex -> PickSwatch(hex, look.value.equals(hex, ignoreCase = true)) { setLook(HybridLook("colour", hex)) } }
                                 }
                             }
-                            var wheel by remember(m.entityId) { mutableStateOf(false) }
+                            var wheel by remember(role) { mutableStateOf(false) }
                             TileRow(listOf(TileItem("cd:eyedropper", "Custom colour", wheel) { wheel = !wheel }), tone, ink)
                             if (wheel) HsWheel(look.value?.let(::hexToHs) ?: (30.0 to 60.0)) { setLook(HybridLook("colour", hexOf(it))) }
                         }
@@ -330,7 +332,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
             }
         }
     }
-    Text("Each light only offers what it can do. Leave keeps the light as it is.", style = MaterialTheme.typography.bodySmall, color = muted)
+    Text("Each light does what it can. Leave keeps a light as it is. A light's role is set on its own settings page.", style = MaterialTheme.typography.bodySmall, color = muted)
     message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
     TileRow(
         listOf(

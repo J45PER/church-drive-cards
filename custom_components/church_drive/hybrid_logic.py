@@ -18,6 +18,12 @@ ICONS = (
     "cd:weather-sunset", "cd:television", "cd:music-note", "cd:leaf", "cd:fire", "cd:snowflake", "cd:home", "cd:home-away", "cd:shield-moon",
 )
 DEFAULT_ICON = "cd:palette"
+# What the look of each role in a theme can be (the roles are in light_roles_logic.py).
+ROLE_LOOKS = {
+    "primary": ("leave", "off", "white", "colour"),
+    "ambient": ("leave", "off", "colour", "gradient", "dynamic"),
+    "tertiary": ("leave", "off", "colour", "gradient"),
+}
 MAX_NAME = 20
 MAX_LIGHTS = 16
 MAX_HYBRIDS_PER_TARGET = 12
@@ -54,8 +60,15 @@ def clean_hybrid(value: Any, existing: dict[str, Any] | None = None) -> dict[str
     target = value.get("target") if value.get("target") is not None else (existing or {}).get("target")
     if not isinstance(target, str) or not target.startswith("light."):
         raise ValueError("A hybrid scene belongs to a room or light")
-    looks_in = value.get("looks")
-    if not isinstance(looks_in, dict) or not looks_in:
+    looks_in = value.get("looks") if value.get("looks") is not None else ((existing or {}).get("looks") if value.get("roles") is None else {})
+    roles_in = value.get("roles") if value.get("roles") is not None else (existing or {}).get("roles")
+    roles: dict[str, dict[str, Any]] = {}
+    for role, raw in (roles_in.items() if isinstance(roles_in, dict) else []):
+        look = clean_look(raw)
+        if role not in ROLE_LOOKS or look is None or look["t"] not in ROLE_LOOKS[role]:
+            raise ValueError(f"Not a look for the {role} lights")
+        roles[role] = look
+    if not isinstance(looks_in, dict) or (not looks_in and not roles):
         raise ValueError("A hybrid scene needs a look for at least one light")
     looks: dict[str, dict[str, Any]] = {}
     for entity, raw in list(looks_in.items())[:MAX_LIGHTS]:
@@ -63,7 +76,7 @@ def clean_hybrid(value: Any, existing: dict[str, Any] | None = None) -> dict[str
         if look is None or not isinstance(entity, str) or not entity.startswith("light."):
             raise ValueError(f"Not a look for {entity}")
         looks[entity] = look
-    if not any(look["t"] != "leave" for look in looks.values()):
+    if not any(look["t"] != "leave" for look in [*looks.values(), *roles.values()]):
         raise ValueError("Every light is set to Leave, so this scene would do nothing")
     icon = value.get("icon")
     return {
@@ -72,6 +85,7 @@ def clean_hybrid(value: Any, existing: dict[str, Any] | None = None) -> dict[str
         "icon": icon if icon in ICONS else DEFAULT_ICON,
         "target": target,
         "looks": looks,
+        "roles": roles,
     }
 
 
@@ -125,3 +139,13 @@ def play_order(entities: list[str], rings: set[str]) -> list[str]:
 def ring_is_colourful(looks: dict[str, dict[str, Any]], rings: set[str]) -> bool:
     """Whether any ring of segments in the hybrid is given a colour, a gradient or a dynamic look."""
     return any(looks[e]["t"] in ("colour", "gradient", "dynamic") for e in rings if e in looks)
+
+
+def expand_roles(role_looks: dict[str, dict[str, Any]], members: list[str], role_of_light: Any) -> dict[str, dict[str, Any]]:
+    """Each light of a room given the look of its role (a light with no role is Primary); a role the theme has no look for is left alone."""
+    out: dict[str, dict[str, Any]] = {}
+    for entity in members:
+        look = role_looks.get(role_of_light(entity))
+        if look is not None:
+            out[entity] = look
+    return out
