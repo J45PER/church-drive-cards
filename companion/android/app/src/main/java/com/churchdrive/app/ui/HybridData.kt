@@ -100,6 +100,27 @@ fun parseHybrids(result: Any?): HybridList? {
     return HybridList(hybrids, active, ids("hue"), ids("gradient"))
 }
 
+/** A "#rrggbb" colour as hue (0 to 360) and saturation (0 to 100), the pair the colour wheel and the saved colours use; null if it isn't a colour. */
+fun hexToHs(hex: String): Pair<Double, Double>? {
+    val argb = hexToArgb(hex) ?: return null
+    val r = ((argb shr 16) and 0xFF) / 255.0
+    val g = ((argb shr 8) and 0xFF) / 255.0
+    val b = (argb and 0xFF) / 255.0
+    val max = maxOf(r, g, b)
+    val d = max - minOf(r, g, b)
+    val hue = when {
+        d == 0.0 -> 0.0
+        max == r -> 60.0 * (((g - b) / d) % 6.0)
+        max == g -> 60.0 * ((b - r) / d + 2.0)
+        else -> 60.0 * ((r - g) / d + 4.0)
+    }
+    return ((hue + 360.0) % 360.0) to (if (max == 0.0) 0.0 else d / max * 100.0)
+}
+
+/** The fewest and most colours a gradient look can have. */
+const val MIN_GRADIENT_POINTS = 2
+const val MAX_GRADIENT_POINTS = 5
+
 /** What a hybrid is being made or changed into: [id] is null for a new one. */
 data class HybridDraft(val id: String?, val name: String, val icon: String, val looks: Map<String, HybridLook>)
 

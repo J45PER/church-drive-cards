@@ -2,6 +2,8 @@ package com.churchdrive.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -290,8 +292,8 @@ private fun SensorSettingRow(setting: SensorSetting, entities: Map<String, Entit
 }
 
 /**
- * The Lights page's Sensor actions card (administrators), under Light routines: one row per motion or presence sensor with what it does and who runs it
- * (Church Drive, or the Hue app for a Hue sensor that hasn't been taken over). Tap one to set it up or change it. Nothing is drawn until the house answers.
+ * The Lights page's Sensor actions card (administrators), under Light routines: a summary (how many sensors are set up and the first one's action), and just
+ * that when folded. Press and hold it to open the page with a card for each motion or presence sensor. Nothing is drawn until the house answers.
  */
 @Composable
 fun SensorActionsCard(entities: Map<String, EntityState>, call: CallService) {
@@ -299,8 +301,8 @@ fun SensorActionsCard(entities: Map<String, EntityState>, call: CallService) {
     val api = LocalHaApi.current
     var data by remember { mutableStateOf<SensorActionsData?>(null) }
     var changed by remember { mutableIntStateOf(0) }
-    var editing by remember { mutableStateOf<SensorInfo?>(null) }
-    val fold = rememberFold("grid-fold|sensor-actions", folded = true)
+    var page by remember { mutableStateOf(false) }
+    val fold = rememberFold("grid-fold|sensor-actions-summary", folded = false)
     LaunchedEffect(api, changed) { parseSensorActions(api?.ask("church_drive/sensor_actions", JSONObject()))?.let { data = it } }
     DisposableEffect(api) {
         val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_sensor_actions_changed")) { changed++ } ?: -1
@@ -308,46 +310,53 @@ fun SensorActionsCard(entities: Map<String, EntityState>, call: CallService) {
     }
     val all = data ?: return
     if (all.sensors.isEmpty()) return
-    editing?.let { s ->
-        SensorEditorCard(s, all.actionFor(s), entities, call) { editing = null; changed++ }
-        return
-    }
     val tone = toneColors(Tone.Lights)
     val ink = tone.onContainer
     val active = all.actions.count { it.enabled }
-    EntityCard(tone.container, ink) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Sensor actions", style = MaterialTheme.typography.headlineSmall, color = ink, modifier = Modifier.weight(1f))
-            Box(Modifier.size(Ui.TileHeight).clip(RoundedCornerShape(50)).clickable(onClickLabel = if (fold.value) "Expand" else "Collapse") { fold.value = !fold.value }, contentAlignment = Alignment.Center) {
-                Icon(if (fold.value) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null, tint = ink.copy(alpha = 0.6f))
+    Box(Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { page = true }) }) {
+        EntityCard(tone.container, ink) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Sensor actions", style = MaterialTheme.typography.headlineSmall, color = ink, modifier = Modifier.weight(1f))
+                Box(Modifier.size(Ui.TileHeight).clip(RoundedCornerShape(50)).clickable(onClickLabel = if (fold.value) "Expand" else "Collapse") { fold.value = !fold.value }, contentAlignment = Alignment.Center) {
+                    Icon(if (fold.value) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null, tint = ink.copy(alpha = 0.6f))
+                }
             }
-        }
-        StatusPill(if (active == 1) "1 sensor set up" else "$active of ${all.sensors.size} sensors set up", tone)
-        if (fold.value) {
+            StatusPill(if (active == 1) "1 sensor set up" else "$active of ${all.sensors.size} sensors set up", tone)
             Text(
                 all.actions.firstOrNull { it.enabled }?.let { "${it.name}: ${it.summary}" } ?: "No sensor switches lights yet.",
                 style = MaterialTheme.typography.bodyLarge, color = ink,
             )
-            TileRow(listOf(TileItem("cd:pencil", "Edit", false) { fold.value = false }), tone, ink)
+            if (!fold.value) Text("Press and hold to open", style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f))
+        }
+    }
+    if (page) SensorActionsPage(all, entities, call, onClose = { page = false }) { changed++ }
+}
+
+/** The Sensor actions page: a card for each motion or presence sensor (what it does and who runs it, a switch for one that is set up); tap one to set it up or change it. */
+@Composable
+private fun SensorActionsPage(all: SensorActionsData, entities: Map<String, EntityState>, call: CallService, onClose: () -> Unit, onChanged: () -> Unit) {
+    val api = LocalHaApi.current
+    val scope = rememberCoroutineScope()
+    val tone = toneColors(Tone.Lights)
+    val ink = tone.onContainer
+    var editing by remember { mutableStateOf<SensorInfo?>(null) }
+    FullPage("Sensor actions", onClose) {
+        val e = editing
+        if (e != null) {
+            SensorEditorCard(e, all.actionFor(e), entities, call) { editing = null; onChanged() }
         } else {
-            Text(
-                "What lights do when a sensor sees someone and when the room empties.",
-                style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.9f),
-            )
             all.sensors.forEach { s ->
                 val a = all.actionFor(s)
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f))
-                        .clickable(onClickLabel = "Set up this sensor") { editing = s }.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    HaIcon("cd:motion-sensor", CdVectors.Info, ink.copy(alpha = 0.8f), 24.dp)
-                    Column(Modifier.weight(1f)) {
-                        Text(s.name, style = MaterialTheme.typography.titleSmall, color = ink.copy(alpha = if (a?.enabled == false) 0.55f else 1f))
-                        Text(sensorSubtitle(s, a), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f))
+                Box(Modifier.fillMaxWidth().clickable(onClickLabel = "Set up this sensor") { editing = s }) {
+                    EntityCard(tone.container, ink) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(s.name, style = MaterialTheme.typography.titleLarge, color = ink.copy(alpha = if (a?.enabled == false) 0.55f else 1f), modifier = Modifier.weight(1f))
+                            if (a != null) Switch(checked = a.enabled, onCheckedChange = { on -> scope.launch { api?.ask("church_drive/sensor_actions/set", JSONObject().put("action_id", a.id).put("enabled", on)); onChanged() } })
+                        }
+                        StatusPill(sensorBadge(s, a), tone)
+                        Text(sensorSubtitle(s, a), style = MaterialTheme.typography.bodyLarge, color = ink.copy(alpha = 0.9f))
+                        Text(sensorReadings(s, entities), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.7f))
                     }
-                    Text(sensorBadge(s, a), style = MaterialTheme.typography.labelMedium, color = ink.copy(alpha = 0.8f))
-                    HaIcon("cd:chevron-right", CdVectors.Info, ink.copy(alpha = 0.7f), 22.dp)
                 }
             }
         }

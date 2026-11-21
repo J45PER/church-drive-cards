@@ -173,6 +173,37 @@ private fun PickSwatch(hex: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 /**
+ * Chooses the colours of a gradient: a few presets, then the colours in order (tap one to change it with the wheel), and add or remove a colour (two to
+ * five). Every change calls [onChange] with the new list of "#rrggbb" colours. Used for a hybrid scene's gradient look and a gradient light's own page.
+ */
+@Composable
+internal fun GradientEditor(colours: List<String>, tone: ToneColors, ink: Color, onChange: (List<String>) -> Unit) {
+    val points = colours.ifEmpty { HYBRID_GRADIENTS[1].second }
+    var sel by remember { mutableIntStateOf(0) }
+    val at = sel.coerceIn(0, points.lastIndex)
+    TileRow(
+        HYBRID_GRADIENTS.map { (name, preset) -> TileItem("cd:bulb-group", name, colours == preset) { onChange(preset); sel = 0 } },
+        tone, ink, perRow = 2,
+    )
+    Text("Colours, in order. Tap one to change it.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        points.forEachIndexed { i, hex -> PickSwatch(hex, i == at) { sel = i } }
+    }
+    TileRow(
+        listOf(
+            TileItem("cd:minus", "Remove colour", false) {
+                if (points.size > MIN_GRADIENT_POINTS) { onChange(points.filterIndexed { i, _ -> i != at }); sel = 0 }
+            },
+            TileItem("cd:plus", "Add colour", false) {
+                if (points.size < MAX_GRADIENT_POINTS) { onChange(points + points.last()); sel = points.size }
+            },
+        ),
+        tone, ink,
+    )
+    HsWheel(hexToHs(points[at]) ?: (200.0 to 60.0)) { picked -> onChange(points.mapIndexed { i, c -> if (i == at) hexOf(picked) else c }) }
+}
+
+/**
  * Makes or changes a hybrid scene in place: a name, an icon from the short list, then a row for each light that opens to the looks it can
  * do (Leave, Off, a white scene, a colour, a gradient, a dynamic scene) and the choices for the one picked. Nothing reaches the house until Save.
  */
@@ -232,11 +263,11 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
                                     row.forEach { hex -> PickSwatch(hex, look.value.equals(hex, ignoreCase = true)) { setLook(HybridLook("colour", hex)) } }
                                 }
                             }
+                            var wheel by remember(m.entityId) { mutableStateOf(false) }
+                            TileRow(listOf(TileItem("cd:eyedropper", "Custom colour", wheel) { wheel = !wheel }), tone, ink)
+                            if (wheel) HsWheel(look.value?.let(::hexToHs) ?: (30.0 to 60.0)) { setLook(HybridLook("colour", hexOf(it))) }
                         }
-                        "gradient" -> TileRow(
-                            HYBRID_GRADIENTS.map { (name, colours) -> TileItem("cd:bulb-group", name, look.colours == colours) { setLook(HybridLook("gradient", colours = colours)) } },
-                            tone, ink, perRow = 2,
-                        )
+                        "gradient" -> GradientEditor(look.colours, tone, ink) { setLook(HybridLook("gradient", colours = it)) }
                         "dynamic" -> {
                             val scenes = looks.library.values.filter { it.hex.isNotEmpty() }.sortedBy { it.name }
                             TileRow(scenes.map { s -> TileItem(s.icon ?: "cd:animation-play", s.name, look.value == s.key) { setLook(HybridLook("dynamic", s.key)) } }, tone, ink, perRow = 2)

@@ -231,6 +231,13 @@ private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean,
                 }
                 if (colourOpen) ColourPanel(light, call, tone) else WhiteControls(light, call, tone)
             }
+            // A gradient light (a Hue gradient strip) can also be given a gradient of its own along its length.
+            if (id in LocalHybrids.current.gradientLights) {
+                var gradient by remember(id) { mutableStateOf(HYBRID_GRADIENTS[1].second) }
+                LightSection("cd:bulb-group", "Gradient", "Colours along the light", tint, openSection == "gradient", { toggle("gradient") }) {
+                    GradientEditor(gradient, tone, ink) { next -> gradient = next; call("church_drive", "apply_gradient", id, data("colours" to JSONArray(next))) }
+                }
+            }
             val scenes = (WHITE_SCENES.map { LightScene(it, id) } + looks.library.values.filter { it.hex.isNotEmpty() }.sortedBy { it.name }.map { LightScene(it.key, id) })
             LightSection("cd:palette", "Scenes", "Applies to this light", tint, openSection == "scenes", { toggle("scenes") }) {
                 SceneGrid(scenes, call)
@@ -383,11 +390,17 @@ private fun ColourPanel(light: EntityState, call: CallService, tone: ToneColors)
     if (picker) ColourWheel(light, call)
 }
 
-/** A hue and saturation wheel: drag or tap to pick a colour; it is sent when you let go. */
+/** A hue and saturation wheel for a light: drag or tap to pick a colour; it is sent to the light when you let go. */
 @Composable
 private fun ColourWheel(light: EntityState, call: CallService) {
     val current = light.attributes.optJSONArray("hs_color")?.let { it.optDouble(0) to it.optDouble(1) } ?: (30.0 to 60.0)
-    var pick by remember(current) { mutableStateOf(current) }
+    HsWheel(current) { pick -> call("light", "turn_on", light.entityId, data("hs_color" to JSONArray(listOf(pick.first, pick.second)))) }
+}
+
+/** A hue and saturation wheel: drag or tap to pick a colour; [onPick] is called when you let go. It starts on [initial] and follows it when that changes. */
+@Composable
+internal fun HsWheel(initial: Pair<Double, Double>, onPick: (Pair<Double, Double>) -> Unit) {
+    var pick by remember(initial) { mutableStateOf(initial) }
     var sizePx by remember { mutableStateOf(1f) }
     fun at(o: Offset): Pair<Double, Double> {
         val r = sizePx / 2.0
@@ -397,11 +410,11 @@ private fun ColourWheel(light: EntityState, call: CallService) {
         Canvas(
             modifier = Modifier.size(260.dp)
                 .onSizeChanged { sizePx = it.width.toFloat().coerceAtLeast(1f) }
-                .pointerInput(Unit) { detectTapGestures { pick = at(it); call("light", "turn_on", light.entityId, data("hs_color" to JSONArray(listOf(pick.first, pick.second)))) } }
+                .pointerInput(Unit) { detectTapGestures { pick = at(it); onPick(pick) } }
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { pick = at(it) },
-                        onDragEnd = { call("light", "turn_on", light.entityId, data("hs_color" to JSONArray(listOf(pick.first, pick.second)))) },
+                        onDragEnd = { onPick(pick) },
                     ) { change, _ -> pick = at(change.position) }
                 },
         ) {

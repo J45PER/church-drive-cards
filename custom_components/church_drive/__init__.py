@@ -97,6 +97,7 @@ from .const import (
     WS_SHOPPING_ITEM,
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
+    SERVICE_APPLY_GRADIENT,
     SERVICE_APPLY_HYBRID,
     SERVICE_CANCEL_SCHEDULE,
     SERVICE_LIST_SCHEDULES,
@@ -2551,6 +2552,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except ValueError as err:
             raise ServiceValidationError(str(err)) from err
 
+    async def apply_gradient(call: ServiceCall) -> None:
+        try:
+            await _hybrids(hass).async_gradient(list(call.data[ATTR_ENTITY_ID]), list(call.data["colours"]), call.context)
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_APPLY_GRADIENT, apply_gradient,
+        schema=vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_ids, vol.Required("colours"): [cv.string]}),
+    )
     hass.services.async_register(DOMAIN, SERVICE_APPLY_HYBRID, apply_hybrid, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional(ATTR_ENTITY_ID): cv.entity_ids}))
 
     _DAYS = {name.lower(): i for i, name in enumerate(ROUTINE_DAYS)}

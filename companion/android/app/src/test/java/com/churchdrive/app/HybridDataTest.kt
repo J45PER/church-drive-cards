@@ -7,6 +7,7 @@ import com.churchdrive.app.ui.HYBRID_ICONS
 import com.churchdrive.app.ui.LightKind
 import com.churchdrive.app.ui.SceneLooks
 import com.churchdrive.app.ui.hexToArgb
+import com.churchdrive.app.ui.hexToHs
 import com.churchdrive.app.ui.hybridKindsFor
 import com.churchdrive.app.ui.hybridLookText
 import com.churchdrive.app.ui.hybridProblem
@@ -110,5 +111,19 @@ class HybridDataTest {
     @Test fun aLookReadsAsWords() {
         assertEquals("White scene · Relax", hybridLookText(HybridLook("white", "relax")) { it.replaceFirstChar { c -> c.uppercase() } })
         assertEquals("Off", hybridLookText(HybridLook("off")) { it })
+    }
+
+    @Test fun aHexColourBecomesHueAndSaturationForTheWheel() {
+        val (h, sat) = hexToHs("#ff0000")!!
+        assertEquals(0.0, h, 0.5)
+        assertEquals(100.0, sat, 0.5)
+        val (h2, s2) = hexToHs("#00ff00")!!
+        assertEquals(120.0, h2, 0.5)
+        assertEquals(100.0, s2, 0.5)
+        val (h3, s3) = hexToHs("#0000ff")!!
+        assertEquals(240.0, h3, 0.5)
+        assertEquals(100.0, s3, 0.5)
+        assertEquals(0.0, hexToHs("#ffffff")!!.second, 0.5)
+        assertNull(hexToHs("blue"))
     }
 }

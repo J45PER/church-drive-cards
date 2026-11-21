@@ -10,7 +10,7 @@ schedule_action:
       required: true
       selector:
         select:
-          options: [on, off, open, close, set]
+          options: ["on", "off", "open", "close", "set"]
     value:
       selector:
         number:
@@ -42,6 +42,19 @@ cancel_schedule:
     all:
       selector:
         boolean:
+apply_gradient:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: light
+          multiple: true
+    colours:
+      required: true
+      example: '["#3ec6ff", "#5b8cfd", "#b36bff"]'
+      selector:
+        object:
 apply_hybrid:
   fields:
     id:
