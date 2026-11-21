@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -171,7 +172,8 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 
 /** A scene as a tile: its colours as a gradient, an icon and its name; the playing scene has a ring. */
 @Composable
-internal fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modifier: Modifier, h: androidx.compose.ui.unit.Dp = Ui.TallTileHeight, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+internal fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modifier: Modifier, h: androidx.compose.ui.unit.Dp = Ui.TallTileHeight, onHold: (() -> Unit)? = null, onClick: () -> Unit) {
     val looks = LocalSceneLooks.current
     // The look set on the dashboards, then the scene's own colours; then a built-in look, then one worked out
     // from a white scene's colour temperature; and last, a colour made from its name so tiles aren't all alike.
@@ -189,7 +191,7 @@ internal fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modi
             .clip(shape)
             .background(Brush.linearGradient(colours))
             .then(if (active) Modifier.border(2.5.dp, Color.White, shape) else Modifier)
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onHold),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {

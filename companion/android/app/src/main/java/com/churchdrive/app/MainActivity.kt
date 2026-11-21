@@ -204,6 +204,7 @@ class MainActivity : ComponentActivity() {
                             com.churchdrive.app.ui.LocalOpenDevice provides { ref -> openDevice = ref; deviceHealthOpen = true },
                             com.churchdrive.app.ui.LocalOpenHeating provides { heatingOpen = true },
                             LocalHaApi provides vm.haApi,
+                            com.churchdrive.app.ui.LocalRefreshLibrary provides { vm.refreshLibrary() },
                             LocalUserName provides userName,
                             com.churchdrive.app.ui.LocalAreaNames provides areaNames,
                             com.churchdrive.app.ui.LocalRegistry provides registry,
