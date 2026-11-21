@@ -20,6 +20,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from .library import WHITE
 
@@ -37,6 +38,25 @@ def async_get_bridge_api(hass: HomeAssistant) -> Any | None:
         if bridge is not None and bridge.api_version == 2 and bridge.api is not None:
             return bridge.api
     return None
+
+
+def async_light_abilities(hass: HomeAssistant) -> dict[str, list[str]]:
+    """The lights that are Hue ("hue", which can play a dynamic scene) and the ones that can do a gradient ("gradient"), as entity ids."""
+    api = async_get_bridge_api(hass)
+    if api is None:
+        return {"hue": [], "gradient": []}
+    registry = er.async_get(hass)
+    hue: list[str] = []
+    gradient: list[str] = []
+    for light in list(api.lights):
+        entity = registry.async_get_entity_id("light", "hue", light.id)
+        if not entity:
+            continue
+        hue.append(entity)
+        points = getattr(getattr(light, "gradient", None), "points_capable", 0) or 0
+        if points >= 2:
+            gradient.append(entity)
+    return {"hue": sorted(hue), "gradient": sorted(gradient)}
 
 
 def async_list_groups(api: Any) -> dict[str, str]:

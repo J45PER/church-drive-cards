@@ -192,7 +192,7 @@ from .const import (
 from .events import URL as EVENTS_URL, CameraEvents, EventFileView
 from .maps import GoogleTiles, MapTileView
 from .health import DeviceHealth
-from .hue import async_sync
+from .hue import async_light_abilities, async_sync
 from .hybrid import Hybrids
 from .saved_colours import SavedColours
 from .layouts import Layouts
@@ -520,7 +520,11 @@ async def ws_layout_set(hass: HomeAssistant, connection: websocket_api.ActiveCon
 @callback
 def ws_hybrids(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """Send the hybrid scenes (all, or one room's) and which one is playing where."""
-    connection.send_result(msg["id"], _hybrids(hass).listing(msg.get("target")))
+    try:
+        abilities = async_light_abilities(hass)
+    except Exception:  # noqa: BLE001 - the list of hybrid scenes must come even if the Hue bridge doesn't answer
+        abilities = {"hue": [], "gradient": []}
+    connection.send_result(msg["id"], {**_hybrids(hass).listing(msg.get("target")), "can": abilities})
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_HYBRID_SAVE, vol.Required("hybrid"): dict})

@@ -60,6 +60,23 @@ class HybridDataTest {
         assertTrue("gradient" !in hybridKindsFor(LightKind.Dim))
     }
 
+    @Test fun aGradientIsOnlyOfferedToALightThatCanDoOne() {
+        val plain = hybridKindsFor(LightKind.Colour, canGradient = false, canDynamic = false)
+        assertTrue("gradient" !in plain)
+        assertTrue("dynamic" !in plain)
+        assertTrue("colour" in plain)
+        assertTrue("dynamic" in hybridKindsFor(LightKind.Colour, canGradient = false, canDynamic = true))
+        assertTrue("gradient" !in hybridKindsFor(LightKind.Colour, canGradient = false, canDynamic = true))
+    }
+
+    @Test fun theHouseSaysWhichLightsCanDoWhat() {
+        val o = JSONObject("""{"hybrids":[],"can":{"hue":["light.strip","light.lamp"],"gradient":["light.strip"]}}""")
+        val got = parseHybrids(o)!!
+        assertEquals(setOf("light.strip", "light.lamp"), got.hueLights)
+        assertEquals(setOf("light.strip"), got.gradientLights)
+        assertTrue(parseHybrids(JSONObject("""{"hybrids":[]}"""))!!.gradientLights.isEmpty())
+    }
+
     @Test fun theSaveBodyCarriesTheLooks() {
         val draft = HybridDraft(null, "  Cosy ", "cd:flower", mapOf("light.a" to HybridLook("white", "relax"), "light.b" to HybridLook("gradient", colours = listOf("#ffffff", "#000000")), "light.c" to HybridLook("off")))
         val h = hybridSaveBody(draft, "light.room").getJSONObject("hybrid")

@@ -12,7 +12,13 @@ data class HybridLook(val kind: String, val value: String? = null, val colours: 
 data class Hybrid(val id: String, val name: String, val icon: String, val target: String, val looks: Map<String, HybridLook>)
 
 /** What the house answered: every hybrid scene, and which one is playing on each room (by the room's group light). */
-data class HybridList(val hybrids: List<Hybrid> = emptyList(), val active: Map<String, String> = emptyMap()) {
+data class HybridList(
+    val hybrids: List<Hybrid> = emptyList(),
+    val active: Map<String, String> = emptyMap(),
+    /** The lights that are Hue (they can play a dynamic scene) and the ones that can really do a gradient, which the other lights are not offered. */
+    val hueLights: Set<String> = emptySet(),
+    val gradientLights: Set<String> = emptySet(),
+) {
     fun of(target: String): List<Hybrid> = hybrids.filter { it.target == target }
 }
 
@@ -42,10 +48,10 @@ val HYBRID_GRADIENTS = listOf(
 )
 
 /** The looks a light can be given: each only offers what it can do. */
-fun hybridKindsFor(kind: LightKind): List<String> = when (kind) {
+fun hybridKindsFor(kind: LightKind, canGradient: Boolean = true, canDynamic: Boolean = true): List<String> = when (kind) {
     LightKind.Switch -> listOf("leave", "off")
     LightKind.Dim, LightKind.White -> listOf("leave", "off", "white")
-    LightKind.Colour -> HYBRID_KINDS
+    LightKind.Colour -> HYBRID_KINDS.filter { (it != "gradient" || canGradient) && (it != "dynamic" || canDynamic) }
 }
 
 /** What a new look of [kind] starts as. */
@@ -89,7 +95,9 @@ fun parseHybrids(result: Any?): HybridList? {
     val hybrids = (0 until list.length()).mapNotNull { parseHybrid(list.optJSONObject(it)) }
     val activeJson = o.optJSONObject("active")
     val active = activeJson?.keys()?.asSequence()?.associateWith { activeJson.optString(it) } ?: emptyMap()
-    return HybridList(hybrids, active)
+    val can = o.optJSONObject("can")
+    fun ids(key: String): Set<String> = can?.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() }.orEmpty()
+    return HybridList(hybrids, active, ids("hue"), ids("gradient"))
 }
 
 /** What a hybrid is being made or changed into: [id] is null for a new one. */
