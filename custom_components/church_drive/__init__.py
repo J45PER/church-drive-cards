@@ -98,6 +98,9 @@ from .const import (
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
     SERVICE_APPLY_GRADIENT,
+    SERVICE_SET_FITTING,
+    WS_FITTING,
+    WS_FITTING_SET,
     SERVICE_APPLY_HYBRID,
     SERVICE_CANCEL_SCHEDULE,
     SERVICE_LIST_SCHEDULES,
@@ -194,6 +197,7 @@ from .events import URL as EVENTS_URL, CameraEvents, EventFileView
 from .maps import GoogleTiles, MapTileView
 from .health import DeviceHealth
 from .hue import async_light_abilities, async_sync
+from .fitting import Fittings
 from .hybrid import Hybrids
 from .saved_colours import SavedColours
 from .layouts import Layouts
@@ -351,6 +355,10 @@ def _library(hass: HomeAssistant) -> Library:
 
 def _hybrids(hass: HomeAssistant) -> Hybrids:
     return hass.data[DOMAIN]["hybrids"]
+
+
+def _fittings(hass: HomeAssistant) -> Fittings | None:
+    return hass.data.get(DOMAIN, {}).get("fittings")
 
 
 def _saved_colours(hass: HomeAssistant) -> SavedColours:
@@ -515,6 +523,42 @@ async def ws_layout_set(hass: HomeAssistant, connection: websocket_api.ActiveCon
         connection.send_error(msg["id"], "invalid", str(err))
         return
     connection.send_result(msg["id"], cleaned)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_FITTING})
+@callback
+def ws_fitting(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send each fitting (a light with a main light and a ring of segments) as the house has it set: the main light and every segment."""
+    fittings = _fittings(hass)
+    if fittings is None:
+        connection.send_error(msg["id"], "not_ready", "Fittings aren't running")
+        return
+    connection.send_result(msg["id"], fittings.listing())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_FITTING_SET,
+        vol.Required("room"): cv.entity_id,
+        vol.Optional("main"): dict,
+        vol.Optional("ring"): dict,
+        vol.Optional("keep_ring"): cv.boolean,
+    }
+)
+@websocket_api.async_response
+async def ws_fitting_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Set a fitting's main light and/or ring (see fitting_logic.py); the house sends the commands in the order that works."""
+    fittings = _fittings(hass)
+    if fittings is None:
+        connection.send_error(msg["id"], "not_ready", "Fittings aren't running")
+        return
+    request = {k: msg[k] for k in ("main", "ring", "keep_ring") if k in msg}
+    try:
+        record = await fittings.async_set(msg["room"], request)
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], {"fitting": record})
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_HYBRIDS, vol.Optional("target"): cv.entity_id})
@@ -2061,7 +2105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_fitting, ws_fitting_set, ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -2299,6 +2343,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Scheduled actions couldn't start; everything else still works")
         data["routines"] = None
+
+    fittings = Fittings(hass)
+    try:
+        await fittings.async_load()
+        data["fittings"] = fittings
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Fittings couldn't start; everything else still works")
+        data["fittings"] = None
 
     sensor_actions = SensorActions(hass)
     try:
@@ -2561,6 +2613,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_register(
         DOMAIN, SERVICE_APPLY_GRADIENT, apply_gradient,
         schema=vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_ids, vol.Required("colours"): [cv.string]}),
+    )
+    async def set_fitting(call: ServiceCall) -> None:
+        fittings = _fittings(hass)
+        if fittings is None:
+            raise ServiceValidationError("Fittings aren't running")
+        request = {k: call.data[k] for k in ("main", "ring", "keep_ring") if k in call.data}
+        try:
+            await fittings.async_set(call.data["room"], request, call.context)
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_FITTING, set_fitting,
+        schema=vol.Schema({
+            vol.Required("room"): cv.entity_id, vol.Optional("main"): dict, vol.Optional("ring"): dict, vol.Optional("keep_ring"): cv.boolean,
+        }),
     )
     hass.services.async_register(DOMAIN, SERVICE_APPLY_HYBRID, apply_hybrid, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional(ATTR_ENTITY_ID): cv.entity_ids}))
 

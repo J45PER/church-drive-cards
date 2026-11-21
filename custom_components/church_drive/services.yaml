@@ -55,6 +55,24 @@ apply_gradient:
       example: '["#3ec6ff", "#5b8cfd", "#b36bff"]'
       selector:
         object:
+set_fitting:
+  fields:
+    room:
+      required: true
+      selector:
+        entity:
+          domain: light
+    main:
+      example: '{"on": true, "mode": "white", "kelvin": 2700, "brightness": 60}'
+      selector:
+        object:
+    ring:
+      example: '{"on": true, "rgb": [0, 60, 255]}'
+      selector:
+        object:
+    keep_ring:
+      selector:
+        boolean:
 apply_hybrid:
   fields:
     id:
