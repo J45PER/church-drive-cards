@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.178.0
+
+- **Sensor actions, and the Lights page's Automations section.** The Routines section on the Lights page is now **Automations**, and under Light routines it has a Sensor actions card: one row per motion or presence sensor (the Cloakroom's, and the Hue ones), showing what it does and who runs it. Open one to choose what its lights do when someone's there and when the room empties, with "only when it's dark" and "between set times", and to set the sensor's own hold time and sensitivity. A Hue sensor keeps its lights on the Hue bridge until you set it up here, which asks you to switch its Hue automation off first.
+
 ## 0.177.0
 
 - **A room's settings show its scenes.** Press and hold a room (the Cloakroom, say) and its settings now list the room's own scenes, the same list as on its card, above its hybrid scenes. The long effects list on the Govee light is gone from a light's settings.
