@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.179.0
+
+- **A light's settings page follows the approved design.** A room's lights are listed in one card ("LIGHTS"), each with its type as well as its level and a chevron. A room with a ring of segments, like the Cloakroom, shows the dial: the main light in the middle and a piece of the ring per segment, each in its colour; tap the middle or a piece to edit it. The ring (Up light) opens as one light with the colour controls. In the hybrid scene editor, Gradient is only offered to lights that can do one, and Dynamic only to Hue lights.
+
 ## 0.178.0
 
 - **Sensor actions, and the Lights page's Automations section.** The Routines section on the Lights page is now **Automations**, and under Light routines it has a Sensor actions card: one row per motion or presence sensor (the Cloakroom's, and the Hue ones), showing what it does and who runs it. Open one to choose what its lights do when someone's there and when the room empties, with "only when it's dark" and "between set times", and to set the sensor's own hold time and sensitivity. A Hue sensor keeps its lights on the Hue bridge until you set it up here, which asks you to switch its Hue automation off first.

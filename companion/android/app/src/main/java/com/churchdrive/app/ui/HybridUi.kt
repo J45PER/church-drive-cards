@@ -187,6 +187,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
     var openLight by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     val saved = LocalSavedColours.current.colours
+    val all = LocalHybrids.current
 
     OutlinedTextField(
         value = draft.name, onValueChange = { draft = draft.copy(name = it.take(20)); message = null }, singleLine = true,
@@ -216,7 +217,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
             if (isOpen) {
                 Column(Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     TileRow(
-                        hybridKindsFor(m.lightKind()).map { kind -> TileItem(hybridKindIcon(kind), hybridKindLabel(kind), look.kind == kind) { if (look.kind != kind) setLook(hybridDefaultLook(kind)) } },
+                        hybridKindsFor(m.lightKind(), m.entityId in all.gradientLights, m.entityId in all.hueLights).map { kind -> TileItem(hybridKindIcon(kind), hybridKindLabel(kind), look.kind == kind) { if (look.kind != kind) setLook(hybridDefaultLook(kind)) } },
                         tone, ink, perRow = 3,
                     )
                     when (look.kind) {

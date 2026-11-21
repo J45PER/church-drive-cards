@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -46,6 +48,8 @@ import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.data
 import org.json.JSONArray
+import kotlin.math.hypot
+import kotlin.math.atan2
 import kotlin.math.roundToInt
 
 private fun rgbColour(c: IntArray) = Color(c[0], c[1], c[2])
@@ -89,7 +93,8 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
     val on = light.state == "on"
     val members = light.lightMembers()
     val memberStates = members.mapNotNull { entities[it] }
-    val grouped = members.size > 1
+    // A ring of segments is one light with a colour per piece, not a room of lights: it opens to the colour controls.
+    val grouped = members.size > 1 && !isSegmentGroup(light)
     val tint = tintOf(light, MaterialTheme.colorScheme.onSurfaceVariant)
     val status = when {
         !light.available -> "Unavailable"
@@ -101,8 +106,24 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
     PowerBar(light, on, tint, tone, status, call)
 
     if (grouped) {
+        // A room with a ring of segments (the Cloakroom's Up light) shows it as a dial: the main light in the middle, a piece of the ring each segment.
+        val ring = memberStates.firstOrNull { isSegmentGroup(it) }
+        val main = memberStates.firstOrNull { it.entityId != ring?.entityId }
+        if (ring != null && main != null) {
+            val segments = ring.lightMembers().mapNotNull { entities[it] }.sortedBy { it.entityId }
+            if (segments.isNotEmpty()) {
+                SegmentDial(main, segments, tint, { openMember(main.entityId) }) { openMember(it.entityId) }
+                Text("Tap the centre or a segment to edit it. Tap ${ring.friendlyName.removePrefix(light.friendlyName).trim().ifBlank { "the ring" }} for the whole ring.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         // A room, zone or group opens to a list of just its lights; a tap on one opens that light's own settings.
-        memberStates.forEach { m -> MemberRow(m, call, tone) { openMember(m.entityId) } }
+        Text("LIGHTS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            memberStates.forEach { m -> MemberRow(m, call, tone) { openMember(m.entityId) } }
+        }
         Text("Tap a light to open its own settings. The switch turns just that light on or off.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         var openSection by rememberSaveable(light.entityId) { mutableStateOf<String?>(null) }
         // The room's own scenes, the same list as on its card, then its hybrid scenes.
@@ -402,7 +423,7 @@ private fun MemberRow(light: EntityState, call: CallService, tone: ToneColors, o
     val tint = tintOf(light, MaterialTheme.colorScheme.onSurfaceVariant)
     val opens = opensSettings(light)
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
+        modifier = Modifier.fillMaxWidth()
             .clickable { if (opens) onOpen() else if (light.available) call("light", if (on) "turn_off" else "turn_on", light.entityId, data()) }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -413,10 +434,69 @@ private fun MemberRow(light: EntityState, call: CallService, tone: ToneColors, o
         Column(Modifier.weight(1f)) {
             Text(light.friendlyName, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
             Text(
-                when { !light.available -> "Unavailable"; !on -> "Off"; light.lightKind() == LightKind.Switch -> "On"; else -> "${brightnessOf(light)}%" },
+                lightKindLabel(light) + " · " + when { !light.available -> "Unavailable"; !on -> "Off"; light.lightKind() == LightKind.Switch -> "On"; else -> "${brightnessOf(light)}%" },
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        if (opens) HaIcon("cd:chevron-right", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
         Switch(checked = on, enabled = light.available, onCheckedChange = { call("light", if (on) "turn_off" else "turn_on", light.entityId, data()) })
+    }
+}
+
+/** A group made of a ring's segments (Govee's backlight): one light with a colour per piece, so it is edited as one light. */
+internal fun isSegmentGroup(light: EntityState): Boolean = light.lightMembers().let { m -> m.size > 1 && m.all { "_segment_" in it } }
+
+/** What a light is, for the line under its name in a room's list: "White tones", "Full colour", "13 segments"... */
+internal fun lightKindLabel(light: EntityState): String = when {
+    isSegmentGroup(light) -> "${light.lightMembers().size} segments"
+    light.lightMembers().size > 1 -> "${light.lightMembers().size} lights"
+    else -> when (light.lightKind()) {
+        LightKind.Switch -> "On and off"
+        LightKind.Dim -> "Single colour"
+        LightKind.White -> "White tones"
+        LightKind.Colour -> "Full colour"
+    }
+}
+
+/**
+ * The dial for a light with a ring of segments: the main light in the middle and a piece of the ring for each segment, each in its own colour (grey
+ * when off). Tap the middle to edit the main light, or a piece to edit that segment.
+ */
+@Composable
+private fun SegmentDial(main: EntityState, segments: List<EntityState>, tint: Color, onMain: () -> Unit, onSegment: (EntityState) -> Unit) {
+    val off = MaterialTheme.colorScheme.surfaceContainerHighest
+    val ink = MaterialTheme.colorScheme.onSurface
+    val mainColour = if (main.state == "on") tintOf(main, tint) else off
+    val n = segments.size
+    Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(24.dp), contentAlignment = Alignment.Center) {
+        Canvas(
+            Modifier.fillMaxSize().pointerInput(segments, main) {
+                detectTapGestures { pos ->
+                    val c = Offset(size.width / 2f, size.height / 2f)
+                    val r = hypot(pos.x - c.x, pos.y - c.y)
+                    val outer = size.minDimension / 2f
+                    if (r < outer * 0.62f) onMain()
+                    else if (n > 0) {
+                        val angle = (Math.toDegrees(atan2((pos.y - c.y).toDouble(), (pos.x - c.x).toDouble())) + 90.0 + 360.0) % 360.0
+                        onSegment(segments[(angle / (360.0 / n)).toInt().coerceIn(0, n - 1)])
+                    }
+                }
+            },
+        ) {
+            val stroke = size.minDimension * 0.10f
+            val sweep = 360f / n
+            val gap = 4f
+            val box = Size(size.minDimension - stroke, size.minDimension - stroke)
+            val topLeft = Offset((size.width - box.width) / 2f, (size.height - box.height) / 2f)
+            segments.forEachIndexed { i, s ->
+                val colour = if (s.state == "on") tintOf(s, tint) else off
+                drawArc(colour, -90f + i * sweep + gap / 2f, sweep - gap, false, topLeft, box, style = Stroke(width = stroke))
+            }
+            drawCircle(mainColour, radius = size.minDimension * 0.30f, center = Offset(size.width / 2f, size.height / 2f))
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Main light", style = MaterialTheme.typography.titleSmall, color = if (main.state == "on") Color.Black.copy(alpha = 0.8f) else ink)
+            Text(if (main.state == "on") "${brightnessOf(main)}%" else "Off", style = MaterialTheme.typography.bodySmall, color = if (main.state == "on") Color.Black.copy(alpha = 0.7f) else ink.copy(alpha = 0.7f))
+        }
     }
 }
