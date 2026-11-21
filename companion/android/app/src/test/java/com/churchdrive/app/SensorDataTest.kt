@@ -118,4 +118,19 @@ class SensorDataTest {
         assertEquals("Nothing", slotLookText(SensorSlot("09:00", "17:00", "none", "", 0), name))
         assertEquals("scene", newSensorSlot().onAction)
     }
+
+    @Test fun aThemeSlotAndTheOffIfOnSettingAreKept() {
+        val name = { k: String -> "Late glow" }
+        assertEquals("Theme · Late glow", slotLookText(SensorSlot("23:00", "02:00", "hybrid", "h1", 0), name))
+        val body = sensorBody(
+            "a1", "binary_sensor.x", "X", listOf("light.a"), "on", "", "off", 20, 20, false, 30, "", null, null, true, 0,
+            listOf(SensorSlot("23:00", "02:00", "hybrid", "h1", 0)), true,
+        )
+        assertEquals(true, body.getBoolean("off_if_on"))
+        assertEquals("hybrid", body.getJSONArray("slots").getJSONObject(0).getString("on_action"))
+        assertNotNull(sensorProblem(listOf("light.a"), "", "hybrid", false, false))
+        assertNull(sensorProblem(listOf("light.a"), "h1", "hybrid", false, false))
+        val parsed = parseSensorActions(JSONObject("""{"actions":[{"id":"a","sensor":"binary_sensor.x","off_if_on":true}],"sensors":[]}"""))!!
+        assertTrue(parsed.actions.single().offIfOn)
+    }
 }

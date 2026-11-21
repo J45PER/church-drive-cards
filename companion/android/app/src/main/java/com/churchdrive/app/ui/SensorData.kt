@@ -55,6 +55,8 @@ data class SensorAction(
     val summary: String,
     val pct: Int = 0,
     val slots: List<SensorSlot> = emptyList(),
+    /** Whether the light goes off after the room empties even if it was already on when someone came in. */
+    val offIfOn: Boolean = false,
 )
 
 data class SensorActionsData(val actions: List<SensorAction>, val sensors: List<SensorInfo>) {
@@ -77,7 +79,7 @@ fun parseSensorActions(result: Any?): SensorActionsData? {
                 offDelay = o.optInt("off_delay", 60), dimPct = o.optInt("dim_pct", 20), onlyDark = o.optBoolean("only_dark"),
                 darkLux = o.optInt("dark_lux", 30), luxSensor = o.optString("lux_sensor"),
                 windowStart = w?.optString("start")?.takeIf { it.isNotBlank() }, windowEnd = w?.optString("end")?.takeIf { it.isNotBlank() },
-                enabled = o.optBoolean("enabled", true), summary = o.optString("summary"), pct = o.optInt("pct", 0),
+                enabled = o.optBoolean("enabled", true), summary = o.optString("summary"), pct = o.optInt("pct", 0), offIfOn = o.optBoolean("off_if_on"),
                 slots = o.optJSONArray("slots")?.let { a ->
                     (0 until a.length()).mapNotNull { j ->
                         val x = a.optJSONObject(j) ?: return@mapNotNull null
@@ -142,6 +144,7 @@ fun sensorSubtitle(sensor: SensorInfo, action: SensorAction?): String = when {
 fun sensorProblem(lights: List<String>, scene: String, onAction: String, needsHueOff: Boolean, hueOff: Boolean): String? = when {
     lights.isEmpty() -> "Choose a light first."
     onAction == "scene" && scene.isBlank() -> "Choose which scene to play."
+    onAction == "hybrid" && scene.isBlank() -> "Choose which theme to play."
     needsHueOff && !hueOff -> "Switch off this sensor's automation in the Hue app, then tick the box."
     else -> null
 }
@@ -150,7 +153,7 @@ fun sensorProblem(lights: List<String>, scene: String, onAction: String, needsHu
 fun sensorBody(
     actionId: String?, sensor: String, name: String, lights: List<String>, onAction: String, scene: String, offAction: String, offDelay: Int,
     dimPct: Int, onlyDark: Boolean, darkLux: Int, luxSensor: String, windowStart: String?, windowEnd: String?, enabled: Boolean,
-    pct: Int = 0, slots: List<SensorSlot> = emptyList(),
+    pct: Int = 0, slots: List<SensorSlot> = emptyList(), offIfOn: Boolean = false,
 ): JSONObject = JSONObject()
     .also { if (actionId != null) it.put("action_id", actionId) else it.put("sensor", sensor) }
     .put("name", name)
@@ -166,11 +169,13 @@ fun sensorBody(
     .put("window", if (windowStart != null && windowEnd != null) JSONObject().put("start", windowStart).put("end", windowEnd) else JSONObject.NULL)
     .put("enabled", enabled)
     .put("pct", pct)
+    .put("off_if_on", offIfOn)
     .put("slots", JSONArray(slots.map { JSONObject().put("start", it.start).put("end", it.end).put("on_action", it.onAction).put("scene", it.scene).put("pct", it.pct) }))
 
 /** "Turn on · 100%", "Scene · Relax", "Nothing": what a time slot does. */
 fun slotLookText(slot: SensorSlot, sceneName: (String) -> String): String = when (slot.onAction) {
     "scene" -> "Scene · ${sceneName(slot.scene)}"
+    "hybrid" -> "Theme · ${sceneName(slot.scene)}"
     "none" -> "Nothing"
     else -> if (slot.pct > 0) "Turn on · ${slot.pct}%" else "Turn on"
 }

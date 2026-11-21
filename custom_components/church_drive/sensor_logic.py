@@ -70,6 +70,7 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
     base = {
         "sensor": "", "name": "", "lights": [], "on_action": "on", "scene": "", "off_action": "off", "off_delay": 60, "dim_pct": 20,
         "only_dark": False, "dark_lux": 30, "lux_sensor": "", "window": None, "enabled": True, "pct": 0, "slots": [],
+        "off_if_on": False,
     }
     item = {**base, **(old or {}), **{k: v for k, v in raw.items() if k in base}}
     sensor = str(item["sensor"]).strip()
@@ -101,6 +102,7 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
         "enabled": bool(item["enabled"]),
         "pct": _int(item["pct"], 0, 100, 0),
         "slots": clean_slots(item["slots"]),
+        "off_if_on": bool(item["off_if_on"]),
     }
 
 

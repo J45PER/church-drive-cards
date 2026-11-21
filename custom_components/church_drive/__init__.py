@@ -1468,6 +1468,7 @@ def ws_sensor_actions(hass: HomeAssistant, connection: websocket_api.ActiveConne
         vol.Optional("window"): vol.Any(None, dict),
         vol.Optional("pct"): vol.Coerce(int),
         vol.Optional("slots"): [dict],
+        vol.Optional("off_if_on"): bool,
         vol.Optional("enabled"): bool,
     }
 )

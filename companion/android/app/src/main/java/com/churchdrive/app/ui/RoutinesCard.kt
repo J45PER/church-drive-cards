@@ -148,7 +148,6 @@ fun LightRoutinesCard(entities: Map<String, EntityState>) {
     var routines by remember { mutableStateOf<List<RoutineInfo>?>(null) }
     var changed by remember { mutableIntStateOf(0) }
     var page by remember { mutableStateOf(false) }
-    val fold = rememberFold("grid-fold|routines-summary", folded = false)
     LaunchedEffect(api, changed) { parseRoutines(api?.ask("church_drive/routines", JSONObject()))?.let { routines = it } }
     DisposableEffect(api) {
         val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_routines_changed")) { changed++ } ?: -1
@@ -157,24 +156,12 @@ fun LightRoutinesCard(entities: Map<String, EntityState>) {
     val all = routines ?: return
     val list = all.filter(::isLightRoutine)
     val tone = toneColors(Tone.Lights)
-    val ink = tone.onContainer
-    val next = list.filter { it.enabled && it.next != null }.minByOrNull { it.next.orEmpty() }
-    Box(Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { page = true }) }) {
-        EntityCard(tone.container, ink) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Light routines", style = MaterialTheme.typography.headlineSmall, color = ink, modifier = Modifier.weight(1f))
-                Box(Modifier.size(Ui.TileHeight).clip(RoundedCornerShape(50)).clickable(onClickLabel = if (fold.value) "Expand" else "Collapse") { fold.value = !fold.value }, contentAlignment = Alignment.Center) {
-                    Icon(if (fold.value) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null, tint = ink.copy(alpha = 0.6f))
-                }
-            }
-            StatusPill(if (list.size == 1) "1 routine" else "${list.size} routines", tone)
-            Text(
-                next?.let { "Next: ${it.name} at ${it.next.orEmpty().drop(11).take(5)}" } ?: if (list.isEmpty()) "No routines yet." else "All switched off.",
-                style = MaterialTheme.typography.bodyLarge, color = ink,
-            )
-            if (!fold.value) Text("Press and hold to open", style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f))
-        }
-    }
+    val next = list.filter { it.enabled && it.next != null }.sortedBy { it.next.orEmpty() }.take(AUTOMATION_LINES)
+    AutomationCard(
+        "Light routines", if (list.size == 1) "1 routine" else "${list.size} routines",
+        next.map { it.name to it.next.orEmpty().drop(11).take(5) },
+        if (list.isEmpty()) "No routines yet." else "All switched off.", tone,
+    ) { page = true }
     if (page) LightRoutinesPage(list, entities, onClose = { page = false }) { changed++ }
 }
 
