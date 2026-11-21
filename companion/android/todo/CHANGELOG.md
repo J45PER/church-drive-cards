@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.181.5
+
+- **No change to this app.** The phone app asks again for the Govee fitting after a restart.
+
 ## 0.181.4
 
 - **No change to this app.** The Govee fitting's dial is in the phone app.

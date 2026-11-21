@@ -87,7 +87,9 @@ class Fittings:
                 "rgb": (s.attributes.get("rgb_color") if on else None) or [255, 200, 140],
                 "brightness": round((s.attributes.get("brightness") or 255) * 100 / 255) if on else 100,
             })
-        fit["ring"] = clean_ring({"on": ring is not None and ring.state == "on", "segments": segments}, count=len(parts["segments"]))
+        # With the device off nothing is lit, whatever the segments last reported: they only repeat the last command sent.
+        ring_on = ring is not None and ring.state == "on" and fit["main"]["on"]
+        fit["ring"] = clean_ring({"on": ring_on, "segments": segments}, count=len(parts["segments"]))
         return fit
 
     def get(self, room: str) -> dict[str, Any] | None:

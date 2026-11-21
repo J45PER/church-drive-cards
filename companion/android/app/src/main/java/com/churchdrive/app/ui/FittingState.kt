@@ -24,7 +24,8 @@ fun rememberFittingList(api: HaApi?): FittingList {
         var tries = 0
         while (tries < 8) {
             val list = parseFittings(api?.ask("church_drive/fitting", JSONObject()))
-            if (list != null) { state.value = list; break }
+            // An empty answer can be the house still starting (the Govee lights come back a minute or two after Home Assistant), so ask again.
+            if (list != null) { state.value = list; if (list.byRoom.isNotEmpty()) break }
             tries++
             delay(1500L * tries)
         }
