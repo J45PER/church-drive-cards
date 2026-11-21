@@ -69,21 +69,21 @@ internal val SWATCHES = listOf(0.0 to 100.0, 28.0 to 100.0, 50.0 to 100.0, 140.0
  * its lights, each with its own switch, and a tap on one opens that light's own settings.
  */
 @Composable
-fun LightSettings(entityId: String, title: String?, entities: Map<String, EntityState>, call: CallService, onClose: () -> Unit) {
+fun LightSettings(entityId: String, title: String?, entities: Map<String, EntityState>, call: CallService, scenes: List<LightScene> = emptyList(), onClose: () -> Unit) {
     val light = entities[entityId]
     var member by remember { mutableStateOf<String?>(null) }
     FullPage(title ?: light?.friendlyName ?: entityId, onClose) {
         if (light == null) {
             Text("Loading…")
         } else {
-            LightSettingsBody(light, entities, call) { member = it }
+            LightSettingsBody(light, entities, call, scenes) { member = it }
         }
     }
     member?.let { LightSettings(it, null, entities, call) { member = null } }
 }
 
 @Composable
-private fun LightSettingsBody(light: EntityState, entities: Map<String, EntityState>, call: CallService, openMember: (String) -> Unit) {
+private fun LightSettingsBody(light: EntityState, entities: Map<String, EntityState>, call: CallService, scenes: List<LightScene>, openMember: (String) -> Unit) {
     val tone = toneColors(Tone.Lights)
     val grey = toneColors(Tone.Grey)
     val on = light.state == "on"
@@ -105,6 +105,12 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
         memberStates.forEach { m -> MemberRow(m, call, tone) { openMember(m.entityId) } }
         Text("Tap a light to open its own settings. The switch turns just that light on or off.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         var openSection by rememberSaveable(light.entityId) { mutableStateOf<String?>(null) }
+        // The room's own scenes, the same list as on its card, then its hybrid scenes.
+        if (scenes.isNotEmpty()) {
+            LightSection("cd:palette", "Scenes", "${scenes.size} for this room", tint, openSection == "scenes", { openSection = if (openSection == "scenes") null else "scenes" }) {
+                SceneGrid(scenes, call)
+            }
+        }
         HybridSection(light, memberStates, call, tone, tint, openSection == "hybrid") { openSection = if (openSection == "hybrid") null else "hybrid" }
     } else {
         LightControls(light, light.lightKind(), light.hasWhiteMode(), call, tone, grey, tint)
@@ -208,23 +214,6 @@ private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean,
             LightSection("cd:palette", "Scenes", "Applies to this light", tint, openSection == "scenes", { toggle("scenes") }) {
                 SceneGrid(scenes, call)
             }
-        }
-    }
-    val effects = light.lightEffects()
-    if (effects.isNotEmpty() && kind != LightKind.Switch) {
-        val playing = light.str("effect")?.takeIf { it.isNotBlank() && !it.equals("none", true) }
-        LightSection("mdi:creation", "Effects", playing?.let(::effectLabel) ?: "None playing", tint, openSection == "effects", { toggle("effects") }) {
-            // "None" goes first and stops the effect; the row wraps four to a line like every other row of choices.
-            val tiles = listOf<String?>(null) + effects
-            TileRow(
-                tiles.map { e ->
-                    val active = if (e == null) playing == null else playing.equals(e, true)
-                    TileItem(if (e == null) "mdi:close" else "mdi:creation", if (e == null) "None" else effectLabel(e), active, showLabel = true) {
-                        call("light", "turn_on", id, data("effect" to (e ?: "none")))
-                    }
-                },
-                tone, ink,
-            )
         }
     }
 }
