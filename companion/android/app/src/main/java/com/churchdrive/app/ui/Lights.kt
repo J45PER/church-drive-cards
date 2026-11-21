@@ -90,7 +90,10 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val head = entities[room.head]
     val on = head?.state == "on"
     val tone = toneColors(if (on) Tone.Lights else Tone.Grey)
-    val expandable = room.rows.isNotEmpty() || room.scenes.isNotEmpty()
+    // A room with a ring of segments (the Cloakroom's Govee) is one device: its Down light and Up light rows aren't shown, and its scenes go to the device's own light.
+    val device = colourSource(head, entities)?.takeIf { it.entityId != room.head }
+    val rowsShown = if (device != null) emptyList() else room.rows
+    val expandable = rowsShown.isNotEmpty() || room.scenes.isNotEmpty()
     // Pressing and holding the card (not just its slider) opens the room's light details, as the slider does; a light with nothing to set keeps its device page.
     var cardSettings by remember { mutableStateOf(false) }
 
@@ -101,7 +104,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val open = !collapsed.value && expandable
     val hintContext = LocalContext.current
     val showHint = opensSettings(head) && remember(room.head) { LightHoldHint.wants(hintContext, room.head) }
-    val lightsEnd = 2f + 1.5f * (if (open) room.rows.size else 0)
+    val lightsEnd = 2f + 1.5f * (if (open) rowsShown.size else 0)
     val sceneRows = if (open && room.scenes.isNotEmpty()) room.scenes.chunked(3) else emptyList()
     // Hybrid scenes (a different look on each light, made by an administrator) go in rows of up to three under the scenes, with their own label.
     val hybridList = LocalHybrids.current
@@ -119,12 +122,12 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
         onHold = if (opensSettings(head)) ({ cardSettings = true }) else null,
     ) {
         LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1f), entities,
-            tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell, scenes = room.scenes)
+            tintFrom = rowsShown.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell, scenes = room.scenes)
         if (!open && showHint) {
             Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.at(0.5f, 1.55f, 7f, 0.5f), color = tone.onContainer.copy(alpha = 0.7f))
         }
         if (open) {
-            room.rows.forEachIndexed { k, row ->
+            rowsShown.forEachIndexed { k, row ->
                 val x = 0.5f + 0.5f * row.level
                 LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.at(x, 2f + 1.5f * k, 7.5f - x, 1f), entities, pillHeight = cell)
             }
@@ -145,7 +148,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
                         ) {
                             val haScene = scene.haScene
                             if (haScene != null) call("scene", "turn_on", haScene, data())
-                            else call("church_drive", "apply_scene", scene.target, data("scene" to scene.key))
+                            else call("church_drive", "apply_scene", if (scene.target == room.head) device?.entityId ?: scene.target else scene.target, data("scene" to scene.key))
                         }
                     }
                 }
@@ -237,6 +240,10 @@ fun LightPill(
     /** For a room: its scenes (the card's list), shown in its settings with the hybrid scenes. */
     scenes: List<LightScene> = emptyList(),
 ) {
+    // A room with a ring of segments (the Cloakroom's Govee) is one device: its own light stands for it, so a tap sends one command, not one per segment.
+    val group = light
+    val light = colourSource(group, entities)
+    val dev = light?.entityId ?: entityId
     val on = light?.state == "on"
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -258,7 +265,7 @@ fun LightPill(
     // Armed Home blue with the words Security mode, not every colour they pass through.
     val registry = LocalRegistry.current
     val security = on && entities?.get(SECURITY_ACTIVE)?.state == "on" &&
-        (securityLabelled(registry, entityId) || light?.list("entity_id").orEmpty().any { securityLabelled(registry, it) })
+        (securityLabelled(registry, entityId) || group?.list("entity_id").orEmpty().any { securityLabelled(registry, it) })
     val tint = if (security) toneColors(Tone.AlarmHome).accent else if (shownOn && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
     val shown = if (security) 1f else dragged
     val shape = RoundedCornerShape(18.dp)
@@ -288,7 +295,7 @@ fun LightPill(
                     onPress = { pressedAt = System.currentTimeMillis(); tryAwaitRelease() },
                     // Press and hold opens the light's full-screen settings, when there is more to set than on and off.
                     onLongPress = {
-                        if (entities != null && opensSettings(light)) {
+                        if (entities != null && opensSettings(group)) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             LightHoldHint.markSeen(context)
                             settings = true
@@ -301,7 +308,7 @@ fun LightPill(
                     detectHorizontalDragGestures(
                         onDragStart = { drag = level(it.x) },
                         onDragEnd = {
-                            drag?.let { askedLevel.ask(it); call("light", "turn_on", entityId, data("brightness_pct" to (it * 100).roundToInt())) }
+                            drag?.let { askedLevel.ask(it); call("light", "turn_on", dev, data("brightness_pct" to (it * 100).roundToInt())) }
                             drag = null
                         },
                         onDragCancel = { drag = null },
@@ -338,7 +345,7 @@ fun LightPill(
             .background(if (shownOn) tint else tone.onContainer.copy(alpha = 0.14f))
             .clickable(enabled = light?.available == true, onClickLabel = if (shownOn) "Turn off" else "Turn on") {
                 askedOn.ask(!shownOn)
-                call("light", if (shownOn) "turn_off" else "turn_on", entityId, data())
+                call("light", if (shownOn) "turn_off" else "turn_on", dev, data())
             },
         contentAlignment = Alignment.Center,
     ) {

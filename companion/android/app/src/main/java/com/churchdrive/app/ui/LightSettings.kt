@@ -108,22 +108,24 @@ fun LightSettings(entityId: String, title: String?, entities: Map<String, Entity
 @Composable
 private fun LightSettingsBody(light: EntityState, entities: Map<String, EntityState>, call: CallService, scenes: List<LightScene>) {
     val tone = toneColors(Tone.Lights)
-    val on = light.state == "on"
     val members = light.lightMembers()
     val memberStates = members.mapNotNull { entities[it] }
-    val grouped = members.size > 1 && !isSegmentGroup(light)
-    val tint = tintOf(colourSource(light, entities) ?: light, MaterialTheme.colorScheme.onSurfaceVariant)
+    // A room with a ring of segments (the Cloakroom's Govee) is one device: its own light stands for it (switching the group would send a command to each segment).
+    val device = colourSource(light, entities) ?: light
+    val on = device.state == "on"
+    val grouped = members.size > 1 && !isSegmentGroup(light) && device.entityId == light.entityId
+    val tint = tintOf(device, MaterialTheme.colorScheme.onSurfaceVariant)
     var selected by rememberSaveable(light.entityId) { mutableStateOf<String?>(null) }
     val status = when {
-        !light.available -> "Unavailable"
+        !device.available -> "Unavailable"
         !on -> "Off"
         grouped -> "${memberStates.count { it.state == "on" }} of ${memberStates.size} lights on"
-        light.lightKind() == LightKind.Switch -> "On"
-        else -> "On · ${brightnessOf(light)}%"
+        device.lightKind() == LightKind.Switch -> "On"
+        else -> "On · ${brightnessOf(device)}%"
     }
     // The bar is a status bar: only the squircle switches the light. With a light of the room showing, tapping the bar closes it.
     PowerBar(
-        light, on, tint, if (grouped && selected != null) "$status · tap to close ${entities[selected]?.friendlyName.orEmpty()}" else status, call,
+        device, on, tint, if (grouped && selected != null) "$status · tap to close ${entities[selected]?.friendlyName.orEmpty()}" else status, call,
         onBar = if (grouped && selected != null) ({ selected = null }) else null,
     )
     LightDetails(light, entities, call, scenes, selected) { selected = it }
@@ -142,12 +144,14 @@ private fun LightDetails(light: EntityState, entities: Map<String, EntityState>,
         LightControls(light, light.lightKind(), light.hasWhiteMode(), call, tone, grey, tint)
         return
     }
-    // A room with a ring of segments (the Cloakroom's Up light) is a dial: the main light in the middle, a piece of the ring for each segment.
+    // A room with a ring of segments (the Cloakroom's Govee) is one device: its own light is the whole thing, and the group would send a command
+    // to each of the 13 segments. So it is one light, with its brightness, white tone or colour, scenes and hybrid scenes.
     val ring = memberStates.firstOrNull { isSegmentGroup(it) }
     val main = memberStates.firstOrNull { it.entityId != ring?.entityId }
-    val segments = ring?.lightMembers()?.mapNotNull { entities[it] }?.sortedBy { it.entityId }.orEmpty()
-    if (ring != null && main != null && segments.isNotEmpty()) {
-        GoveeParts(light.entityId, main, ring, segments, call, tone, tint)
+    if (ring != null && main != null) {
+        LightControls(main, main.lightKind(), main.hasWhiteMode(), call, tone, grey, tint)
+        HybridSection(light, memberStates, call, tone, tint, true) {}
+        return
     } else {
         Text("LIGHTS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(
@@ -575,289 +579,5 @@ internal fun lightKindLabel(light: EntityState): String = when {
         LightKind.Dim -> "Single colour"
         LightKind.White -> "White tones"
         LightKind.Colour -> "Full colour"
-    }
-}
-
-private const val SEGMENT_DARK = 8
-
-/** A Govee segment has no power of its own, so it is "off" when it is set to black. */
-private fun segmentOn(s: EntityState): Boolean = s.state == "on" && (s.rgb()?.let { it.max() > SEGMENT_DARK } ?: true)
-
-private enum class DialZone { Centre, Gauge, Rim }
-
-/**
- * The parts of a light with a ring of segments (the Cloakroom's Govee), as one circle: the main light in the middle (tap to pick it, press
- * and hold to switch it, drag round its ring for brightness) and a rounded wedge for each segment. What is picked stays bright and the rest dims; an
- * off part is plain acrylic. A bar under the dial shows the picked part's level (drag it) and, for the segments, a power squircle; the picked part's
- * colours open under it. The dial draws the house's own record of the fitting ([LocalFittings]) when it has one, and changes go through it, so the main
- * light's white and the ring's colours are set together in the order the Govee needs.
- */
-@Composable
-private fun GoveeParts(room: String, main: EntityState, ring: EntityState, segments: List<EntityState>, call: CallService, tone: ToneColors, tint: Color) {
-    val ink = MaterialTheme.colorScheme.onSurface
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val surface = MaterialTheme.colorScheme.surfaceContainer
-    val acrylic = ink.copy(alpha = 0.22f).compositeOver(surface)
-    val haptic = LocalHapticFeedback.current
-    val fit = LocalFittings.current.byRoom[room]
-    val api = LocalHaApi.current
-    val scope = rememberCoroutineScope()
-    var sel by rememberSaveable(ring.entityId) { mutableStateOf<String?>(null) }
-    var dragPct by remember { mutableStateOf<Int?>(null) }
-    var colourTab by remember { mutableIntStateOf(1) }
-    var gradient by remember { mutableStateOf(HYBRID_GRADIENTS[1].second) }
-    var keepRing by rememberSaveable(ring.entityId) { mutableStateOf(false) }
-    val n = segments.size
-    fun rgbOf(l: List<Int>): Color = if (l.size == 3) Color(l[0], l[1], l[2]) else tint
-
-    val mainOn = fit?.mainOn ?: (main.state == "on")
-    val mainBase = fit?.let { rgbOf(it.mainShown) } ?: tintOf(main, tint)
-    val mainColour = if (mainOn) mainBase else acrylic
-    val mainLevel = fit?.mainBrightness ?: brightnessOf(main)
-    val mainPct = dragPct ?: if (mainOn) mainLevel else 0
-    fun segOn(i: Int): Boolean = if (fit != null) fit.ringOn && fit.ringSegments.getOrNull(i)?.dark == false else segmentOn(segments[i])
-    fun segColour(i: Int): Color = fit?.ringSegments?.getOrNull(i)?.let { rgbOf(it.rgb) } ?: tintOf(segments[i], tint)
-    fun segLevel(i: Int): Int = fit?.ringSegments?.getOrNull(i)?.brightness ?: brightnessOf(segments[i])
-    val ringOn = fit?.ringOn ?: segments.any { segmentOn(it) }
-    val remembered = remember(ring.entityId) { mutableMapOf<Int, List<Int>>() }
-
-    fun fitSet(main: JSONObject? = null, ring: JSONObject? = null, keep: Boolean = false) {
-        scope.launch { api?.ask("church_drive/fitting/set", fittingBody(room, main, ring, keep)) }
-    }
-    fun setLevel(id: String, pct: Int) = call("light", "turn_on", id, data("brightness_pct" to pct))
-    fun setMainLevel(pct: Int) = if (fit != null) fitSet(main = mainRequest(on = true, brightness = pct)) else setLevel(main.entityId, pct)
-    fun toggleMain() = if (fit != null) fitSet(main = mainRequest(on = !mainOn)) else call("light", if (mainOn) "turn_off" else "turn_on", main.entityId, data())
-    fun setRingLevel(pct: Int) = if (fit != null) fitSet(ring = ringLevelRequest(pct)) else setLevel(ring.entityId, pct)
-    fun setSegLevel(i: Int, pct: Int) =
-        if (fit != null) fitSet(ring = ringSegmentsRequest(fit.ringSegments.replaced(i, fit.ringSegments[i].copy(brightness = pct)))) else setLevel(segments[i].entityId, pct)
-    fun toggleSegment(i: Int) {
-        if (fit != null) {
-            val cur = fit.ringSegments[i]
-            val next = if (segOn(i)) { remembered[i] = cur.rgb; cur.copy(rgb = listOf(0, 0, 0)) } else cur.copy(rgb = remembered[i] ?: listOf(255, 200, 140))
-            fitSet(ring = ringSegmentsRequest(fit.ringSegments.replaced(i, next)))
-        } else {
-            val s = segments[i]
-            if (segmentOn(s)) {
-                s.rgb()?.let { remembered[i] = it.toList() }
-                call("light", "turn_on", s.entityId, data("rgb_color" to JSONArray(listOf(0, 0, 0))))
-            } else {
-                call("light", "turn_on", s.entityId, data("rgb_color" to JSONArray(remembered[i] ?: listOf(255, 200, 140))))
-            }
-        }
-    }
-    fun allSegmentsOn() {
-        if (fit != null) fitSet(ring = ringSegmentsRequest(fit.ringSegments.mapIndexed { i, s -> if (s.dark) s.copy(rgb = remembered[i] ?: listOf(255, 200, 140)) else s }))
-        else segments.indices.filter { !segmentOn(segments[it]) }.forEach { toggleSegment(it) }
-    }
-    fun toggleRing() = if (fit != null) fitSet(ring = JSONObject().put("on", !fit.ringOn)) else segments.indices.forEach { if (ringOn == segmentOn(segments[it])) toggleSegment(it) }
-
-    LightSection("cd:bulb-group", "Parts", "Govee · ${segments.size} segments", tint) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(4.dp), contentAlignment = Alignment.Center) {
-            var ringDrag = false
-            fun zone(size: androidx.compose.ui.unit.IntSize, p: Offset): DialZone {
-                val half = minOf(size.width, size.height) / 2f
-                val u = half / 120f
-                val d = hypot(p.x - size.width / 2f, p.y - size.height / 2f) / u
-                return if (d <= 42f) DialZone.Centre else if (d <= 74f) DialZone.Gauge else DialZone.Rim
-            }
-            fun angleOf(size: androidx.compose.ui.unit.IntSize, p: Offset): Double =
-                (Math.toDegrees(atan2((p.y - size.height / 2f).toDouble(), (p.x - size.width / 2f).toDouble())) + 90.0 + 360.0) % 360.0
-            Canvas(
-                Modifier.fillMaxSize()
-                    .pointerInput(segments, main, sel, fit) {
-                        detectTapGestures(
-                            onTap = { pos ->
-                                when (zone(size, pos)) {
-                                    DialZone.Rim -> if (n > 0) {
-                                        val id = (angleOf(size, pos) / (360.0 / n)).toInt().coerceIn(0, n - 1).toString()
-                                        sel = if (sel == id) null else id
-                                    }
-                                    else -> sel = if (sel == "main") null else "main"
-                                }
-                            },
-                            onLongPress = { pos ->
-                                if (zone(size, pos) == DialZone.Centre && main.available) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    toggleMain()
-                                }
-                            },
-                        )
-                    }
-                    .pointerInput(main, fit) {
-                        detectDragGestures(
-                            onDragStart = { pos -> ringDrag = zone(size, pos) == DialZone.Gauge; if (ringDrag) { sel = "main"; dragPct = ((angleOf(size, pos) / 360.0 * 20).roundToInt() * 5).coerceIn(5, 100) } },
-                            onDragEnd = { if (ringDrag) dragPct?.let { setMainLevel(it) }; dragPct = null; ringDrag = false },
-                            onDragCancel = { dragPct = null; ringDrag = false },
-                        ) { change, _ -> if (ringDrag) dragPct = ((angleOf(size, change.position) / 360.0 * 20).roundToInt() * 5).coerceIn(5, 100) }
-                    },
-            ) {
-                val u = size.minDimension / 2f / 120f
-                val c = Offset(size.width / 2f, size.height / 2f)
-                val sweep = 360f / n
-                val gap = 3.5f
-                val rc = 5f * u
-                val r1 = 80f * u + rc
-                val r2 = 108f * u - rc
-                val pickedDim = if (sel == null) 1f else 0.62f
-                for (i in 0 until n) {
-                    val isSel = sel == i.toString()
-                    val dim = if (sel == null || isSel || sel == "ring") 1f else pickedDim
-                    val on = segOn(i)
-                    val base = if (on) segColour(i).copy(alpha = (0.5f + segLevel(i) / 100f * 0.5f) * dim).compositeOver(surface) else acrylic.copy(alpha = dim).compositeOver(surface)
-                    val a0 = -90f + i * sweep + gap / 2f
-                    val span = sweep - gap
-                    val da = Math.toDegrees((rc / r1).toDouble()).toFloat()
-                    val db = Math.toDegrees((rc / r2).toDouble()).toFloat()
-                    val outer = androidx.compose.ui.geometry.Rect(c.x - r2, c.y - r2, c.x + r2, c.y + r2)
-                    val inner = androidx.compose.ui.geometry.Rect(c.x - r1, c.y - r1, c.x + r1, c.y + r1)
-                    val path = androidx.compose.ui.graphics.Path().apply {
-                        arcTo(outer, a0 + db, span - 2 * db, true)
-                        arcTo(inner, a0 + span - da, -(span - 2 * da), false)
-                        close()
-                    }
-                    drawPath(path, base)
-                    drawPath(path, base, style = Stroke(width = 2f * rc, join = androidx.compose.ui.graphics.StrokeJoin.Round))
-                }
-                val mainDim = if (sel == null || sel == "main") 1f else 0.55f
-                drawCircle(ink.copy(alpha = 0.08f * mainDim), radius = 72f * u, center = c)
-                val gr = 56f * u
-                drawCircle(ink.copy(alpha = 0.18f * mainDim), radius = gr, center = c, style = Stroke(12f * u))
-                val gc = mainColour.copy(alpha = mainDim)
-                if (mainOn) {
-                    drawArc(gc, -90f, 360f * mainPct / 100f, false, Offset(c.x - gr, c.y - gr), Size(gr * 2, gr * 2), style = Stroke(12f * u, cap = androidx.compose.ui.graphics.StrokeCap.Round))
-                    val ang = Math.toRadians((-90.0 + 360.0 * mainPct / 100.0))
-                    val tp = Offset(c.x + (gr * Math.cos(ang)).toFloat(), c.y + (gr * Math.sin(ang)).toFloat())
-                    drawCircle(Color.White.copy(alpha = mainDim), radius = 8f * u, center = tp)
-                    drawCircle(gc, radius = 8f * u, center = tp, style = Stroke(3f * u))
-                }
-                drawCircle(gc, radius = 36f * u, center = c)
-            }
-            HaIcon("cd:power", CdVectors.Bulb, if (mainOn) Color(0xFF1B1F27) else ink, 28.dp, Modifier.alpha(if (sel == null || sel == "main") 1f else 0.55f))
-        }
-        Text(
-            "Tap a segment to pick it, or the ring to pick the main light; tap again to let go. Press and hold the middle to switch the main light.",
-            style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.fillMaxWidth(),
-        )
-        // Pick every segment at once, or put back any that were switched off.
-        TileRow(
-            listOf(
-                TileItem("cd:bulb-group", "Whole ring", sel == "ring") { sel = if (sel == "ring") null else "ring" },
-                TileItem("cd:sun", "All segments on", false) { allSegmentsOn() },
-            ),
-            tone, ink, perRow = 2,
-        )
-        val pickedIndex = sel?.toIntOrNull()
-        val isMain = sel == "main"
-        val isRing = sel == "ring"
-        if (isMain || isRing || (pickedIndex != null && pickedIndex in 0 until n)) {
-            val i = pickedIndex ?: 0
-            val name = if (isMain) "Main light" else if (isRing) "Backlight ring" else "Segment ${i + 1}"
-            val on = if (isMain) mainOn else if (isRing) ringOn else segOn(i)
-            val level = if (isMain) mainPct else if (isRing) segLevel(0) else segLevel(i)
-            val col = if (isMain) mainBase else if (isRing) (segments.indices.firstOrNull { segOn(it) }?.let { segColour(it) } ?: segColour(0)) else segColour(i)
-            PartBar(name, if (isMain) "cd:bulb-lit" else "cd:bulb-group", on, level, col, onLevel = { pct -> if (isMain) setMainLevel(pct) else if (isRing) setRingLevel(pct) else setSegLevel(i, pct) })
-            if (!isMain) {
-                // Segments have no power of their own: the squircle sets them to black and puts their colour back.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PowerSquircle(on, col, true, if (on) "Turn off" else "Turn on", Ui.TallTileHeight) { if (isRing) toggleRing() else toggleSegment(i) }
-                    Text(if (on) "Switch off (goes dark)" else "Switch on", Modifier.weight(1f).align(Alignment.CenterVertically), style = MaterialTheme.typography.bodyMedium, color = muted)
-                }
-            }
-            LightSection(
-                if (isMain) "cd:bulb-lit" else "cd:bulb-group", name,
-                if (isMain) "White tone or whole-fitting colour" else if (isRing) "${segments.size} segments together" else "One segment of the ring", col,
-            ) {
-                if (fit != null && isMain) {
-                    MainToneControls(fit, keepRing, { keepRing = it }, { req, keep -> fitSet(main = req, keep = keep) }, tone, ink)
-                } else if (fit != null) {
-                    FittingColours(if (isRing) fit.ringSegments.firstOrNull { !it.dark }?.rgb else fit.ringSegments.getOrNull(i)?.rgb) { rgb ->
-                        if (isRing) fitSet(ring = ringColourRequest(rgb))
-                        else fitSet(ring = ringSegmentsRequest(fit.ringSegments.replaced(i, fit.ringSegments[i].copy(rgb = rgb))))
-                    }
-                } else if (isMain) {
-                    // Without the house's record, the Govee sends a colour to the whole fitting, so the down light is white only.
-                    WhiteControls(main, call, tone)
-                    Text("The down light is white only. Colour the ring or its segments for colour.", style = MaterialTheme.typography.bodySmall, color = muted)
-                } else {
-                    ColourTabs(if (isRing) ring else segments[i], false, false, 1, { colourTab = it }, gradient, { gradient = it }, call, tone, ink)
-                }
-            }
-        }
-    }
-}
-
-/** The main light's controls from the house's record: a white tone (down light only, a coloured ring keeps its colours) or a colour for the whole fitting. */
-@Composable
-private fun MainToneControls(fit: Fitting, keepRing: Boolean, setKeep: (Boolean) -> Unit, set: (JSONObject, Boolean) -> Unit, tone: ToneColors, ink: Color) {
-    var tab by remember { mutableIntStateOf(if (fit.mainMode == "colour") 1 else 0) }
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    TileRow(listOf(TileItem("cd:sun", "White", tab == 0) { tab = 0 }, TileItem("cd:palette", "Colour", tab == 1) { tab = 1 }), tone, ink, perRow = 2)
-    if (tab == 0) {
-        val min = 2200
-        val max = 6500
-        val k = fit.mainKelvin.coerceIn(min, max)
-        BarSlider(
-            "Colour temperature", "$k K · ${kelvinWord(k)}", (k - min).toFloat() / (max - min),
-            Brush.horizontalGradient((0..8).map { rgbColour(kelvinRgb(min + (max - min) * it / 8)) }), thumbOnly = true,
-            onSet = { f -> set(mainRequest(on = true, mode = "white", kelvin = (min + (max - min) * f).roundToInt()), false) },
-        )
-        TileRow(
-            whitePresets(min, max).map { (name, k2) -> TileItem("cd:sun", name, fit.mainMode == "white" && kotlin.math.abs(k - k2) < 150) { set(mainRequest(on = true, mode = "white", kelvin = k2), false) } },
-            tone, ink, perRow = 3,
-        )
-        Text("White lights the down light only. A coloured ring keeps its colours.", style = MaterialTheme.typography.bodySmall, color = muted)
-    } else {
-        Text("A colour on the down light paints the whole fitting, ring included.", style = MaterialTheme.typography.bodySmall, color = muted)
-        FittingColours(fit.mainRgb.takeIf { fit.mainMode == "colour" }) { rgb -> set(mainRequest(on = true, mode = "colour", rgb = rgb), keepRing) }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Keep the ring's colours", style = MaterialTheme.typography.bodyLarge)
-                Text("Puts them back after, which takes longer for a ring of many colours.", style = MaterialTheme.typography.bodySmall, color = muted)
-            }
-            Switch(keepRing, setKeep)
-        }
-    }
-}
-
-/** Preset swatches and a colour wheel for a part of the fitting; [onPick] gets the colour as red, green and blue. */
-@Composable
-private fun FittingColours(current: List<Int>?, onPick: (List<Int>) -> Unit) {
-    val ink = MaterialTheme.colorScheme.onSurface
-    val tone = toneColors(Tone.Lights)
-    val currentHs = current?.takeIf { it.size == 3 }?.let { hexToHs("#%02x%02x%02x".format(it[0], it[1], it[2])) }
-    Text("Presets", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        SWATCHES.forEach { c -> Swatch(c, currentHs, false) { onPick(hsToRgb(c.first, c.second).toList()) } }
-    }
-    var wheel by remember { mutableStateOf(false) }
-    TileRow(listOf(TileItem("cd:eyedropper", "Custom colour", wheel) { wheel = !wheel }), tone, ink, perRow = 1)
-    if (wheel) HsWheel(currentHs ?: (30.0 to 60.0)) { onPick(hsToRgb(it.first, it.second).toList()) }
-}
-
-/** A level bar for the picked part: a pill filled to its level that you drag across, with its name and level on it. */
-@Composable
-private fun PartBar(name: String, icon: String, on: Boolean, level: Int, colour: Color, onLevel: (Int) -> Unit) {
-    var drag by remember(level) { mutableStateOf<Float?>(null) }
-    val asked = rememberPending<Float>(level)
-    var width by remember { mutableIntStateOf(1) }
-    val shown = drag ?: asked.asked ?: (if (on) level / 100f else 0f)
-    fun at(x: Float) = ((x / width * 20).roundToInt() * 5).coerceIn(5, 100) / 100f
-    Box(
-        Modifier.fillMaxWidth().height(Ui.TallTileHeight).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = if (on) 0.10f else 0.06f))
-            .onSizeChanged { width = it.width.coerceAtLeast(1) }
-            .pointerInput(on) {
-                detectHorizontalDragGestures(
-                    onDragStart = { drag = at(it.x) },
-                    onDragEnd = { drag?.let { asked.ask(it); onLevel((it * 100).roundToInt()) }; drag = null },
-                    onDragCancel = { drag = null },
-                ) { change, _ -> drag = at(change.position.x) }
-            },
-    ) {
-        if (on || drag != null) Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(colour.copy(alpha = 0.45f)))
-        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            HaIcon(icon, CdVectors.Bulb, if (on) colour else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), 26.dp)
-            Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
-            Text(if (on || drag != null) "${(shown * 100).roundToInt()}%" else "Off", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-        }
     }
 }
