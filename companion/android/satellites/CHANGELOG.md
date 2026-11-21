@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.181.3
+
+- **No change to this app.** Integration fix only: a presence sensor's lights now switch off.
+
 ## 0.181.2
 
 - **No change to this app.** Light controls in the phone app answer at once.
