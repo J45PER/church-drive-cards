@@ -358,10 +358,13 @@ fun LightingPage(layout: LightLayout, entities: Map<String, EntityState>, areaNa
             }
         }
     }
-    // Lights that switch themselves at a set time (administrators): Clive makes them when asked, and they are changed here.
+    // What lights do on their own (administrators): routines at a set time (Clive makes them when asked), and what a sensor does when it sees someone.
     if (LocalIsAdmin.current) {
-        SectionPanel("Routines", iconName = "cd:calendar-clock", tone = Tone.Lights) {
-            LightRoutinesCard(entities)
+        SectionPanel("Automations", iconName = "cd:calendar-clock", tone = Tone.Lights) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LightRoutinesCard(entities)
+                SensorActionsCard(entities, call)
+            }
         }
     }
 }

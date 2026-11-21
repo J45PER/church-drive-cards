@@ -1,0 +1,93 @@
+package com.churchdrive.app
+
+import com.churchdrive.app.ui.SENSOR_DELAYS
+import com.churchdrive.app.ui.SensorAction
+import com.churchdrive.app.ui.delayText
+import com.churchdrive.app.ui.parseSensorActions
+import com.churchdrive.app.ui.sensorBadge
+import com.churchdrive.app.ui.sensorBody
+import com.churchdrive.app.ui.sensorProblem
+import com.churchdrive.app.ui.sensorSubtitle
+import com.churchdrive.app.ui.stepDelay
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SensorDataTest {
+    private val answer = JSONObject(
+        """{"actions":[{"id":"a1","sensor":"binary_sensor.cloakroom_presence","name":"Cloakroom","lights":["light.cloakroom"],"on_action":"on","scene":"",
+          "off_action":"off","off_delay":60,"dim_pct":20,"only_dark":false,"dark_lux":30,"lux_sensor":"sensor.fp300_lux","window":null,"enabled":true,
+          "summary":"Light follows presence · off after 1 min"}],
+         "sensors":[
+          {"entity_id":"binary_sensor.cloakroom_presence","name":"Cloakroom Presence Sensor","model":"Presence Multi-Sensor FP300","platform":"matter","area":"cloakroom","state":"off",
+           "readings":{"battery":{"entity_id":"sensor.fp300_battery","state":"100"},"illuminance":{"entity_id":"sensor.fp300_lux","state":"353"}},
+           "settings":[{"entity_id":"number.fp300_hold_time","kind":"number","name":"Hold time","state":"10","min":1,"max":300,"step":1,"unit":"s"},
+                       {"entity_id":"select.fp300_sensitivity","kind":"select","name":"Sensitivity","state":"medium","options":["low","medium","high"]}],
+           "action":"a1"},
+          {"entity_id":"binary_sensor.lower_landing_sensor_motion","name":"Lower Landing Sensor","model":"Hue motion sensor","platform":"hue","state":"off","readings":{},"settings":[],"action":null}]}"""
+    )
+
+    @Test fun theHousesAnswerIsRead() {
+        val data = parseSensorActions(answer)!!
+        assertEquals(1, data.actions.size)
+        assertEquals(2, data.sensors.size)
+        val cloak = data.sensors[0]
+        assertEquals("sensor.fp300_battery", cloak.batteryEntity)
+        assertEquals("sensor.fp300_lux", cloak.luxEntity)
+        assertEquals(listOf("number", "select"), cloak.settings.map { it.kind })
+        assertEquals(listOf("low", "medium", "high"), cloak.settings[1].options)
+        assertEquals(300.0, cloak.settings[0].max!!, 0.0)
+        assertNotNull(data.actionFor(cloak))
+        assertNull(data.actionFor(data.sensors[1]))
+        assertTrue(data.sensors[1].isHue)
+    }
+
+    @Test fun nothingIsReadFromAnAnswerThatIsntOne() {
+        assertNull(parseSensorActions(null))
+        assertNull(parseSensorActions("no"))
+    }
+
+    @Test fun theBadgeSaysWhoRunsIt() {
+        val data = parseSensorActions(answer)!!
+        val action: SensorAction = data.actions[0]
+        assertEquals("Church Drive", sensorBadge(data.sensors[0], action))
+        assertEquals("Hue app", sensorBadge(data.sensors[1], null))
+        assertEquals("Off", sensorBadge(data.sensors[0], action.copy(enabled = false)))
+        assertEquals("Set in the Hue app", sensorSubtitle(data.sensors[1], null))
+        assertEquals("Light follows presence · off after 1 min", sensorSubtitle(data.sensors[0], action))
+    }
+
+    @Test fun theDelayStepsThroughSensibleValues() {
+        assertEquals(90, stepDelay(60, 1))
+        assertEquals(45, stepDelay(60, -1))
+        assertEquals(10, stepDelay(10, -1))
+        assertEquals(3600, stepDelay(3600, 1))
+        assertEquals(60, stepDelay(50, 0))
+        assertTrue(SENSOR_DELAYS == SENSOR_DELAYS.sorted())
+        assertEquals("45 s", delayText(45))
+        assertEquals("1 min", delayText(60))
+        assertEquals("1 min 30 s", delayText(90))
+    }
+
+    @Test fun aHueSensorCantBeSavedUntilItsOwnAutomationIsOff() {
+        assertEquals("Choose a light first.", sensorProblem(emptyList(), "", "on", false, false))
+        assertEquals("Choose which scene to play.", sensorProblem(listOf("light.a"), "", "scene", false, false))
+        assertNotNull(sensorProblem(listOf("light.a"), "", "on", needsHueOff = true, hueOff = false))
+        assertNull(sensorProblem(listOf("light.a"), "", "on", needsHueOff = true, hueOff = true))
+        assertNull(sensorProblem(listOf("light.a"), "", "on", needsHueOff = false, hueOff = false))
+    }
+
+    @Test fun theBodyNamesTheSensorOnlyForANewOne() {
+        val made = sensorBody(null, "binary_sensor.x", "X", listOf("light.a"), "on", "", "off", 60, 20, true, 30, "", "22:00", "06:00", true)
+        assertEquals("binary_sensor.x", made.getString("sensor"))
+        assertTrue(!made.has("action_id"))
+        assertEquals("22:00", made.getJSONObject("window").getString("start"))
+        val changed = sensorBody("a1", "binary_sensor.x", "X", listOf("light.a"), "on", "", "off", 60, 20, false, 30, "", null, null, true)
+        assertEquals("a1", changed.getString("action_id"))
+        assertTrue(!changed.has("sensor"))
+        assertTrue(changed.isNull("window"))
+    }
+}

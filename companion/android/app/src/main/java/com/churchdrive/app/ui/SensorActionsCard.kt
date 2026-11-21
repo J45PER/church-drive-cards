@@ -1,0 +1,295 @@
+package com.churchdrive.app.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import com.churchdrive.app.ha.CallService
+import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.data
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+
+// Sensor actions: what lights do when a motion or presence sensor sees someone and when the room empties (the Lights page's Automations section,
+// under Light routines, for administrators). The house runs them (`church_drive/sensor_actions`). A Hue sensor keeps its own lights on the Hue
+// bridge until it is taken over here, which Church Drive can't read, so taking one over asks for that automation to be switched off first.
+
+/** One line of readings for a sensor from live states: "Empty · 353 lx · Battery 100%". */
+private fun sensorReadings(sensor: SensorInfo, entities: Map<String, EntityState>): String {
+    val seen = entities[sensor.entityId]?.state
+    val parts = buildList {
+        add(when (seen) { "on" -> "Someone's there"; "off" -> "Empty"; else -> "Not reporting" })
+        sensor.luxEntity?.let { e -> entities[e]?.state?.takeIf { it.toDoubleOrNull() != null }?.let { add("${it.toDouble().toInt()} lx") } }
+        sensor.temperatureEntity?.let { e -> entities[e]?.state?.toDoubleOrNull()?.let { add("%.1f°".format(it)) } }
+        sensor.batteryEntity?.let { e -> entities[e]?.state?.toDoubleOrNull()?.let { add("Battery ${it.toInt()}%") } }
+    }
+    return parts.joinToString(" · ")
+}
+
+/** The editor for one sensor's action ([action] null makes a new one): what it does, its limits and the sensor's own settings. [onDone] runs after Save, Remove or Cancel. */
+@Composable
+fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<String, EntityState>, call: CallService, onDone: () -> Unit) {
+    val api = LocalHaApi.current
+    val scope = rememberCoroutineScope()
+    val tone = toneColors(Tone.Lights)
+    val ink = tone.onContainer
+    val key = action?.id ?: sensor.entityId
+    var onAction by remember(key) { mutableStateOf(action?.onAction ?: "on") }
+    var scene by remember(key) { mutableStateOf(action?.scene ?: WHITE_SCENES.first()) }
+    var offAction by remember(key) { mutableStateOf(action?.offAction ?: "off") }
+    var offDelay by remember(key) { mutableIntStateOf(action?.offDelay ?: 60) }
+    var dimPct by remember(key) { mutableIntStateOf(action?.dimPct ?: 20) }
+    var onlyDark by remember(key) { mutableStateOf(action?.onlyDark ?: false) }
+    var darkLux by remember(key) { mutableIntStateOf(action?.darkLux ?: 30) }
+    var windowOn by remember(key) { mutableStateOf(action?.windowStart != null) }
+    var windowStart by remember(key) { mutableStateOf(action?.windowStart ?: "22:00") }
+    var windowEnd by remember(key) { mutableStateOf(action?.windowEnd ?: "06:00") }
+    var enabled by remember(key) { mutableStateOf(action?.enabled ?: true) }
+    var chosen by remember(key) { mutableStateOf(action?.lights ?: emptyList()) }
+    var hueOff by remember(key) { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val lights = remember(entities) { schedulableLights(entities) }
+    val names = lights.toMap()
+    val needsHueOff = sensor.isHue && action == null
+    val luxEntity = sensor.luxEntity
+
+    EntityCard(tone.container, ink) {
+        Text(sensor.name, style = MaterialTheme.typography.titleLarge, color = ink)
+        Text(sensorReadings(sensor, entities), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f))
+        if (sensor.isHue && action == null) {
+            Text(
+                "Which lights this sensor switches is set on the Hue bridge, so Church Drive can't show it or change it. Set it up here to run it from Church Drive.",
+                style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f),
+            )
+        }
+        if (action != null) {
+            SwitchLine("Action on", enabled, ink) { enabled = it }
+        }
+
+        Text("When someone is there", style = MaterialTheme.typography.titleSmall, color = ink)
+        Text("Which lights", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+        TileRow(
+            chosen.map { id -> TileItem("cd:bulb-lit", names[id] ?: entities[id]?.friendlyName ?: id, true) { chosen = chosen - id; message = null } } +
+                TileItem("cd:plus", "Add a light", picking) { picking = !picking },
+            tone, ink, perRow = 2,
+        )
+        if (picking) {
+            Column(Modifier.fillMaxWidth().heightIn(max = 240.dp).verticalScroll(rememberScrollState())) {
+                lights.filter { it.first !in chosen }.forEach { (id, name) ->
+                    Text(
+                        name, style = MaterialTheme.typography.bodyLarge, color = ink,
+                        modifier = Modifier.fillMaxWidth().clickable { chosen = chosen + id; picking = false; message = null }.padding(vertical = 10.dp),
+                    )
+                }
+            }
+        }
+        TileRow(
+            listOf(
+                TileItem("cd:power", "Turn on", onAction == "on") { onAction = "on" },
+                TileItem("cd:sun", "Scene", onAction == "scene") { onAction = "scene" },
+                TileItem("cd:close", "Nothing", onAction == "none") { onAction = "none" },
+            ),
+            tone, ink,
+        )
+        if (onAction == "scene") {
+            TileRow(WHITE_SCENES.map { k -> TileItem("", LightScene(k, "").name, scene == k) { scene = k } }, tone, ink)
+        }
+
+        Text("When the room is empty", style = MaterialTheme.typography.titleSmall, color = ink)
+        TileRow(
+            listOf(
+                TileItem("cd:bulb-off", "Turn off", offAction == "off") { offAction = "off" },
+                TileItem("cd:moon", "Dim", offAction == "dim") { offAction = "dim" },
+                TileItem("cd:close", "Nothing", offAction == "none") { offAction = "none" },
+            ),
+            tone, ink,
+        )
+        if (offAction != "none") {
+            StepLine("After", delayText(offDelay), ink, tone, { offDelay = stepDelay(offDelay, -1) }, { offDelay = stepDelay(offDelay, 1) })
+        }
+        if (offAction == "dim") {
+            StepLine("Dim to", "$dimPct%", ink, tone, { dimPct = (dimPct - 5).coerceAtLeast(5) }, { dimPct = (dimPct + 5).coerceAtMost(100) })
+        }
+
+        Text("Only", style = MaterialTheme.typography.titleSmall, color = ink)
+        SwitchLine("When it's dark", onlyDark, ink) { onlyDark = it }
+        if (onlyDark) {
+            if (luxEntity != null) {
+                StepLine("Dark is below", "$darkLux lx", ink, tone, { darkLux = (darkLux - 5).coerceAtLeast(5) }, { darkLux = (darkLux + 5).coerceAtMost(2000) })
+            } else {
+                Text("This sensor has no light reading, so dark means the sun is down.", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+            }
+        }
+        SwitchLine("Between set times", windowOn, ink) { windowOn = it }
+        if (windowOn) {
+            StepLine("From", windowStart, ink, tone, { windowStart = stepTime(windowStart, -1, 30) ?: windowStart }, { windowStart = stepTime(windowStart, 1, 30) ?: windowStart })
+            StepLine("Until", windowEnd, ink, tone, { windowEnd = stepTime(windowEnd, -1, 30) ?: windowEnd }, { windowEnd = stepTime(windowEnd, 1, 30) ?: windowEnd })
+        }
+
+        if (sensor.settings.isNotEmpty()) {
+            Text("Sensor settings", style = MaterialTheme.typography.titleSmall, color = ink)
+            sensor.settings.forEach { s -> SensorSettingRow(s, entities, call, tone, ink) }
+        }
+
+        if (needsHueOff) {
+            SwitchLine("I've switched off this sensor's automation in the Hue app", hueOff, ink) { hueOff = it; message = null }
+        }
+        message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+        TileRow(
+            listOfNotNull(
+                action?.let { a -> TileItem("cd:bin", "Remove", false) { scope.launch { api?.ask("church_drive/sensor_actions/delete", JSONObject().put("action_id", a.id)); onDone() } } },
+                TileItem("cd:close", "Cancel", false) { onDone() },
+                TileItem("cd:check", if (saving) "Saving…" else "Save", false) {
+                    val problem = sensorProblem(chosen, scene, onAction, needsHueOff, hueOff)
+                    if (problem != null) message = problem
+                    else if (!saving) {
+                        saving = true
+                        scope.launch {
+                            val body = sensorBody(
+                                action?.id, sensor.entityId, action?.name?.takeIf { it.isNotBlank() } ?: sensor.name.removeSuffix(" Sensor").trim(), chosen, onAction, scene, offAction,
+                                offDelay, dimPct, onlyDark, darkLux, luxEntity ?: "", if (windowOn) windowStart else null,
+                                if (windowOn) windowEnd else null, enabled,
+                            )
+                            val result = api?.ask("church_drive/sensor_actions/set", body)
+                            saving = false
+                            if (result != null) onDone() else message = "The house didn't save it."
+                        }
+                    }
+                },
+            ),
+            tone, ink,
+        )
+    }
+}
+
+@Composable
+private fun SwitchLine(label: String, checked: Boolean, ink: androidx.compose.ui.graphics.Color, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun StepLine(label: String, value: String, ink: androidx.compose.ui.graphics.Color, tone: ToneColors, less: () -> Unit, more: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.titleMedium, color = ink)
+    }
+    TileRow(listOf(TileItem("cd:minus", "Less", false) { less() }, TileItem("cd:plus", "More", false) { more() }), tone, ink)
+}
+
+/** One setting of the sensor's own (hold time, sensitivity): a number moves in its own steps and a choice is a row of tiles, both sent straight to the sensor. */
+@Composable
+private fun SensorSettingRow(setting: SensorSetting, entities: Map<String, EntityState>, call: CallService, tone: ToneColors, ink: androidx.compose.ui.graphics.Color) {
+    val state = entities[setting.entityId]?.state
+    if (setting.kind == "select") {
+        Text(setting.name, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+        TileRow(
+            setting.options.map { o -> TileItem("", o.replaceFirstChar { it.uppercase() }, state == o) { call("select", "select_option", setting.entityId, data("option" to o)) } },
+            tone, ink,
+        )
+    } else {
+        val value = state?.toDoubleOrNull()
+        val step = setting.step?.takeIf { it > 0 } ?: 1.0
+        val shown = value?.let { (if (it % 1.0 == 0.0) it.toInt().toString() else "%.1f".format(it)) + (if (setting.unit.isNotBlank()) " ${setting.unit}" else "") } ?: "—"
+        StepLine(
+            setting.name, shown, ink, tone,
+            { value?.let { call("number", "set_value", setting.entityId, data("value" to (it - step).coerceAtLeast(setting.min ?: Double.NEGATIVE_INFINITY))) } },
+            { value?.let { call("number", "set_value", setting.entityId, data("value" to (it + step).coerceAtMost(setting.max ?: Double.POSITIVE_INFINITY))) } },
+        )
+    }
+}
+
+/**
+ * The Lights page's Sensor actions card (administrators), under Light routines: one row per motion or presence sensor with what it does and who runs it
+ * (Church Drive, or the Hue app for a Hue sensor that hasn't been taken over). Tap one to set it up or change it. Nothing is drawn until the house answers.
+ */
+@Composable
+fun SensorActionsCard(entities: Map<String, EntityState>, call: CallService) {
+    if (!LocalIsAdmin.current) return
+    val api = LocalHaApi.current
+    var data by remember { mutableStateOf<SensorActionsData?>(null) }
+    var changed by remember { mutableIntStateOf(0) }
+    var editing by remember { mutableStateOf<SensorInfo?>(null) }
+    val fold = rememberFold("grid-fold|sensor-actions", folded = true)
+    LaunchedEffect(api, changed) { parseSensorActions(api?.ask("church_drive/sensor_actions", JSONObject()))?.let { data = it } }
+    DisposableEffect(api) {
+        val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_sensor_actions_changed")) { changed++ } ?: -1
+        onDispose { if (sub >= 0) api?.close(sub) }
+    }
+    val all = data ?: return
+    if (all.sensors.isEmpty()) return
+    editing?.let { s ->
+        SensorEditorCard(s, all.actionFor(s), entities, call) { editing = null; changed++ }
+        return
+    }
+    val tone = toneColors(Tone.Lights)
+    val ink = tone.onContainer
+    val active = all.actions.count { it.enabled }
+    EntityCard(tone.container, ink) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Sensor actions", style = MaterialTheme.typography.headlineSmall, color = ink, modifier = Modifier.weight(1f))
+            Box(Modifier.size(Ui.TileHeight).clip(RoundedCornerShape(50)).clickable(onClickLabel = if (fold.value) "Expand" else "Collapse") { fold.value = !fold.value }, contentAlignment = Alignment.Center) {
+                Icon(if (fold.value) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null, tint = ink.copy(alpha = 0.6f))
+            }
+        }
+        StatusPill(if (active == 1) "1 sensor set up" else "$active of ${all.sensors.size} sensors set up", tone)
+        if (fold.value) {
+            Text(
+                all.actions.firstOrNull { it.enabled }?.let { "${it.name}: ${it.summary}" } ?: "No sensor switches lights yet.",
+                style = MaterialTheme.typography.bodyLarge, color = ink,
+            )
+            TileRow(listOf(TileItem("cd:pencil", "Edit", false) { fold.value = false }), tone, ink)
+        } else {
+            Text(
+                "What lights do when a sensor sees someone and when the room empties.",
+                style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.9f),
+            )
+            all.sensors.forEach { s ->
+                val a = all.actionFor(s)
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f))
+                        .clickable(onClickLabel = "Set up this sensor") { editing = s }.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    HaIcon("cd:motion-sensor", CdVectors.Info, ink.copy(alpha = 0.8f), 24.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(s.name, style = MaterialTheme.typography.titleSmall, color = ink.copy(alpha = if (a?.enabled == false) 0.55f else 1f))
+                        Text(sensorSubtitle(s, a), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f))
+                    }
+                    Text(sensorBadge(s, a), style = MaterialTheme.typography.labelMedium, color = ink.copy(alpha = 0.8f))
+                    HaIcon("cd:chevron-right", CdVectors.Info, ink.copy(alpha = 0.7f), 22.dp)
+                }
+            }
+        }
+    }
+}

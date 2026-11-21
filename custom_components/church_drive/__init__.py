@@ -70,6 +70,7 @@ from .upcoming_logic import build as build_upcoming
 from homeassistant.util.yaml import load_yaml
 from .blind_schedule_logic import words_for as blind_words
 from .routines_logic import DAY_NAMES as ROUTINE_DAYS
+from .sensor_actions import SensorActions
 from .purifier_display import PurifierDisplay
 from .alarm_tests import AlarmTests
 from .purifier_schedule import PurifierSchedule
@@ -156,6 +157,9 @@ from .const import (
     WS_UPCOMING,
     WS_ROUTINES_DELETE,
     WS_ROUTINES_SET,
+    WS_SENSOR_ACTIONS,
+    WS_SENSOR_ACTIONS_DELETE,
+    WS_SENSOR_ACTIONS_SET,
     WS_BLIND_SCHEDULE_SET,
     WS_ALARM_TESTS,
     WS_ALARM_TESTS_SET,
@@ -1400,6 +1404,70 @@ async def ws_routines_delete(hass: HomeAssistant, connection: websocket_api.Acti
         return
     connection.send_result(msg["id"], {"removed": await routines.async_remove(msg["routine_id"])})
 
+def _sensor_actions(hass: HomeAssistant) -> SensorActions | None:
+    return hass.data.get(DOMAIN, {}).get("sensor_actions")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_SENSOR_ACTIONS})
+@websocket_api.require_admin
+@callback
+def ws_sensor_actions(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The sensor actions that are set, and every motion or presence sensor the house has (with its readings and its own settings)."""
+    actions = _sensor_actions(hass)
+    if actions is None:
+        connection.send_error(msg["id"], "not_ready", "Sensor actions aren't running")
+        return
+    connection.send_result(msg["id"], {"actions": actions.all(), "sensors": actions.candidates()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_SENSOR_ACTIONS_SET,
+        # (Not "id": that is the websocket message's own id.)
+        vol.Optional("action_id"): cv.string,
+        vol.Optional("sensor"): cv.entity_id,
+        vol.Optional("name"): cv.string,
+        vol.Optional("lights"): [cv.entity_id],
+        vol.Optional("on_action"): cv.string,
+        vol.Optional("scene"): cv.string,
+        vol.Optional("off_action"): cv.string,
+        vol.Optional("off_delay"): vol.Coerce(int),
+        vol.Optional("dim_pct"): vol.Coerce(int),
+        vol.Optional("only_dark"): bool,
+        vol.Optional("dark_lux"): vol.Coerce(int),
+        vol.Optional("lux_sensor"): vol.Any(None, cv.string),
+        vol.Optional("window"): vol.Any(None, dict),
+        vol.Optional("enabled"): bool,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_sensor_actions_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Make a sensor action (no action_id) or change one (only what's sent changes)."""
+    actions = _sensor_actions(hass)
+    if actions is None:
+        connection.send_error(msg["id"], "not_ready", "Sensor actions aren't running")
+        return
+    change = {k: v for k, v in msg.items() if k not in ("id", "type", "action_id")}
+    try:
+        result = await actions.async_set(msg.get("action_id"), change)
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+        return
+    connection.send_result(msg["id"], {"action": result})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_SENSOR_ACTIONS_DELETE, vol.Required("action_id"): cv.string})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_sensor_actions_delete(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Remove a sensor action (the sensor goes back to doing nothing here)."""
+    actions = _sensor_actions(hass)
+    if actions is None:
+        connection.send_error(msg["id"], "not_ready", "Sensor actions aren't running")
+        return
+    connection.send_result(msg["id"], {"removed": await actions.async_remove(msg["action_id"])})
+
 
 def _next_fields(nxt: Any) -> dict[str, Any]:
     """A device schedule's "next change" ({"at", "text"}, or text alone) as the Schedules list's `next` and `next_text`."""
@@ -1991,7 +2059,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
-            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_schedules, ws_upcoming, ws_alarm_tests, ws_alarm_tests_set,
+            ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_sensor_actions, ws_sensor_actions_set, ws_sensor_actions_delete, ws_schedules, ws_upcoming, ws_alarm_tests, ws_alarm_tests_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -2224,6 +2292,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Scheduled actions couldn't start; everything else still works")
         data["routines"] = None
+
+    sensor_actions = SensorActions(hass)
+    try:
+        await sensor_actions.async_start()
+        entry.async_on_unload(sensor_actions.async_stop)
+        data["sensor_actions"] = sensor_actions
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Sensor actions couldn't start; everything else still works")
+        data["sensor_actions"] = None
 
     blind_schedule = BlindSchedule(hass)
     try:
