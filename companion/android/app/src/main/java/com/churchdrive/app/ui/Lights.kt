@@ -244,26 +244,30 @@ fun LightPill(
     val dimmable = light?.dimmable() == true
     val pct = if (on) brightnessPct(light) else 0
     var drag by remember(pct) { mutableStateOf<Float?>(null) }
+    // What you just asked for shows at once; the light's own report replaces it when it arrives.
+    val askedLevel = rememberPending<Float>(pct)
+    val askedOn = rememberPending<Boolean>(on)
+    val shownOn = askedOn.value(on)
     var widthPx by remember { mutableIntStateOf(1) }
     var pressedAt by remember { mutableStateOf(0L) }
-    val dragged = drag ?: (pct / 100f)
+    val dragged = drag ?: askedLevel.asked ?: (pct / 100f)
     val rgb = if (tintFrom != null && entities != null) {
         tintFrom.firstNotNullOfOrNull { id -> entities[id]?.takeIf { it.state == "on" && it.str("color_mode") in COLOUR_MODES }?.rgb() }
-    } else light?.rgb()
+    } else colourSource(light, entities)?.rgb()
     // Away "security mode": the lights Clive keeps on (or flickers like a television) while the house is empty are labelled, and show a steady full bar in the
     // Armed Home blue with the words Security mode, not every colour they pass through.
     val registry = LocalRegistry.current
     val security = on && entities?.get(SECURITY_ACTIVE)?.state == "on" &&
         (securityLabelled(registry, entityId) || light?.list("entity_id").orEmpty().any { securityLabelled(registry, it) })
-    val tint = if (security) toneColors(Tone.AlarmHome).accent else if (on && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
+    val tint = if (security) toneColors(Tone.AlarmHome).accent else if (shownOn && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
     val shown = if (security) 1f else dragged
     val shape = RoundedCornerShape(18.dp)
     val status = when {
         light == null -> "Loading…"
         !light.available -> "Unavailable"
         security -> "Security mode"
-        drag != null -> "${(shown * 100).roundToInt()}%"
-        !on -> "Off"
+        drag != null || (shownOn && askedLevel.asked != null) -> "${(shown * 100).roundToInt()}%"
+        !shownOn -> "Off"
         dimmable -> "$pct%"
         else -> "On"
     }
@@ -297,7 +301,7 @@ fun LightPill(
                     detectHorizontalDragGestures(
                         onDragStart = { drag = level(it.x) },
                         onDragEnd = {
-                            drag?.let { call("light", "turn_on", entityId, data("brightness_pct" to (it * 100).roundToInt())) }
+                            drag?.let { askedLevel.ask(it); call("light", "turn_on", entityId, data("brightness_pct" to (it * 100).roundToInt())) }
                             drag = null
                         },
                         onDragCancel = { drag = null },
@@ -305,7 +309,7 @@ fun LightPill(
                 }
             },
     ) {
-        if (on || drag != null) {
+        if (shownOn || drag != null) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(tint.copy(alpha = 0.45f)))
         }
         Row(
@@ -315,7 +319,7 @@ fun LightPill(
         ) {
             HaIcon(
                 light?.str("icon"), CdVectors.Bulb,
-                tint = if (on) tint else tone.onContainer.copy(alpha = 0.55f),
+                tint = if (shownOn) tint else tone.onContainer.copy(alpha = 0.55f),
                 size = 26.dp,
             )
             Text(
@@ -331,13 +335,14 @@ fun LightPill(
     }
     Box(
         Modifier.size(pillHeight).clip(shape)
-            .background(if (on) tint else tone.onContainer.copy(alpha = 0.14f))
-            .clickable(enabled = light?.available == true, onClickLabel = if (on) "Turn off" else "Turn on") {
-                call("light", if (on) "turn_off" else "turn_on", entityId, data())
+            .background(if (shownOn) tint else tone.onContainer.copy(alpha = 0.14f))
+            .clickable(enabled = light?.available == true, onClickLabel = if (shownOn) "Turn off" else "Turn on") {
+                askedOn.ask(!shownOn)
+                call("light", if (shownOn) "turn_off" else "turn_on", entityId, data())
             },
         contentAlignment = Alignment.Center,
     ) {
-        HaIcon("cd:power", CdVectors.Bulb, if (on) tone.onAccent else MaterialTheme.colorScheme.onSurface, 26.dp)
+        HaIcon("cd:power", CdVectors.Bulb, if (shownOn) tone.onAccent else MaterialTheme.colorScheme.onSurface, 26.dp)
     }
     }
     if (settings && entities != null) LightSettings(entityId, name, entities, call, scenes) { settings = false }

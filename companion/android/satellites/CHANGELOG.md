@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.181.2
+
+- **No change to this app.** Light controls in the phone app answer at once.
+
 ## 0.181.1
 
 - **No change to this app.** The Govee down light is white only in the phone app's light settings.
