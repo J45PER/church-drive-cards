@@ -7,6 +7,7 @@ everyone. Its icon is one of a short list: the scene icons and the ones other se
 
 from __future__ import annotations
 
+import math
 import re
 import time
 from typing import Any
@@ -99,3 +100,28 @@ def rgb_of(hex_colour: str) -> list[int]:
     """"#ff9a3c" as [255, 154, 60]."""
     v = hex_colour.lstrip("#")
     return [int(v[i : i + 2], 16) for i in (0, 2, 4)]
+
+
+def kelvin_rgb(kelvin: float) -> list[int]:
+    """The colour of a white of [kelvin] as red, green and blue (0 to 255)."""
+    t = max(1000.0, min(40000.0, float(kelvin))) / 100.0
+    red = 255.0 if t <= 66 else 329.698727446 * ((t - 60) ** -0.1332047592)
+    green = 99.4708025861 * math.log(t) - 161.1195681661 if t <= 66 else 288.1221695283 * ((t - 60) ** -0.0755148492)
+    if t >= 66:
+        blue = 255.0
+    elif t <= 19:
+        blue = 0.0
+    else:
+        blue = 138.5177312231 * math.log(t - 10) - 305.0447927307
+    return [int(max(0, min(255, round(c)))) for c in (red, green, blue)]
+
+
+def play_order(entities: list[str], rings: set[str]) -> list[str]:
+    """The order to play a hybrid's lights in: a fitting's ring of segments last, because setting its colours puts the fitting in colour mode,
+    where the light beside it shows the fitting's colour, so that light has to be set first (and as a colour, see ``white_as_colour``)."""
+    return sorted(entities, key=lambda e: e in rings)
+
+
+def ring_is_colourful(looks: dict[str, dict[str, Any]], rings: set[str]) -> bool:
+    """Whether any ring of segments in the hybrid is given a colour, a gradient or a dynamic look."""
+    return any(looks[e]["t"] in ("colour", "gradient", "dynamic") for e in rings if e in looks)

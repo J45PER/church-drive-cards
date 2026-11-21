@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.181.1
 
-- **Fix: the Govee down light is white only.** A colour sent to the down light lights the whole fitting, ring included, and a later white command switches the ring off, so the down light now offers only white tones (and its scenes) in the light's settings and in hybrid scenes. Colour the ring or its segments for colour.
+- **Fix: the Govee down light is white only.** A colour sent to the down light lights the whole fitting, ring included, and a later white command switches the ring off, so the down light now offers only white tones (and its scenes) in the light's settings and in hybrid scenes. Colour the ring or its segments for colour. In the house, a hybrid scene with a white down light and a coloured ring now plays the down light first, as the same white in RGB, so it no longer shows green.
 
 ## 0.181.0
 
