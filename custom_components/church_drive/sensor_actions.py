@@ -164,7 +164,9 @@ class SensorActions:
                 self._cancel(item["id"])
                 if item["off_action"] != "none":
                     sid = item["id"]
-                    self._timers[sid] = async_call_later(self.hass, item["off_delay"], lambda _now, sid=sid: self._on_empty(sid))
+                    # A @callback, so Home Assistant runs it on the event loop: a plain lambda runs on a worker thread, where creating the off task is refused
+                    # and the light would turn on but never off.
+                    self._timers[sid] = async_call_later(self.hass, item["off_delay"], callback(lambda _now, sid=sid: self._on_empty(sid)))
 
     @callback
     def _on_empty(self, sid: str) -> None:

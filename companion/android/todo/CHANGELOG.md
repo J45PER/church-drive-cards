@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.181.3
+
+- **No change to this app.** Integration fix only: a presence sensor's lights now switch off.
+
 ## 0.181.2
 
 - **No change to this app.** Light controls in the phone app answer at once.
