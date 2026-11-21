@@ -2,9 +2,11 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.LightKind
+import com.churchdrive.app.ui.effectLabel
 import com.churchdrive.app.ui.groupKind
 import com.churchdrive.app.ui.hsToRgb
 import com.churchdrive.app.ui.kelvinRgb
+import com.churchdrive.app.ui.lightEffects
 import com.churchdrive.app.ui.lightKindOf
 import com.churchdrive.app.ui.lightMembers
 import com.churchdrive.app.ui.opensSettings
@@ -72,5 +74,21 @@ class LightSettingsDataTest {
     @Test fun presetsStayInsideTheLightsRange() {
         assertEquals(listOf("Candle", "Warm", "Neutral", "Daylight", "Cool"), whitePresets(2000, 6500).map { it.first })
         assertEquals(listOf("Warm", "Neutral", "Daylight", "Cool"), whitePresets(2700, 6500).map { it.first })
+    }
+
+    @Test fun aLightListsItsEffectsWithoutNone() {
+        val govee = light("effect_list" to JSONArray(listOf("none", "sunrise", "candlelight")))
+        assertEquals(listOf("sunrise", "candlelight"), govee.lightEffects())
+        assertEquals(emptyList<String>(), light(modes("xy")).lightEffects())
+    }
+
+    @Test fun aGroupShowsNoEffects() {
+        val group = light("effect_list" to JSONArray(listOf("sunrise")), "entity_id" to JSONArray(listOf("light.a", "light.b")))
+        assertEquals(emptyList<String>(), group.lightEffects())
+    }
+
+    @Test fun effectNamesReadAsWords() {
+        assertEquals("Candlelight", effectLabel("candlelight"))
+        assertEquals("Color loop", effectLabel("color_loop"))
     }
 }
