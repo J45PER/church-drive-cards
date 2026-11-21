@@ -26,6 +26,14 @@ fun EntityState.lightKind(): LightKind = lightKindOf(lightModes(), num("brightne
 /** Whether a colour light can also make plain white (so it gets a White tab beside Colour). */
 fun EntityState.hasWhiteMode(): Boolean = "color_temp" in lightModes()
 
+/** The effects a light can play by name (Govee: sunrise, candlelight...), without "none"; empty for a light with no effects or a group. */
+fun EntityState.lightEffects(): List<String> =
+    if (lightMembers().size > 1) emptyList()
+    else attributes.optJSONArray("effect_list")?.let { a -> (0 until a.length()).map { a.getString(it) }.filter { it.isNotBlank() && !it.equals("none", true) } } ?: emptyList()
+
+/** An effect's name as shown on its tile: "candlelight" is "Candlelight", "color_loop" is "Color loop". */
+fun effectLabel(effect: String): String = effect.replace('_', ' ').trim().replaceFirstChar { it.uppercase() }
+
 /** The lights a group, room or zone is made of (Hue and light groups list them in `entity_id`); empty for a single light. */
 fun EntityState.lightMembers(): List<String> =
     attributes.optJSONArray("entity_id")?.let { a -> (0 until a.length()).map { a.getString(it) }.filter { it.startsWith("light.") } } ?: emptyList()

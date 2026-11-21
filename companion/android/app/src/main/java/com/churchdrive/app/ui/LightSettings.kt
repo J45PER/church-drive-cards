@@ -210,6 +210,23 @@ private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean,
             }
         }
     }
+    val effects = light.lightEffects()
+    if (effects.isNotEmpty() && kind != LightKind.Switch) {
+        val playing = light.str("effect")?.takeIf { it.isNotBlank() && !it.equals("none", true) }
+        LightSection("mdi:creation", "Effects", playing?.let(::effectLabel) ?: "None playing", tint, openSection == "effects", { toggle("effects") }) {
+            // "None" goes first and stops the effect; the row wraps four to a line like every other row of choices.
+            val tiles = listOf<String?>(null) + effects
+            TileRow(
+                tiles.map { e ->
+                    val active = if (e == null) playing == null else playing.equals(e, true)
+                    TileItem(if (e == null) "mdi:close" else "mdi:creation", if (e == null) "None" else effectLabel(e), active, showLabel = true) {
+                        call("light", "turn_on", id, data("effect" to (e ?: "none")))
+                    }
+                },
+                tone, ink,
+            )
+        }
+    }
 }
 
 /** Scene tiles three to a row, as on the room card; a tap plays the scene on [LightScene.target]. */
