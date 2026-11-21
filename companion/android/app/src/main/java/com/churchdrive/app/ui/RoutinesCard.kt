@@ -2,6 +2,9 @@ package com.churchdrive.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.material3.Switch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -135,8 +138,8 @@ fun RoutineEditorCard(routine: RoutineInfo?, entities: Map<String, EntityState>,
 }
 
 /**
- * The Lights page's Routines card (administrators): how many routines there are and the next one, folded away by default like Overnight Heating, and
- * open it to see each routine, change one, or add one. Nothing is drawn until the house answers, or for good if it has no routines to give.
+ * The Lights page's Light routines card (administrators): a summary (how many there are and the next one), and just the next one when folded. Press and
+ * hold it to open the page with a card for each routine. Nothing is drawn until the house answers.
  */
 @Composable
 fun LightRoutinesCard(entities: Map<String, EntityState>) {
@@ -144,57 +147,66 @@ fun LightRoutinesCard(entities: Map<String, EntityState>) {
     val api = LocalHaApi.current
     var routines by remember { mutableStateOf<List<RoutineInfo>?>(null) }
     var changed by remember { mutableIntStateOf(0) }
-    var editing by remember { mutableStateOf<RoutineInfo?>(null) }
-    var adding by remember { mutableStateOf(false) }
-    val fold = rememberFold("grid-fold|routines", folded = true)
+    var page by remember { mutableStateOf(false) }
+    val fold = rememberFold("grid-fold|routines-summary", folded = false)
     LaunchedEffect(api, changed) { parseRoutines(api?.ask("church_drive/routines", JSONObject()))?.let { routines = it } }
     DisposableEffect(api) {
         val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_routines_changed")) { changed++ } ?: -1
         onDispose { if (sub >= 0) api?.close(sub) }
     }
     val all = routines ?: return
-    if (editing != null || adding) {
-        RoutineEditorCard(editing, entities) { editing = null; adding = false; changed++ }
-        return
-    }
     val list = all.filter(::isLightRoutine)
     val tone = toneColors(Tone.Lights)
     val ink = tone.onContainer
     val next = list.filter { it.enabled && it.next != null }.minByOrNull { it.next.orEmpty() }
-    EntityCard(tone.container, ink) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Light routines", style = MaterialTheme.typography.headlineSmall, color = ink, modifier = Modifier.weight(1f))
-            Box(Modifier.size(Ui.TileHeight).clip(RoundedCornerShape(50)).clickable(onClickLabel = if (fold.value) "Expand" else "Collapse") { fold.value = !fold.value }, contentAlignment = Alignment.Center) {
-                Icon(if (fold.value) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null, tint = ink.copy(alpha = 0.6f))
+    Box(Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { page = true }) }) {
+        EntityCard(tone.container, ink) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Light routines", style = MaterialTheme.typography.headlineSmall, color = ink, modifier = Modifier.weight(1f))
+                Box(Modifier.size(Ui.TileHeight).clip(RoundedCornerShape(50)).clickable(onClickLabel = if (fold.value) "Expand" else "Collapse") { fold.value = !fold.value }, contentAlignment = Alignment.Center) {
+                    Icon(if (fold.value) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null, tint = ink.copy(alpha = 0.6f))
+                }
             }
-        }
-        StatusPill(if (list.size == 1) "1 routine" else "${list.size} routines", tone)
-        if (fold.value) {
+            StatusPill(if (list.size == 1) "1 routine" else "${list.size} routines", tone)
             Text(
                 next?.let { "Next: ${it.name} at ${it.next.orEmpty().drop(11).take(5)}" } ?: if (list.isEmpty()) "No routines yet." else "All switched off.",
                 style = MaterialTheme.typography.bodyLarge, color = ink,
             )
-            TileRow(listOf(TileItem("cd:pencil", "Edit", false) { fold.value = false }), tone, ink)
+            if (!fold.value) Text("Press and hold to open", style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f))
+        }
+    }
+    if (page) LightRoutinesPage(list, entities, onClose = { page = false }) { changed++ }
+}
+
+/** The Light routines page: a card for each routine (days and time, who made it, a switch; tap to change) and a way to add one. */
+@Composable
+private fun LightRoutinesPage(list: List<RoutineInfo>, entities: Map<String, EntityState>, onClose: () -> Unit, onChanged: () -> Unit) {
+    val api = LocalHaApi.current
+    val scope = rememberCoroutineScope()
+    val tone = toneColors(Tone.Lights)
+    val ink = tone.onContainer
+    var editing by remember { mutableStateOf<RoutineInfo?>(null) }
+    var adding by remember { mutableStateOf(false) }
+    FullPage("Light routines", onClose) {
+        if (editing != null || adding) {
+            RoutineEditorCard(editing, entities) { editing = null; adding = false; onChanged() }
         } else {
-            Text(
-                "Lights that switch themselves on or off at a set time. Ask ${AssistantBrand.shown} to make one, or add one here.",
-                style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.9f),
-            )
+            if (list.isEmpty()) Text("No routines yet. Ask ${AssistantBrand.shown} to make one, or add one here.", style = MaterialTheme.typography.bodyMedium)
             list.forEach { r ->
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f))
-                        .clickable(onClickLabel = "Change this routine") { editing = r }.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(r.name, style = MaterialTheme.typography.titleSmall, color = ink.copy(alpha = if (r.enabled) 1f else 0.55f))
-                        Text("${routineDaysText(r.days)} · ${r.time}", style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = if (r.enabled) 0.85f else 0.5f))
-                        Text(
-                            if (r.src == "user") "Added by ${r.by.ifBlank { "someone" }}" else "${AssistantBrand.shown}${if (r.by.isNotBlank()) " · ${r.by} asked" else ""}",
-                            style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.7f),
-                        )
+                Box(Modifier.fillMaxWidth().clickable(onClickLabel = "Change this routine") { editing = r }) {
+                    EntityCard(tone.container, ink) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(r.name, style = MaterialTheme.typography.titleLarge, color = ink.copy(alpha = if (r.enabled) 1f else 0.55f))
+                                Text("${routineDaysText(r.days)} · ${r.time}", style = MaterialTheme.typography.bodyLarge, color = ink.copy(alpha = if (r.enabled) 0.9f else 0.55f))
+                                Text(
+                                    if (r.src == "user") "Added by ${r.by.ifBlank { "someone" }}" else "${AssistantBrand.shown}${if (r.by.isNotBlank()) " · ${r.by} asked" else ""}",
+                                    style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.7f),
+                                )
+                            }
+                            Switch(checked = r.enabled, onCheckedChange = { on -> scope.launch { api?.ask("church_drive/routines/set", JSONObject().put("routine_id", r.id).put("enabled", on)); onChanged() } })
+                        }
                     }
-                    HaIcon("cd:chevron-right", CdVectors.Info, ink.copy(alpha = 0.7f), 22.dp)
                 }
             }
             TileRow(listOf(TileItem("cd:plus", "Add routine", false) { adding = true }), tone, ink)

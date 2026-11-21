@@ -22,6 +22,10 @@ data class LibraryScene(
     val xy: Pair<Double, Double>?,
     val icon: String?,
     val dynamic: Boolean,
+    /** Made in the app or the Scene Builder (it can be changed and deleted), not one of the built-in scenes. */
+    val custom: Boolean = false,
+    /** Brightness as a percentage, for a colour scene. */
+    val brightnessPct: Int? = null,
 )
 
 /**
@@ -73,6 +77,8 @@ class SceneLooks(val library: Map<String, LibraryScene>, val styles: Map<String,
                 xy = xy,
                 icon = o.text("icon"),
                 dynamic = o.optBoolean("dynamic", false),
+                custom = o.optBoolean("custom", false),
+                brightnessPct = if (o.has("brightness")) (o.optInt("brightness") * 100 / 255.0).toInt().coerceIn(1, 100) else null,
             )
         }
 

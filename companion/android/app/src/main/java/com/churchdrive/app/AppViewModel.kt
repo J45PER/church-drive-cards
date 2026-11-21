@@ -305,6 +305,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Asks the house for the scene library again (after a scene is made, changed or deleted). */
+    fun refreshLibrary() {
+        fetch("church_drive/library") {
+            libraryResult = it
+            _sceneLooks.value = SceneLooks.parse(libraryResult, stylesDashboard)
+            (it as? org.json.JSONObject)?.let { o -> viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("library", o.toString()) } }
+        }
+    }
+
     init {
         checkForUpdate()
         if (!session.signedIn) cachesReady = true

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.181.0
+
+- **Light cards and light settings reworked.** No change to this app; a power button beside every light's slider, press and hold on a room card for its details, a Govee dial of one circle, tap a light in a room to show its settings under the list, and administrators can make their own scenes. See the phone app's notes.
+
 ## 0.180.0
 
 - **Time slots for a sensor, and no more duplicate sensors.** A sensor's action can have different looks at different times of day (day bright, evening a scene, night dim): add time slots in the sensor's editor, the first one that covers the time decides, and any other time uses the sensor's own look, which can now set a brightness. A Hue sensor's own switches (Motion sensor enabled, Light sensor enabled) show in its settings. The Sensor actions list no longer includes Ring cameras' motion or Hue rooms, only the sensors themselves.

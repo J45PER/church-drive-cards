@@ -14,7 +14,7 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .apply import async_apply
-from .hybrid_logic import clean_all, clean_hybrid, for_target, gradient_spec, rgb_of
+from .hybrid_logic import clean_all, clean_hybrid, clean_look, for_target, gradient_spec, rgb_of
 from .library import Library, hex_to_xy
 
 _LOGGER = logging.getLogger(__name__)
@@ -73,6 +73,15 @@ class Hybrids:
                 _LOGGER.warning("Hybrid scene %s: %s didn't take its look: %s", hybrid["name"], entity, err)
         self._active[hybrid["target"]] = hybrid["id"]
         self.hass.bus.async_fire(EVENT_CHANGED, {})
+
+    async def async_gradient(self, entities: list[str], colours: list[str], context: Context | None = None) -> None:
+        """Play a gradient of two to five colours (hex) on lights: along the strip of a gradient light, a still colour on any other."""
+        look = clean_look({"t": "gradient", "v": colours})
+        if look is None:
+            raise ValueError("A gradient needs two to five colours")
+        for entity in entities:
+            if self.hass.states.get(entity) is not None:
+                await self._async_look(entity, look, context)
 
     async def _async_look(self, entity: str, look: dict[str, Any], context: Context | None) -> None:
         kind = look["t"]

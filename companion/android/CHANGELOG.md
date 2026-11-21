@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.181.0
+
+- **Light cards and light settings, reworked.** Every light on a card has its own power button beside its slider (the slider only works while the light is on), and pressing and holding a room card opens the room's light details, like the slider does. The details page follows the approved mockups: sections are always open, the top bar is a status bar with its own power squircle, tapping a light in a room shows its settings under the list (tap the bar to close them), and a light with parts is one light on its card. The Govee Cloakroom's parts are one circle: the main light in the middle (tap to pick, press and hold to switch, drag round it for brightness) and a rounded wedge for each segment, with unpicked parts dimmed and off parts plain; a level bar and the picked part's colours sit under it. Administrators can make their own scenes from a room's Scenes (New scene: name, up to five colours, brightness, Hue animation), and press and hold one to change or delete it. Hybrid scenes can use custom colours and gradients, a gradient light has a Gradient tab, and Sensor actions and Light routines open their own pages.
+
 ## 0.180.0
 
 - **Time slots for a sensor, and no more duplicate sensors.** A sensor's action can have different looks at different times of day (day bright, evening a scene, night dim): add time slots in the sensor's editor, the first one that covers the time decides, and any other time uses the sensor's own look, which can now set a brightness. A Hue sensor's own switches (Motion sensor enabled, Light sensor enabled) show in its settings. The Sensor actions list no longer includes Ring cameras' motion or Hue rooms, only the sensors themselves.
