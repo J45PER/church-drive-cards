@@ -22,7 +22,6 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
 from .sensor_logic import MAX_SENSORS, clean_sensor, clean_sensors, pick_look, should_act_on_presence, summary
 
 _LOGGER = logging.getLogger(__name__)
@@ -197,8 +196,6 @@ class SensorActions:
         for light in item["lights"]:
             if look["on_action"] == "scene":
                 await self._call("church_drive", "apply_scene", {"entity_id": light, "scene": look["scene"]}, item)
-            elif await self._async_fitting(light, {"main": {"on": True, **({"brightness": look["pct"]} if look["pct"] else {})}}, item):
-                continue
             else:
                 data: dict[str, Any] = {"entity_id": light}
                 if look["pct"]:
@@ -208,23 +205,9 @@ class SensorActions:
     async def _async_empty(self, item: dict[str, Any]) -> None:
         for light in item["lights"]:
             if item["off_action"] == "dim":
-                if not await self._async_fitting(light, {"main": {"on": True, "brightness": item["dim_pct"]}}, item):
-                    await self._call("light", "turn_on", {"entity_id": light, "brightness_pct": item["dim_pct"]}, item)
-            elif not await self._async_fitting(light, {"main": {"on": False}, "ring": {"on": False}}, item):
+                await self._call("light", "turn_on", {"entity_id": light, "brightness_pct": item["dim_pct"]}, item)
+            else:
                 await self._call("light", "turn_off", {"entity_id": light}, item)
-
-    async def _async_fitting(self, light: str, request: dict[str, Any], item: dict[str, Any]) -> bool:
-        """Set [light] through the house's record of it when it is a fitting (a main light with a ring), so the main light and the ring are
-        sent the right commands in the right order and a ring isn't switched on one segment at a time. False when it isn't a fitting."""
-        fittings = self.hass.data.get(DOMAIN, {}).get("fittings")
-        if fittings is None or fittings.parts(light) is None:
-            return False
-        try:
-            async with asyncio.timeout(CALL_TIMEOUT * 3):
-                await fittings.async_set(light, request)
-        except Exception as err:  # noqa: BLE001 - one light that doesn't answer must not stop the rest
-            _LOGGER.warning("Sensor action %s: setting the fitting %s failed: %s", item["name"], light, err)
-        return True
 
     async def _call(self, domain: str, service: str, data: dict[str, Any], item: dict[str, Any]) -> None:
         try:

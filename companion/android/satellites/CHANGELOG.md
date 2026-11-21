@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.182.0
+
+- **No change to this app.** The phone app's Cloakroom is one light again.
+
 ## 0.181.5
 
 - **No change to this app.** The phone app asks again for the Govee fitting after a restart.
