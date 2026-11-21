@@ -14,6 +14,8 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .apply import async_apply
+from .const import DOMAIN
+from .fitting_logic import main_from_look, ring_from_look
 from .hybrid_logic import clean_all, clean_hybrid, clean_look, for_target, gradient_spec, kelvin_rgb, play_order, ring_is_colourful, rgb_of
 from .library import Library, hex_to_xy, xy_to_hex
 
@@ -64,7 +66,30 @@ class Hybrids:
         hybrid = next((h for h in self._items if h["id"] == hybrid_id), None)
         if hybrid is None:
             raise ValueError("That hybrid scene is gone")
-        looks = hybrid["looks"]
+        looks = dict(hybrid["looks"])
+        # A fitting (a main light with a ring of segments) is set as one: the house works out the order of commands from what it has recorded.
+        fittings = self.hass.data.get(DOMAIN, {}).get("fittings")
+        found = fittings.get(hybrid["target"]) if fittings is not None else None
+        if found is not None:
+            request: dict[str, Any] = {}
+            main_look, ring_look = looks.get(found["main"]), looks.get(found["ring"])
+            white = None
+            if main_look and main_look.get("t") == "white":
+                scene = self._library.find(main_look["v"])
+                white = scene[1] if scene else None
+            main_req = main_from_look(main_look, white)
+            ring_req = ring_from_look(ring_look, len(found["segments"]))
+            if main_req is not None:
+                request["main"] = main_req
+                looks.pop(found["main"], None)
+            if ring_req is not None:
+                request["ring"] = ring_req
+                looks.pop(found["ring"], None)
+            if request:
+                try:
+                    await fittings.async_set(hybrid["target"], request, context)
+                except Exception as err:  # noqa: BLE001 - the other lights still play
+                    _LOGGER.warning("Hybrid scene %s: the fitting didn't take its look: %s", hybrid["name"], err)
         rings = {e for e in looks if self._is_ring(e)}
         group = self.hass.states.get(hybrid["target"])
         siblings = set(group.attributes.get("entity_id") or []) if group is not None else set()

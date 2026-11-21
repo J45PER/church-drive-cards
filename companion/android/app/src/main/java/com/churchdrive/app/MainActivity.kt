@@ -181,6 +181,7 @@ class MainActivity : ComponentActivity() {
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
                         val assistantCtl = remember { com.churchdrive.app.ui.AssistantController() }
                         val hybrids = com.churchdrive.app.ui.rememberHybridList(vm.haApi)
+                        val fittings = com.churchdrive.app.ui.rememberFittingList(vm.haApi)
                         // The saved colours live in the house now; the ones this phone kept before are sent up the first time the house has none.
                         val appContext = androidx.compose.ui.platform.LocalContext.current
                         val legacyColours = remember { com.churchdrive.app.ui.decodeSavedColours(appContext.getSharedPreferences("church_drive_light", android.content.Context.MODE_PRIVATE).getString("saved_colours", null)) }
@@ -194,6 +195,7 @@ class MainActivity : ComponentActivity() {
                             com.churchdrive.app.ui.LocalSecurityDetails provides panels[com.churchdrive.app.ui.DashboardPanels.SECURITY_DETAILS].orEmpty(),
                             LocalSceneLooks provides sceneLooks,
                             com.churchdrive.app.ui.LocalHybrids provides hybrids,
+                            com.churchdrive.app.ui.LocalFittings provides fittings,
                             com.churchdrive.app.ui.LocalSavedColours provides savedColours,
                             com.churchdrive.app.ui.LocalUserLayout provides userLayout,
                             com.churchdrive.app.ui.LocalHousePages provides panels,

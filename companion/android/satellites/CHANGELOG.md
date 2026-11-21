@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.181.4
+
+- **No change to this app.** The Govee fitting's dial is in the phone app.
+
 ## 0.181.3
 
 - **No change to this app.** Integration fix only: a presence sensor's lights now switch off.
