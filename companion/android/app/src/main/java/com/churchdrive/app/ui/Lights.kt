@@ -93,11 +93,14 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     // A room with a ring of segments (the Cloakroom's Govee) is one device: its Down light and Up light rows aren't shown, and its scenes go to the device's own light.
     val device = colourSource(head, entities)?.takeIf { it.entityId != room.head }
     val rowsShown = if (device != null) emptyList() else room.rows
+    // The scenes on the card are the same ones its settings show: the room's, then the ones you made.
+    val library = LocalSceneLooks.current.library
+    val sceneList = if (room.scenes.isEmpty()) room.scenes else room.scenes + library.values.filter { it.custom && room.scenes.none { s -> s.key == it.key } }.sortedBy { it.name }.map { LightScene(it.key, room.head) }
     // A light a presence sensor looks after says whether someone is in and counts down to switching it off; its line and bar are always there, so the card never changes size.
     val presence = LocalPresence.current.let { it[room.head] ?: device?.let { d -> it[d.entityId] } }
     val remaining = rememberRemaining(presence)
-    val top = if (presence != null) 2.5f else 2f
-    val expandable = rowsShown.isNotEmpty() || room.scenes.isNotEmpty()
+    val top = if (presence != null) 2.75f else 2f
+    val expandable = rowsShown.isNotEmpty() || sceneList.isNotEmpty()
     // Pressing and holding the card (not just its slider) opens the room's light details, as the slider does; a light with nothing to set keeps its device page.
     var cardSettings by remember { mutableStateOf(false) }
 
@@ -109,14 +112,14 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val hintContext = LocalContext.current
     val showHint = opensSettings(head) && remember(room.head) { LightHoldHint.wants(hintContext, room.head) }
     val lightsEnd = top + 1.5f * (if (open) rowsShown.size else 0)
-    val sceneRows = if (open && room.scenes.isNotEmpty()) room.scenes.chunked(3) else emptyList()
+    val sceneRows = if (open && sceneList.isNotEmpty()) sceneList.chunked(3) else emptyList()
     // Hybrid scenes (a different look on each light, made by an administrator) go in rows of up to three under the scenes, with their own label.
     val hybridList = LocalHybrids.current
-    val hybridRows = if (open && room.scenes.isNotEmpty()) hybridList.of(room.head).chunked(3) else emptyList()
+    val hybridRows = if (open && sceneList.isNotEmpty()) hybridList.of(room.head).chunked(3) else emptyList()
     val scenesEnd = lightsEnd + 1f + 1.25f * sceneRows.size - 0.25f
     val hybridTop = scenesEnd + 0.25f
     val rows = when {
-        !open -> if (showHint || presence != null) 2.5f else 2f
+        !open -> if (presence != null) 2.75f else if (showHint) 2.5f else 2f
         sceneRows.isEmpty() -> lightsEnd + 0.5f
         hybridRows.isEmpty() -> scenesEnd + 0.5f
         else -> hybridTop + 0.75f + 1.25f * hybridRows.size - 0.25f + 0.5f
@@ -126,10 +129,9 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
         onHold = if (opensSettings(head)) ({ cardSettings = true }) else null,
     ) {
         LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1f), entities,
-            tintFrom = rowsShown.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell, scenes = room.scenes)
+            tintFrom = rowsShown.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell, scenes = sceneList)
         if (presence != null) {
-            Text(presenceLine(presence, remaining), style = MaterialTheme.typography.labelSmall, modifier = Modifier.at(0.5f, 1.55f, 3.5f, 0.5f), color = tone.onContainer.copy(alpha = 0.7f))
-            PresenceBar(presenceFraction(presence, remaining), tone.onContainer, Modifier.at(4f, 1.7f, 3.5f, 0.2f))
+            PresenceBar(presenceFraction(presence, remaining), presenceLine(presence, remaining), tone.onContainer, Modifier.at(0.5f, 1.6f, if (expandable) 6.5f else 7f, 0.7f))
         } else if (!open && showHint) {
             Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.at(0.5f, 1.55f, 7f, 0.5f), color = tone.onContainer.copy(alpha = 0.7f))
         }
@@ -140,7 +142,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
             }
             if (sceneRows.isNotEmpty()) {
                 Text("Scenes", style = MaterialTheme.typography.labelLarge, modifier = Modifier.at(0.5f, lightsEnd + 0.25f, 3f, 0.5f))
-                val active = room.scenes.filter { entities[it.selectEntity]?.state.equals(it.name, ignoreCase = true) }
+                val active = sceneList.filter { entities[it.selectEntity]?.state.equals(it.name, ignoreCase = true) }
                 sceneRows.forEachIndexed { r, rowScenes ->
                     val n = rowScenes.size
                     val gap = 0.25f
@@ -177,7 +179,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
             }
         }
     }
-    if (cardSettings && head != null) LightSettings(room.head, roomTitle(room, head, areaNames), entities, call, room.scenes) { cardSettings = false }
+    if (cardSettings && head != null) LightSettings(room.head, roomTitle(room, head, areaNames), entities, call, sceneList) { cardSettings = false }
 }
 
 /** A scene as a tile: its colours as a gradient, an icon and its name; the playing scene has a ring. */
@@ -332,7 +334,7 @@ fun LightPill(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             HaIcon(
-                light?.str("icon"), CdVectors.Bulb,
+                (group ?: light)?.str("icon"), CdVectors.Bulb,
                 tint = if (shownOn) tint else tone.onContainer.copy(alpha = 0.55f),
                 size = 26.dp,
             )

@@ -132,11 +132,11 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
     val presence = LocalPresence.current.let { it[light.entityId] ?: it[device.entityId] }
     val remaining = rememberRemaining(presence)
     if (presence != null) {
+        PresenceBar(presenceFraction(presence, remaining), presenceLine(presence, remaining), tint, Modifier.height(Ui.TallTileHeight))
         Text(
-            "${presenceLine(presence, remaining)} · ${presence.sensor}${if (presence.delay > 0) " · off ${presence.delay} s after" else ""}",
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            "${presence.sensor}${if (presence.delay > 0) " · off ${presence.delay} s after nobody is seen" else ""}",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        PresenceBar(presenceFraction(presence, remaining), tint)
     }
     LightDetails(light, entities, call, scenes, selected) { selected = it }
 }
@@ -151,7 +151,7 @@ private fun LightDetails(light: EntityState, entities: Map<String, EntityState>,
     val grouped = members.size > 1 && !isSegmentGroup(light)
     val tint = tintOf(colourSource(light, entities) ?: light, MaterialTheme.colorScheme.onSurfaceVariant)
     if (!grouped) {
-        LightControls(light, light.lightKind(), light.hasWhiteMode(), call, tone, grey, tint)
+        LightControls(light, light.lightKind(), light.hasWhiteMode(), call, tone, grey, tint, scenes.takeIf { it.isNotEmpty() })
         LightRolesSection(listOf(light))
         return
     }
@@ -160,7 +160,7 @@ private fun LightDetails(light: EntityState, entities: Map<String, EntityState>,
     val ring = memberStates.firstOrNull { isSegmentGroup(it) }
     val main = memberStates.firstOrNull { it.entityId != ring?.entityId }
     if (ring != null && main != null) {
-        LightControls(main, main.lightKind(), main.hasWhiteMode(), call, tone, grey, tint)
+        LightControls(main, main.lightKind(), main.hasWhiteMode(), call, tone, grey, tint, scenes.takeIf { it.isNotEmpty() })
         HybridSection(light, memberStates, call, tone, tint, true) {}
         LightRolesSection(memberStates)
         return
@@ -247,7 +247,7 @@ internal fun LightSection(icon: String, title: String, summary: String, tint: Co
  * colour, the scenes). [light] is what the calls go to.
  */
 @Composable
-private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean, call: CallService, tone: ToneColors, grey: ToneColors, tint: Color) {
+private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean, call: CallService, tone: ToneColors, grey: ToneColors, tint: Color, roomScenes: List<LightScene>? = null) {
     val ink = MaterialTheme.colorScheme.onSurface
     val id = light.entityId
     var colourTab by remember { mutableStateOf(if (light.str("color_mode") == "color_temp" && whiteOk) 0 else 1) }
@@ -284,10 +284,14 @@ private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean,
             ) {
                 ColourTabs(light, whiteOk, canGradient, colourTab, { colourTab = it }, gradient, { gradient = it }, call, tone, ink)
             }
-            val scenes = (WHITE_SCENES.map { LightScene(it, id) } + looks.library.values.filter { it.hex.isNotEmpty() }.sortedBy { it.name }.map { LightScene(it.key, id) })
-            ScenesSection(scenes, id, tint, call, "Applies to this light")
+            // With no room list (a light picked from a room's list) it offers every scene; with one, exactly the scenes the room's card shows.
+            if (roomScenes == null) {
+                val scenes = (WHITE_SCENES.map { LightScene(it, id) } + looks.library.values.filter { it.hex.isNotEmpty() }.sortedBy { it.name }.map { LightScene(it.key, id) })
+                ScenesSection(scenes, id, tint, call, "Applies to this light")
+            }
         }
     }
+    if (roomScenes != null && kind != LightKind.Switch) ScenesSection(roomScenes.map { it.copy(target = id) }, id, tint, call)
 }
 
 /**
