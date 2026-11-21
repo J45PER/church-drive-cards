@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -173,34 +174,67 @@ private fun PickSwatch(hex: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 /**
- * Chooses the colours of a gradient: a few presets, then the colours in order (tap one to change it with the wheel), and add or remove a colour (two to
- * five). Every change calls [onChange] with the new list of "#rrggbb" colours. Used for a hybrid scene's gradient look and a gradient light's own page.
+ * Chooses the colours of a gradient, as drawn in the approved mockup: a bar showing the gradient with each colour as a round point on it (Start, Middle, End),
+ * the presets and saved colours to give the chosen point, the colour wheel, and add, remove and reverse. Every change calls [onChange] with the new list of
+ * "#rrggbb" colours. Used for a hybrid scene's gradient look and a gradient light's own page.
  */
 @Composable
 internal fun GradientEditor(colours: List<String>, tone: ToneColors, ink: Color, onChange: (List<String>) -> Unit) {
     val points = colours.ifEmpty { HYBRID_GRADIENTS[1].second }
     var sel by remember { mutableIntStateOf(0) }
+    var wheel by remember { mutableStateOf(false) }
     val at = sel.coerceIn(0, points.lastIndex)
-    TileRow(
-        HYBRID_GRADIENTS.map { (name, preset) -> TileItem("cd:bulb-group", name, colours == preset) { onChange(preset); sel = 0 } },
-        tone, ink, perRow = 2,
-    )
-    Text("Colours, in order. Tap one to change it.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        points.forEachIndexed { i, hex -> PickSwatch(hex, i == at) { sel = i } }
+    val saved = LocalSavedColours.current
+    val argb = points.map { hexToArgb(it) ?: 0xFFFFFFFF.toInt() }
+    fun give(hex: String) = onChange(points.mapIndexed { i, c -> if (i == at) hex else c })
+    Box(Modifier.fillMaxWidth().height(Ui.TallTileHeight)) {
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(Brush.horizontalGradient(argb.map { Color(it) }.let { if (it.size == 1) it + it else it })))
+        Row(Modifier.fillMaxSize().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            points.forEachIndexed { i, _ ->
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape).background(Color(argb[i]))
+                        .border(if (i == at) 4.dp else 2.dp, if (i == at) ink else Color.White, CircleShape)
+                        .clickable(onClickLabel = "Colour ${i + 1}") { sel = i },
+                )
+            }
+        }
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        points.indices.forEach { i ->
+            Text(
+                when { points.size == 3 && i == 1 -> "Middle"; i == 0 -> "Start"; i == points.lastIndex -> "End"; else -> "${i + 1}" },
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    Text("Presets", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        SWATCHES.map(::hexOf).forEach { hex -> PickSwatch(hex, points[at].equals(hex, ignoreCase = true)) { give(hex) } }
+    }
+    Text("Saved", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val current = hexToHs(points[at])
+    val isSaved = current != null && saved.colours.any { sameColour(it, current) }
+    saved.colours.map(::hexOf).chunked(6).forEach { row ->
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { row.forEach { hex -> PickSwatch(hex, points[at].equals(hex, ignoreCase = true)) { give(hex) } } }
     }
     TileRow(
         listOf(
-            TileItem("cd:minus", "Remove colour", false) {
-                if (points.size > MIN_GRADIENT_POINTS) { onChange(points.filterIndexed { i, _ -> i != at }); sel = 0 }
-            },
-            TileItem("cd:plus", "Add colour", false) {
-                if (points.size < MAX_GRADIENT_POINTS) { onChange(points + points.last()); sel = points.size }
-            },
+            TileItem(if (isSaved) "cd:bin" else "cd:plus", if (isSaved) "Remove saved" else "Save this colour", false) { current?.let { saved.set(toggleSavedColour(saved.colours, it)) } },
+            TileItem("cd:eyedropper", "Colour picker", wheel) { wheel = !wheel },
+        ),
+        tone, ink, perRow = 2,
+    )
+    if (wheel) HsWheel(current ?: (200.0 to 60.0)) { picked -> give(hexOf(picked)) }
+    TileRow(
+        listOf(
+            TileItem("cd:minus", "Remove colour", false) { if (points.size > MIN_GRADIENT_POINTS) { onChange(points.filterIndexed { i, _ -> i != at }); sel = 0 } },
+            TileItem("cd:plus", "Add colour", false) { if (points.size < MAX_GRADIENT_POINTS) { onChange(points + points.last()); sel = points.size } },
+            TileItem("cd:arrow-right", "Reverse", false) { onChange(points.reversed()); sel = points.lastIndex - at },
         ),
         tone, ink,
     )
-    HsWheel(hexToHs(points[at]) ?: (200.0 to 60.0)) { picked -> onChange(points.mapIndexed { i, c -> if (i == at) hexOf(picked) else c }) }
+    Text("Start from", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    TileRow(HYBRID_GRADIENTS.map { (name, preset) -> TileItem("cd:bulb-group", name, colours == preset) { onChange(preset); sel = 0 } }, tone, ink, perRow = 2)
 }
 
 /**

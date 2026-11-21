@@ -218,25 +218,28 @@ private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean,
         }
         LightKind.Colour -> {
             BrightnessBar(light, call)
-            val colourOpen = colourTab == 1 || !whiteOk
+            // A gradient light (a Hue gradient strip) has a third tab: a gradient of its own along its length.
+            val canGradient = id in LocalHybrids.current.gradientLights
+            val gradientTab = canGradient && colourTab == 2
+            val colourOpen = !gradientTab && (colourTab == 1 || !whiteOk)
+            var gradient by remember(id) { mutableStateOf(HYBRID_GRADIENTS[1].second) }
             LightSection(
-                if (colourOpen) "cd:palette" else "cd:sun", if (colourOpen) "Colour" else "White tone",
-                if (colourOpen) "Tap to change the colour" else whiteSummary, tint, openSection == "colour", { toggle("colour") },
+                if (gradientTab) "cd:bulb-group" else if (colourOpen) "cd:palette" else "cd:sun",
+                if (gradientTab) "Gradient" else if (colourOpen) "Colour" else "White tone",
+                if (gradientTab) "Colours along the light" else if (colourOpen) "Tap to change the colour" else whiteSummary, tint, openSection == "colour", { toggle("colour") },
             ) {
-                if (whiteOk) {
+                if (whiteOk || canGradient) {
                     TileRow(
-                        listOf(TileItem("cd:sun", "White", colourTab == 0) { colourTab = 0 }, TileItem("cd:palette", "Colour", colourTab == 1) { colourTab = 1 }),
+                        listOfNotNull(
+                            if (whiteOk) TileItem("cd:sun", "White", !gradientTab && !colourOpen) { colourTab = 0 } else null,
+                            TileItem("cd:palette", "Colour", colourOpen) { colourTab = 1 },
+                            if (canGradient) TileItem("cd:bulb-group", "Gradient", gradientTab) { colourTab = 2 } else null,
+                        ),
                         tone, ink,
                     )
                 }
-                if (colourOpen) ColourPanel(light, call, tone) else WhiteControls(light, call, tone)
-            }
-            // A gradient light (a Hue gradient strip) can also be given a gradient of its own along its length.
-            if (id in LocalHybrids.current.gradientLights) {
-                var gradient by remember(id) { mutableStateOf(HYBRID_GRADIENTS[1].second) }
-                LightSection("cd:bulb-group", "Gradient", "Colours along the light", tint, openSection == "gradient", { toggle("gradient") }) {
-                    GradientEditor(gradient, tone, ink) { next -> gradient = next; call("church_drive", "apply_gradient", id, data("colours" to JSONArray(next))) }
-                }
+                if (gradientTab) GradientEditor(gradient, tone, ink) { next -> gradient = next; call("church_drive", "apply_gradient", id, data("colours" to JSONArray(next))) }
+                else                 if (colourOpen) ColourPanel(light, call, tone) else WhiteControls(light, call, tone)
             }
             val scenes = (WHITE_SCENES.map { LightScene(it, id) } + looks.library.values.filter { it.hex.isNotEmpty() }.sortedBy { it.name }.map { LightScene(it.key, id) })
             LightSection("cd:palette", "Scenes", "Applies to this light", tint, openSection == "scenes", { toggle("scenes") }) {
