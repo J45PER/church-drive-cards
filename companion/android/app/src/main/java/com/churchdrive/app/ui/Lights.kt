@@ -300,7 +300,8 @@ fun LightPill(
         else -> "On"
     }
 
-    fun level(x: Float) = (x / widthPx).coerceIn(0.01f, 1f)
+    // The slider moves in the same steps as the light's own page: 1%, then 5% to 100%.
+    fun level(x: Float) = snapBrightness((x / widthPx).coerceIn(0f, 1f)) / 100f
 
     // The right-hand end is its own power button; the slider beside it only responds while the light is on (holding it still opens the light's settings).
     Row(modifier = modifier.fillMaxWidth().height(pillHeight), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -329,7 +330,7 @@ fun LightPill(
                     detectHorizontalDragGestures(
                         onDragStart = { drag = level(it.x) },
                         onDragEnd = {
-                            drag?.let { askedLevel.ask(it); call("light", "turn_on", dev, data("brightness_pct" to (it * 100).roundToInt())) }
+                            drag?.let { askedLevel.ask(it); call("light", "turn_on", dev, data("brightness_pct" to snapBrightness(it))) }
                             drag = null
                         },
                         onDragCancel = { drag = null },

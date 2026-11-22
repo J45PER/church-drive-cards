@@ -32,7 +32,7 @@ class SceneEditorDataTest {
 
     @Test fun brightnessMovesInTensWithinTenToAHundred() {
         assertEquals(70, newSceneDraft().stepBrightness(1).brightness)
-        assertEquals(10, newSceneDraft().copy(brightness = 10).stepBrightness(-1).brightness)
+        assertEquals(5, newSceneDraft().copy(brightness = 10).stepBrightness(-1).brightness)
         assertEquals(100, newSceneDraft().copy(brightness = 100).stepBrightness(1).brightness)
     }
 

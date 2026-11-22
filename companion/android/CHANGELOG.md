@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.184.1
 
-- **Presence on room cards.** A room's card and page show the presence line and countdown bar for a sensor that looks after a light or zone inside the room (the landings' Main zone, say), not only the room's own light. A motion sensor counts down from the last movement it saw. A room card's pill and slider take the colour most of the room's lights on show (not only a light called ceiling), as the details page does.
+- **Presence on room cards.** A room's card and page show the presence line and countdown bar for a sensor that looks after a light or zone inside the room (the landings' Main zone, say), not only the room's own light. A motion sensor counts down from the last movement it saw. A room card's pill and slider take the colour most of the room's lights on show (not only a light called ceiling), as the details page does. Brightness sliders on the room cards now snap like the light's own page (1%, then 5% steps), and 1% is available on both. No scene starts dimmer than 5% (Nightlight was 1%; saved and new scenes are raised to 5%).
 
 ## 0.184.0
 

@@ -18,8 +18,9 @@ import org.junit.Test
 
 class LightSettingsSavedColoursTest {
     @Test fun brightnessMovesInFivePercentSteps() {
-        assertEquals(5, snapBrightness(0f))
-        assertEquals(5, snapBrightness(0.02f))
+        assertEquals(1, snapBrightness(0f))
+        assertEquals(1, snapBrightness(0.02f))
+        assertEquals(5, snapBrightness(0.04f))
         assertEquals(50, snapBrightness(0.5f))
         assertEquals(55, snapBrightness(0.53f))
         assertEquals(100, snapBrightness(1f))

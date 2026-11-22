@@ -18,6 +18,9 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
+# No scene starts dimmer than this percentage.
+MIN_BRIGHTNESS = 5.0
+
 WHITE: dict[str, dict] = {
     "bright": {"name": "Bright", "mirek": 370, "brightness": 100.0},
     "cool_bright": {"name": "Cool bright", "mirek": 250, "brightness": 100.0},
@@ -27,7 +30,7 @@ WHITE: dict[str, dict] = {
     "energise": {"name": "Energise", "mirek": 156, "brightness": 100.0},
     "relax": {"name": "Relax", "mirek": 447, "brightness": 56.25},
     "rest": {"name": "Rest", "mirek": 447, "brightness": 34.0},
-    "nightlight": {"name": "Nightlight", "xy": (0.5610, 0.4042), "mirek": 500, "brightness": 0.4},
+    "nightlight": {"name": "Nightlight", "xy": (0.5610, 0.4042), "mirek": 500, "brightness": 5.0},
 }
 
 # Hue's animated colour scenes: each palette colour is (x, y, brightness %)
@@ -178,7 +181,7 @@ def normalise(scene: dict) -> dict:
     spec: dict[str, Any] = {
         "name": scene["name"],
         "kind": scene.get("kind", "white"),
-        "brightness": float(scene.get("brightness", 100)),
+        "brightness": max(MIN_BRIGHTNESS, float(scene.get("brightness", 100))),
         "custom": True,
     }
     if scene.get("icon"):

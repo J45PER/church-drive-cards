@@ -6,7 +6,7 @@ import org.json.JSONObject
 /** The most colours a scene made in the app can have; the house accepts nine. */
 const val MAX_SCENE_COLOURS = 5
 
-/** A scene being made or changed: [key] is null for a new one, [colours] are `#rrggbb`, [brightness] is a percentage (10 to 100). */
+/** A scene being made or changed: [key] is null for a new one, [colours] are `#rrggbb`, [brightness] is a percentage (5 to 100). */
 data class SceneDraft(val key: String?, val name: String, val colours: List<String>, val brightness: Int, val animated: Boolean)
 
 fun newSceneDraft(): SceneDraft = SceneDraft(null, "", listOf("#5b8cfd", "#b36bff"), 60, false)
@@ -28,7 +28,7 @@ fun SceneDraft.withAdded(hex: String): SceneDraft = if (colours.size >= MAX_SCEN
 
 fun SceneDraft.withoutColour(index: Int): SceneDraft = if (colours.size <= 1) this else copy(colours = colours.filterIndexed { i, _ -> i != index })
 
-fun SceneDraft.stepBrightness(direction: Int): SceneDraft = copy(brightness = (brightness + direction * 10).coerceIn(10, 100))
+fun SceneDraft.stepBrightness(direction: Int): SceneDraft = copy(brightness = (brightness + direction * 10).coerceIn(5, 100))
 
 /** The body of `church_drive/scene/save`. */
 fun sceneSaveBody(draft: SceneDraft): JSONObject = JSONObject().put(
