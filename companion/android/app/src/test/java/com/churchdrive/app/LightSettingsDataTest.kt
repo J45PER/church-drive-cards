@@ -91,4 +91,13 @@ class LightSettingsDataTest {
         val off = EntityState("light.d", "off", JSONObject().put("color_mode", "rgb").put("rgb_color", org.json.JSONArray(listOf(1, 2, 3))))
         assertEquals(emptyList<String>(), com.churchdrive.app.ui.majorityColourLights(listOf(off)))
     }
+
+    @Test fun aCardForOneLightTakesItsColourFromThatLight() {
+        val bulb = EntityState("light.front_light", "on", JSONObject().put("color_mode", "xy").put("rgb_color", org.json.JSONArray(listOf(255, 125, 60))))
+        val room = EntityState("light.front", "on", JSONObject().put("entity_id", org.json.JSONArray(listOf("light.front_light"))))
+        val all = listOf(bulb, room).associateBy { it.entityId }
+        assertEquals(listOf("light.front_light"), com.churchdrive.app.ui.roomTintLights(bulb, null, all))
+        assertEquals(listOf("light.front_light"), com.churchdrive.app.ui.roomTintLights(room, null, all))
+        assertEquals(emptyList<String>(), com.churchdrive.app.ui.roomTintLights(null, null, all))
+    }
 }
