@@ -6,6 +6,7 @@
     <queries>
         <provider android:authorities="com.churchdrive.app.sessionshare" />
         <package android:name="com.churchdrive.manager" />
+        <package android:name="com.churchdrive.todo" />
     </queries>
 
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->

@@ -190,6 +190,8 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
                     vm.entities, vm.registry, vm.areaNames,
                     openManager = { go(MANAGER) }, openHealth = { onPanel("health") }, openEnergy = { go(ENERGY) }, openDevices = { go(DEVICES) },
                     openSecurity = { ChurchDriveLink.open(context, "Security") },
+                    // The To-Do app where it is installed; the Manager (where the house's jobs are) when it isn't.
+                    openTodo = { list, uid -> if (!ChurchDriveLink.openTodo(context, list, uid)) go(MANAGER) },
                 )
             }
             Spacer(Modifier.height(padding.calculateBottomPadding()))
