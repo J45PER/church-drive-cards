@@ -96,6 +96,8 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     // A room with a ring of segments (the Cloakroom's Govee) is one device: its Down light and Up light rows aren't shown, and its scenes go to the device's own light.
     val device = colourSource(head, entities)?.takeIf { it.entityId != room.head }
     val rowsShown = if (device != null) emptyList() else room.rows
+    // The room's colour on its pill and slider is the colour most of its lights that are on and showing one have (the group itself reports whichever changed last).
+    val tintLights = if (device != null) listOf(device.entityId) else majorityColourLights(head?.lightMembers().orEmpty().flatMap { id -> entities[id]?.lightMembers()?.takeIf { it.size > 1 } ?: listOf(id) }.mapNotNull { entities[it] })
     // The scenes on the card are the same ones its settings show: the room's, then the ones you made.
     val library = LocalSceneLooks.current.library
     val sceneList = if (room.scenes.isEmpty()) room.scenes else room.scenes + library.values.filter { it.custom && room.scenes.none { s -> s.key == it.key } }.sortedBy { it.name }.map { LightScene(it.key, room.head) }
@@ -132,7 +134,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
         onHold = if (opensSettings(head)) ({ cardSettings = true }) else null,
     ) {
         LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1f), entities,
-            tintFrom = rowsShown.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell, scenes = sceneList)
+            tintFrom = tintLights, pillHeight = cell, scenes = sceneList)
         if (presence != null) {
             PresenceBar(presenceFraction(presence, remaining), presenceLine(presence, remaining), tone.onContainer, Modifier.at(0.5f, 1.6f, if (expandable) 6.5f else 7f, 0.7f))
         } else if (!open && showHint) {
@@ -227,6 +229,13 @@ private fun brightnessPct(light: EntityState?): Int =
     ((light?.num("brightness") ?: 255.0) / 255.0 * 100).roundToInt().coerceIn(1, 100)
 
 private val COLOUR_MODES = setOf("hs", "rgb", "rgbw", "rgbww", "xy")
+
+/** The lights whose colour is the most common among the lights that are on and in a colour mode (colours within a small step count as the same), or none. */
+internal fun majorityColourLights(lights: List<EntityState>): List<String> =
+    lights.filter { it.state == "on" && it.str("color_mode") in COLOUR_MODES }
+        .mapNotNull { l -> l.rgb()?.let { c -> l to Triple(c[0] / 32, c[1] / 32, c[2] / 32) } }
+        .groupBy({ it.second }, { it.first })
+        .values.maxByOrNull { it.size }?.map { it.entityId }.orEmpty()
 
 private const val SECURITY_ACTIVE = "input_boolean.clive_away_lights_active"
 private val SECURITY_LABELS = setOf("away_security_light", "away_tv_simulation")

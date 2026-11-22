@@ -82,4 +82,13 @@ class LightSettingsDataTest {
         assertEquals(listOf("leave", "off", "colour", "gradient", "dynamic"), com.churchdrive.app.ui.hybridKindsForRole("ambient"))
         assertEquals(listOf("leave", "off", "colour", "gradient"), com.churchdrive.app.ui.hybridKindsForRole("tertiary"))
     }
+
+    @Test fun aRoomsColourIsTheOneMostOfItsLightsShow() {
+        fun colour(id: String, r: Int, g: Int, b: Int) = EntityState(id, "on", JSONObject().put("color_mode", "rgb").put("rgb_color", org.json.JSONArray(listOf(r, g, b))))
+        val warm = listOf(colour("light.a", 255, 150, 40), colour("light.b", 250, 148, 45), colour("light.c", 40, 60, 255))
+        assertEquals(listOf("light.a", "light.b"), com.churchdrive.app.ui.majorityColourLights(warm))
+        assertEquals(emptyList<String>(), com.churchdrive.app.ui.majorityColourLights(emptyList()))
+        val off = EntityState("light.d", "off", JSONObject().put("color_mode", "rgb").put("rgb_color", org.json.JSONArray(listOf(1, 2, 3))))
+        assertEquals(emptyList<String>(), com.churchdrive.app.ui.majorityColourLights(listOf(off)))
+    }
 }
