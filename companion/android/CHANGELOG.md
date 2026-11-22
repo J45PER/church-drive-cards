@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.184.2
+
+- **Fan off card.** A fan that Clive turns off ends its card on the crossed-out fan, as a light goes out. A sensor action can now go back to how the lights were when someone came in (the new Go back choice for when the room is empty): the house notes each light and the Hue scene its room or zone was showing, and puts it back after the countdown, so a front light returns to its night scene.
+
 ## 0.184.1
 
 - **Presence on room cards.** A room's card and page show the presence line and countdown bar for a sensor that looks after a light or zone inside the room (the landings' Main zone, say), not only the room's own light. A motion sensor counts down from the last movement it saw. A room card's pill and slider take the colour most of the room's lights on show (not only a light called ceiling), as the details page does. Brightness sliders on the room cards now snap like the light's own page (1%, then 5% steps), and 1% is available on both. The built-in Nightlight scene is now 5% (it was 1%), and a scene you make can go down to 1% or 5% in the editor for a night light. Sensor time slots always cover the whole day like the Hue app: changing when one ends changes when the next begins, and times are picked on the clock (also for a routine's and a one-off's time, and a sensor's "between set times"). The activity log lists what a sensor action does ("Cloakroom sensor: switched on Cloakroom Down Light with late glow", "switched off"), with its own Sensor actions filter in the app and the website, no longer lists the thirteen ring segments of a Govee fitting, and shows a scene or theme you apply as one line instead of two. A motion detector (the Hue ones) says "Motion detected" and "No motion" where a presence sensor (the FP300) says "Someone's in" and "Nobody in".

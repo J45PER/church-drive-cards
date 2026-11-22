@@ -26,7 +26,7 @@ MAX_GROUP = 8
 MAX_LIGHTS = 12
 MAX_SLOTS = 6
 ON_ACTIONS = ("on", "scene", "hybrid", "none")
-OFF_ACTIONS = ("off", "dim", "none")
+OFF_ACTIONS = ("off", "dim", "restore", "none")
 _TIME = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
 
@@ -176,6 +176,8 @@ def summary(item: dict[str, Any]) -> str:
         parts.append(f"off after {delay_text(item['off_delay'])}")
     elif item["off_action"] == "dim":
         parts.append(f"dims to {item['dim_pct']}% after {delay_text(item['off_delay'])}")
+    elif item["off_action"] == "restore":
+        parts.append(f"goes back to how it was after {delay_text(item['off_delay'])}")
     if item["slots"]:
         parts.append(f"{len(item['slots'])} time slot{'s' if len(item['slots']) != 1 else ''}")
     if item["only_dark"]:

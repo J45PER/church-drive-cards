@@ -10,11 +10,12 @@ This applies to: what a page or feature should do, where it lives (website, Cliv
 
 ## Releasing (decided 2026-11-17)
 
-**When a pull request's CI is green, merge it and let the release go out without asking.** Jamie has said to always merge and push updates once green. Watch the PR, fix anything CI flags, and merge as soon as every check passes; merging to `main` publishes the release (`v<version>`) and the apps. Still never merge with a red or unfinished check, and never skip or weaken a test to get green.
+**When a pull request's CI is green, merge it and let the release go out without asking.** Jamie has said to always merge and push updates once green. Watch the PR, fix anything CI flags, and merge as soon as every check passes; merging to `main` publishes the release (`v<version>`) and the apps. Restart Home Assistant after installing a release whenever its integration code changed, without asking (Jamie, 2026-11-21); an app-only release needs no restart. Still never merge with a red or unfinished check, and never skip or weaken a test to get green.
 
 ## Designing
 
 - Design proposals are built as a tweakable example page first (a published Artifact, tweak panel hidden by default), page by page, and ported to the live site only once signed off. Keep the example site 1:1 with the live site.
+- **A mock-up must look like it will in the app** (decided 2026-11-22): use the real Church Drive icons (`custom_components/church_drive/frontend/clive/icons.json`, drawn at their real sizes), the app's real sizes and shapes (tiles 48 px, choice tiles 72 px, scene tiles 64 px, corners 18 px, the 10% wash, selected tiles in the strong colour with the dark ink), the tone palettes (`design/clive/cards.json`, `docs/STYLE.md`) and the app's own components in place of plain HTML ones (scene and theme tiles with their colours, the clock-picker time tile, the status pill). Generate the page from those files rather than drawing icons or colours from memory, and look at a render before publishing.
 - The apps are the style reference (`docs/STYLE.md`). The website adapts layout only. No outlines or borders unless the app has them. No figure repeated on a page. A missing figure reads "Data not available".
 - Read-only access to the house is available for checking real entities; check a page against the real entity names, not only a mock.
 
