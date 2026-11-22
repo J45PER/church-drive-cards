@@ -292,7 +292,26 @@ private fun LightControls(light: EntityState, kind: LightKind, whiteOk: Boolean,
         }
     }
     if (roomScenes != null && kind != LightKind.Switch) ScenesSection(roomScenes.map { it.copy(target = id) }, id, tint, call)
+    // A Hue light's own effects (candle, fire, prism...): the ones the light says it has, and None to stop one.
+    val effects = lightEffects(light)
+    if (kind != LightKind.Switch && effects.isNotEmpty()) {
+        val current = light.str("effect")?.takeIf { it != "off" && light.state == "on" }
+        LightSection("cd:animation-play", "Effect", current?.let(::effectLabel) ?: "None", tint) {
+            TileRow(
+                listOf(TileItem("cd:close", "None", current == null && light.state == "on") { call("light", "turn_on", id, data("effect" to "off")) }) +
+                    effects.map { e -> TileItem("cd:animation-play", effectLabel(e), current == e) { call("light", "turn_on", id, data("effect" to e)) } },
+                tone, ink, perRow = 3, column = true,
+            )
+        }
+    }
 }
+
+/** The effects a light offers, other than "off" (Hue lights list candle, fire, prism and the like); none for a light that has none. */
+fun lightEffects(light: EntityState): List<String> =
+    light.attributes.optJSONArray("effect_list")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty().filter { it.isNotBlank() && it != "off" }
+
+/** "underwater" as "Underwater". */
+fun effectLabel(effect: String): String = effect.replace('_', ' ').replaceFirstChar { it.uppercase() }
 
 /**
  * Scene tiles three to a row, as on the room card; a tap plays the scene on [LightScene.target]. Pressing and holding one of [holdable]'s keys

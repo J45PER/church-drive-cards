@@ -6,6 +6,9 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.190.0
 
+- **Overnight heating times on the clock.** From and Until are picked on the clock, with the Earlier and Later buttons gone.
+- **Hue effects.** A Hue light's details page has an Effect section: candle, fire, prism and the other effects the light offers, and None to stop one.
+- **Sunset in the routine editor.** A light routine can happen at sunset or sunrise (at, or 15 to 120 minutes before or after) as well as at a clock time. A routine that plays a scene or theme (made from the house) is kept as it is when you open and save it.
 No change you will see in this app beyond tasks: a website edit waiting ("Colours edit waiting") is now a task on the administrator's own list, so it shows here.
 
 ## 0.189.0

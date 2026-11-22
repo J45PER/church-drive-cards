@@ -51,7 +51,11 @@ fun RoutineEditorCard(routine: RoutineInfo?, entities: Map<String, EntityState>,
     val ink = tone.onContainer
     var days by remember(routine?.id) { mutableStateOf(routine?.days ?: EVERY_DAY) }
     var time by remember(routine?.id) { mutableStateOf(routine?.time?.takeIf { it.isNotBlank() } ?: "23:00") }
-    var action by remember(routine?.id) { mutableStateOf(routine?.action?.takeIf { it == "on" || it == "off" } ?: "off") }
+    // A scene or theme the house plays (made from the house) is kept as it is when this is saved; the editor only changes when and which lights.
+    val plays = routine?.action?.takeIf { it == "scene" || it == "theme" }
+    var action by remember(routine?.id) { mutableStateOf(routine?.action?.takeIf { it == "on" || it == "off" || it == "scene" || it == "theme" } ?: "off") }
+    var sun by remember(routine?.id) { mutableStateOf(routine?.sun.orEmpty()) }
+    var offset by remember(routine?.id) { mutableStateOf(routine?.offset ?: 0) }
     var chosen by remember(routine?.id) { mutableStateOf(routine?.entities ?: emptyList()) }
     var picking by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
@@ -80,14 +84,44 @@ fun RoutineEditorCard(routine: RoutineInfo?, entities: Map<String, EntityState>,
             tone, ink,
         )
         Text("Do", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+        if (plays != null) {
+            Text("Plays ${routine?.value.orEmpty().replace('_', ' ')} (${if (plays == "scene") "a scene" else "a theme"}).", style = MaterialTheme.typography.bodyLarge, color = ink)
+        } else {
+            TileRow(
+                listOf(
+                    TileItem("cd:bulb-off", "Off", action == "off") { action = "off" },
+                    TileItem("cd:bulb-lit", "On", action == "on") { action = "on" },
+                ),
+                tone, ink,
+            )
+        }
+        Text("When", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
         TileRow(
             listOf(
-                TileItem("cd:bulb-off", "Off", action == "off") { action = "off" },
-                TileItem("cd:bulb-lit", "On", action == "on") { action = "on" },
+                TileItem("cd:clock", "At a time", sun.isEmpty()) { sun = "" },
+                TileItem("cd:weather-sunset", "At sunset", sun == "sunset") { sun = "sunset" },
+                TileItem("cd:sun", "At sunrise", sun == "sunrise") { sun = "sunrise" },
             ),
             tone, ink,
         )
-        ScheduleTime("At", time, false, ink) { t -> if (t != null) time = t }
+        if (sun.isEmpty()) ScheduleTime("At", time, false, ink) { t -> if (t != null) time = t }
+        else {
+            // How long before or after the sun: a direction, and the minutes.
+            TileRow(
+                listOf(
+                    TileItem("", "Before", offset < 0) { offset = -kotlin.math.abs(offset).coerceAtLeast(15) },
+                    TileItem("", "At $sun", offset == 0) { offset = 0 },
+                    TileItem("", "After", offset > 0) { offset = kotlin.math.abs(offset).coerceAtLeast(15) },
+                ),
+                tone, ink,
+            )
+            if (offset != 0) {
+                TileRow(
+                    listOf(15, 30, 45, 60, 90, 120).map { m -> TileItem("", "$m min", kotlin.math.abs(offset) == m) { offset = if (offset < 0) -m else m } },
+                    tone, ink, perRow = 3, column = true,
+                )
+            }
+        }
         Text("Which lights", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
         TileRow(
             chosen.map { id -> TileItem("cd:bulb-lit", names[id] ?: entities[id]?.friendlyName ?: id, true) { chosen = chosen - id; message = null } } +
@@ -115,7 +149,7 @@ fun RoutineEditorCard(routine: RoutineInfo?, entities: Map<String, EntityState>,
                     else if (!saving) {
                         saving = true
                         scope.launch {
-                            val result = api?.ask("church_drive/routines/set", repeatBody(routine?.id, chosen, action, time, days))
+                            val result = api?.ask("church_drive/routines/set", repeatBody(routine?.id, chosen, action, time, days, sun, offset, routine?.value.orEmpty()))
                             saving = false
                             if (result != null) onDone() else message = "The house didn't save it."
                         }
