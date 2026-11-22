@@ -136,6 +136,9 @@ class SensorDataTest {
         assertNull(sensorProblem(listOf("light.a"), "h1", "hybrid", false, false))
         val parsed = parseSensorActions(JSONObject("""{"actions":[{"id":"a","sensor":"binary_sensor.x","off_if_on":true}],"sensors":[]}"""))!!
         assertTrue(parsed.actions.single().offIfOn)
+        assertTrue(parsed.actions.single().dimWarning)
+        assertEquals(true, body.getBoolean("dim_warning"))
+        assertEquals(false, parseSensorActions(JSONObject("""{"actions":[{"id":"a","sensor":"binary_sensor.x","dim_warning":false}],"sensors":[]}"""))!!.actions.single().dimWarning)
     }
 
     @Test fun sensorsInAGroupShareOneCardAndOneAction() {

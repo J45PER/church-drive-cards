@@ -203,7 +203,11 @@ class SensorActions:
                     # A @callback, so Home Assistant runs it on the event loop: a plain lambda runs on a worker thread, where creating the off task is refused
                     # and the light would turn on but never off.
                     self._due[sid] = time.monotonic() + item["off_delay"]
-                    self._timers[sid] = async_call_later(self.hass, item["off_delay"], callback(lambda _now, sid=sid: self._on_empty(sid)))
+                    cancels = [async_call_later(self.hass, item["off_delay"], callback(lambda _now, sid=sid: self._on_empty(sid)))]
+                    # Halfway through the countdown a light that is about to go off dims to half, as the warning.
+                    if item["off_action"] == "off" and item["dim_warning"] and item["off_delay"] >= 2:
+                        cancels.append(async_call_later(self.hass, item["off_delay"] / 2, callback(lambda _now, sid=sid: self._on_halfway(sid))))
+                    self._timers[sid] = lambda cancels=cancels: [cancel() for cancel in cancels]
 
     def _any_sensor_on(self, item: dict[str, Any]) -> bool:
         states = (self.hass.states.get(sensor) for sensor in item["sensors"])
@@ -220,6 +224,21 @@ class SensorActions:
         item = self._items.get(sid)
         if item and item["enabled"] and not self._any_sensor_on(item):
             self.hass.async_create_task(self._async_empty(item))
+
+    @callback
+    def _on_halfway(self, sid: str) -> None:
+        item = self._items.get(sid)
+        # Only when the light really is going to be switched off at the end (one that was on already is left alone unless the action says otherwise).
+        if item and item["enabled"] and not self._any_sensor_on(item) and (item["off_if_on"] or not self._was_on.get(sid, False)):
+            self.hass.async_create_task(self._async_halve(item))
+
+    async def _async_halve(self, item: dict[str, Any]) -> None:
+        for light in item["lights"]:
+            state = self.hass.states.get(light)
+            brightness = state.attributes.get("brightness") if state is not None and state.state == "on" else None
+            if not brightness:  # an on/off light has no brightness to halve
+                continue
+            await self._call("light", "turn_on", {"entity_id": light, "brightness_pct": max(1, round(brightness / 255 * 50))}, item)
 
     def _lux(self, item: dict[str, Any]) -> float | None:
         readings: list[float] = []
