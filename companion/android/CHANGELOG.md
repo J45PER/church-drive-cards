@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.184.0
+
+- **Sensor groups and a standard picker.** Sensors can be grouped: one sensor action can list several sensors (the two Hue landing sensors, say). Someone seen by any of them counts as someone there, the lights go off after all have seen nobody, and the daylight check uses the brightest light reading of the group. Add sensors to a group from the sensor's page, and a group shows as one card. Drop-downs (a light's role, the cleaning settings) now open Android's standard picker in the middle of the screen with large rows.
+
 ## 0.183.3
 
 - **Cloakroom shows off when it is off.** Fix: the Cloakroom card's colour and the floor's "rooms on" count follow the Govee light's own state, not the room group's (which keeps the last ring segment's state), so an off Cloakroom no longer shows lit. The home screen widgets do the same. Back from setting up a sensor or editing a routine goes back to the list, not out to the Lights page.

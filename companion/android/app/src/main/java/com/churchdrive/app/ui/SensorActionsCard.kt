@@ -56,12 +56,17 @@ private fun sensorReadings(sensor: SensorInfo, entities: Map<String, EntityState
 
 /** The editor for one sensor's action ([action] null makes a new one): what it does, its limits and the sensor's own settings. [onDone] runs after Save, Remove or Cancel. */
 @Composable
-fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<String, EntityState>, call: CallService, onDone: () -> Unit) {
+fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<String, EntityState>, call: CallService, others: List<SensorInfo> = emptyList(), onDone: () -> Unit) {
     val api = LocalHaApi.current
     val scope = rememberCoroutineScope()
     val tone = toneColors(Tone.Lights)
     val ink = tone.onContainer
     val key = action?.id ?: sensor.entityId
+    // Sensors that act as one: someone seen by any of them is someone there, and the room empties when all have gone.
+    var members by remember(key) { mutableStateOf(action?.sensors?.takeIf { it.isNotEmpty() } ?: listOf(sensor.entityId)) }
+    var addingSensor by remember { mutableStateOf(false) }
+    val everyone = remember(sensor, others) { listOf(sensor) + others.filter { it.entityId != sensor.entityId } }
+    val memberInfos = everyone.filter { it.entityId in members }
     var onAction by remember(key) { mutableStateOf(action?.onAction ?: "on") }
     var scene by remember(key) { mutableStateOf(action?.scene ?: WHITE_SCENES.first()) }
     var offAction by remember(key) { mutableStateOf(action?.offAction ?: "off") }
@@ -86,12 +91,30 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
     var message by remember { mutableStateOf<String?>(null) }
     val lights = remember(entities) { schedulableLights(entities) }
     val names = lights.toMap()
-    val needsHueOff = sensor.isHue && action == null
-    val luxEntity = sensor.luxEntity
+    val needsHueOff = memberInfos.any { it.isHue } && action == null
+    val luxSensors = memberInfos.mapNotNull { it.luxEntity }
+    val luxEntity = luxSensors.firstOrNull()
 
     EntityCard(tone.container, ink) {
-        Text(sensor.name, style = MaterialTheme.typography.titleLarge, color = ink)
-        Text(sensorReadings(sensor, entities), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f))
+        Text(memberInfos.joinToString(" + ") { it.name }.ifBlank { sensor.name }, style = MaterialTheme.typography.titleLarge, color = ink)
+        memberInfos.forEach { m -> Text(if (memberInfos.size > 1) "${m.name}: ${sensorReadings(m, entities)}" else sensorReadings(m, entities), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f)) }
+        if (others.any { it.entityId != sensor.entityId } || members.size > 1) {
+            Text("Sensors in this group", style = MaterialTheme.typography.titleSmall, color = ink)
+            TileRow(
+                memberInfos.map { m -> TileItem("mdi:motion-sensor", m.name, true) { if (m.entityId != sensor.entityId) members = members - m.entityId } } +
+                    (if (others.any { it.entityId !in members && it.entityId != sensor.entityId }) listOf(TileItem("cd:plus", "Add a sensor", addingSensor) { addingSensor = !addingSensor }) else emptyList()),
+                tone, ink, perRow = 2,
+            )
+            if (addingSensor) {
+                others.filter { it.entityId !in members && it.entityId != sensor.entityId }.forEach { o ->
+                    Text(
+                        o.name, style = MaterialTheme.typography.bodyLarge, color = ink,
+                        modifier = Modifier.fillMaxWidth().clickable { members = members + o.entityId; addingSensor = false }.padding(vertical = 10.dp),
+                    )
+                }
+            }
+            Text("Someone seen by any of them counts. The lights go off after all have seen nobody. The light reading is the brightest of them.", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+        }
         if (sensor.isHue && action == null) {
             Text(
                 "Which lights this sensor switches is set on the Hue bridge, so Church Drive can't show it or change it. Set it up here to run it from Church Drive.",
@@ -229,9 +252,9 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
             StepLine("Until", windowEnd, ink, tone, { windowEnd = stepTime(windowEnd, -1, 30) ?: windowEnd }, { windowEnd = stepTime(windowEnd, 1, 30) ?: windowEnd })
         }
 
-        if (sensor.settings.isNotEmpty()) {
+        if (memberInfos.any { it.settings.isNotEmpty() }) {
             Text("Sensor settings", style = MaterialTheme.typography.titleSmall, color = ink)
-            sensor.settings.forEach { s -> SensorSettingRow(s, entities, call, tone, ink) }
+            memberInfos.forEach { m -> m.settings.forEach { s -> SensorSettingRow(s, entities, call, tone, ink) } }
         }
 
         if (needsHueOff) {
@@ -249,9 +272,9 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
                         saving = true
                         scope.launch {
                             val body = sensorBody(
-                                action?.id, sensor.entityId, action?.name?.takeIf { it.isNotBlank() } ?: sensor.name.removeSuffix(" Sensor").trim(), chosen, onAction, scene, offAction,
+                                action?.id, sensor.entityId, action?.name?.takeIf { it.isNotBlank() } ?: memberInfos.joinToString(" + ") { it.name.removeSuffix(" Sensor").trim() }.ifBlank { sensor.name.removeSuffix(" Sensor").trim() }, chosen, onAction, scene, offAction,
                                 offDelay, dimPct, onlyDark, darkLux, luxEntity ?: "", if (windowOn) windowStart else null,
-                                if (windowOn) windowEnd else null, enabled, pct, slots, offIfOn,
+                                if (windowOn) windowEnd else null, enabled, pct, slots, offIfOn, members, luxSensors,
                             )
                             val result = api?.ask("church_drive/sensor_actions/set", body)
                             saving = false
@@ -345,14 +368,15 @@ private fun SensorActionsPage(all: SensorActionsData, entities: Map<String, Enti
     FullPage(editing?.name ?: "Sensor actions", onClose, handleBack = { if (editing != null) { editing = null; true } else false }) {
         val e = editing
         if (e != null) {
-            SensorEditorCard(e, all.actionFor(e), entities, call) { editing = null; onChanged() }
+            SensorEditorCard(e, all.actionFor(e), entities, call, others = all.sensors.filter { it.entityId == e.entityId || all.actionFor(it) == null || all.actionFor(it) == all.actionFor(e) }) { editing = null; onChanged() }
         } else {
-            all.sensors.forEach { s ->
+            all.cards().forEach { s ->
                 val a = all.actionFor(s)
+                val group = a?.let { all.groupOf(it) }.orEmpty()
                 Box(Modifier.fillMaxWidth().clickable(onClickLabel = "Set up this sensor") { editing = s }) {
                     EntityCard(tone.container, ink) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(s.name, style = MaterialTheme.typography.titleLarge, color = ink.copy(alpha = if (a?.enabled == false) 0.55f else 1f), modifier = Modifier.weight(1f))
+                            Text(if (group.size > 1) group.joinToString(" + ") { it.name } else s.name, style = MaterialTheme.typography.titleLarge, color = ink.copy(alpha = if (a?.enabled == false) 0.55f else 1f), modifier = Modifier.weight(1f))
                             if (a != null) Switch(checked = a.enabled, onCheckedChange = { on -> scope.launch { api?.ask("church_drive/sensor_actions/set", JSONObject().put("action_id", a.id).put("enabled", on)); onChanged() } })
                         }
                         StatusPill(sensorBadge(s, a), tone)

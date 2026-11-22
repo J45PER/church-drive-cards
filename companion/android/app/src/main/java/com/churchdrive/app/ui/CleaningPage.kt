@@ -258,18 +258,6 @@ private fun PickRow(label: String, options: List<String>, selected: String, icon
             Text(nice(selected), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
             Icon(CdVectors.ChevronDown, contentDescription = null, tint = tone.onContainer)
         }
-        run {
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                for (o in options) {
-                    val icon = iconFor(o)
-                    val ink = if (o == selected) tone.accent else MaterialTheme.colorScheme.onSurface
-                    DropdownMenuItem(
-                        text = { Text(nice(o), color = ink) },
-                        leadingIcon = if (icon != null) { { HaIcon(icon, CdVectors.Info, ink, 22.dp) } } else null,
-                        onClick = { open = false; onPick(o) },
-                    )
-                }
-            }
-        }
+        if (open) PickDialog(label, options, selected, nice, { open = false }, onPick)
     }
 }

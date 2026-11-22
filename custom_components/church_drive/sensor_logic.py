@@ -22,6 +22,7 @@ import secrets
 from typing import Any
 
 MAX_SENSORS = 40
+MAX_GROUP = 8
 MAX_LIGHTS = 12
 MAX_SLOTS = 6
 ON_ACTIONS = ("on", "scene", "hybrid", "none")
@@ -70,7 +71,7 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
     base = {
         "sensor": "", "name": "", "lights": [], "on_action": "on", "scene": "", "off_action": "off", "off_delay": 60, "dim_pct": 20,
         "only_dark": False, "dark_lux": 30, "lux_sensor": "", "window": None, "enabled": True, "pct": 0, "slots": [],
-        "off_if_on": False,
+        "off_if_on": False, "sensors": [], "lux_sensors": [],
     }
     item = {**base, **(old or {}), **{k: v for k, v in raw.items() if k in base}}
     sensor = str(item["sensor"]).strip()
@@ -85,6 +86,12 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
     if on_action in ("scene", "hybrid") and not scene:
         raise ValueError("Choose which scene or theme to play")
     lux = str(item["lux_sensor"] or "").strip()
+    # A group: the sensor above plus any others, which together count as one (someone seen by any of them is someone there, and the room empties
+    # when all have gone). The light level is the brightest of their readings.
+    extra = item["sensors"] if isinstance(item["sensors"], (list, tuple)) else []
+    sensors = list(dict.fromkeys([sensor] + [str(x).strip() for x in extra if str(x).strip().startswith("binary_sensor.")]))[:MAX_GROUP]
+    extra_lux = item["lux_sensors"] if isinstance(item["lux_sensors"], (list, tuple)) else []
+    lux_list = list(dict.fromkeys(x for x in [lux] + [str(y).strip() for y in extra_lux] if x.startswith("sensor.")))[:MAX_GROUP]
     return {
         "id": (old or {}).get("id") or secrets.token_hex(4),
         "sensor": sensor,
@@ -97,7 +104,9 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
         "dim_pct": _int(item["dim_pct"], 1, 100, 20),
         "only_dark": bool(item["only_dark"]),
         "dark_lux": _int(item["dark_lux"], 1, 2000, 30),
-        "lux_sensor": lux if lux.startswith("sensor.") else "",
+        "lux_sensor": lux_list[0] if lux_list else "",
+        "lux_sensors": lux_list,
+        "sensors": sensors,
         "window": clean_window(item["window"]),
         "enabled": bool(item["enabled"]),
         "pct": _int(item["pct"], 0, 100, 0),
@@ -133,7 +142,7 @@ def in_window(now_minutes: int, window: dict[str, str] | None) -> bool:
 
 def is_dark(item: dict[str, Any], lux: float | None, sun_down: bool) -> bool:
     """Dark means below the light level on its sensor, or, when there is no reading, the sun being down."""
-    if item["lux_sensor"] and lux is not None:
+    if item["lux_sensors"] and lux is not None:
         return lux < item["dark_lux"]
     return sun_down
 
