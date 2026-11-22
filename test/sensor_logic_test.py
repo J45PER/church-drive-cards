@@ -159,6 +159,13 @@ class Groups(unittest.TestCase):
         self.assertFalse(item["dim_warning"])
         self.assertFalse(sl.clean_sensor({"off_delay": 30}, item)["dim_warning"])
 
+    def test_the_actions_own_light_does_not_make_the_room_bright(self):
+        item = sl.clean_sensor({**CLOAK, "only_dark": True, "lux_sensor": "sensor.lux", "lux_sensors": ["sensor.lux"]})
+        # The lamp has just gone off but its sensor still reads 140 lux: held, it is dark; not held, it is bright.
+        self.assertTrue(sl.should_act_on_presence(item, 600, sl.lux_for_decision(140.0, True), True))
+        self.assertFalse(sl.should_act_on_presence(item, 600, sl.lux_for_decision(140.0, False), True))
+        self.assertEqual(sl.lux_for_decision(None, False), None)
+
     def test_a_group_keeps_the_first_sensor_and_the_others_once(self):
         item = sl.clean_sensor({**CLOAK, "sensors": ["binary_sensor.b", "binary_sensor.cloakroom_presence", "binary_sensor.b", "light.x", ""]})
         self.assertEqual(item["sensors"], ["binary_sensor.cloakroom_presence", "binary_sensor.b"])

@@ -24,7 +24,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .sensor_logic import MAX_SENSORS, clean_sensor, clean_sensors, pick_look, should_act_on_presence, summary
+from .sensor_logic import LIT_HOLD_OFF_S, LIT_HOLD_ON_S, MAX_SENSORS, clean_sensor, clean_sensors, lux_for_decision, pick_look, should_act_on_presence, summary
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +52,8 @@ class SensorActions:
         self._due: dict[str, float] = {}
         # Which sensor actions found their light already on when someone came in (kept until the room empties).
         self._was_on: dict[str, bool] = {}
+        # Until when (monotonic seconds) the room counts as dark whatever its sensor reads: the light this action switched on raises that reading.
+        self._dark_hold: dict[str, float] = {}
         # The scene that holds how an action's lights were before someone came in (action id -> scene entity), for the ones that go back to it.
         self._snap: dict[str, str] = {}
         self._migrated = False
@@ -250,6 +252,10 @@ class SensorActions:
                 continue
         return max(readings) if readings else None  # the brightest reading of a group
 
+    def _lux_now(self, item: dict[str, Any]) -> float | None:
+        """The light level to decide "is it dark" from, ignoring what the action's own light has done to the sensor lately."""
+        return lux_for_decision(self._lux(item), time.monotonic() < self._dark_hold.get(item["id"], 0.0))
+
     def _sun_down(self) -> bool:
         sun = self.hass.states.get("sun.sun")
         return sun is not None and sun.state == "below_horizon"
@@ -267,7 +273,7 @@ class SensorActions:
     async def _async_arrive(self, item: dict[str, Any]) -> None:
         """Someone came in: note how the lights are (when they are to go back to it), then do the "someone's there" action."""
         now = dt_util.now()
-        if item["off_action"] == "restore" and item["id"] not in self._snap and should_act_on_presence(item, now.hour * 60 + now.minute, self._lux(item), self._sun_down()):
+        if item["off_action"] == "restore" and item["id"] not in self._snap and should_act_on_presence(item, now.hour * 60 + now.minute, self._lux_now(item), self._sun_down()):
             await self._async_snapshot(item)
         await self._async_present(item)
 
@@ -289,8 +295,10 @@ class SensorActions:
     async def _async_present(self, item: dict[str, Any]) -> None:
         now = dt_util.now()
         minutes = now.hour * 60 + now.minute
-        if not should_act_on_presence(item, minutes, self._lux(item), self._sun_down()):
+        if not should_act_on_presence(item, minutes, self._lux_now(item), self._sun_down()):
             return
+        # It is dark enough to act: the light about to come on will lift the sensor's reading, so keep calling the room dark while it is lit.
+        self._dark_hold[item["id"]] = time.monotonic() + LIT_HOLD_ON_S
         look = pick_look(item, minutes)
         for light in item["lights"]:
             if look["on_action"] == "hybrid":
@@ -308,6 +316,9 @@ class SensorActions:
         self._note(item, f"switched on {self._light_names(item)}" + (f" with {scene}" if scene else ""), item["lights"][0] if len(item["lights"]) == 1 else "")
 
     async def _async_empty(self, item: dict[str, Any]) -> None:
+        # The sensor is slow to read the light going out, so the next person in a moment is still coming into the dark.
+        if item["id"] in self._dark_hold:
+            self._dark_hold[item["id"]] = time.monotonic() + LIT_HOLD_OFF_S
         # A light that was already on when someone came in is left on, unless this action is set to switch it off anyway.
         if item["off_action"] == "restore":
             self._was_on.pop(item["id"], None)
