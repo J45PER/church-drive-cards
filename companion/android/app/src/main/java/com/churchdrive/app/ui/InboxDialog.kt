@@ -51,24 +51,38 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
         }
         var code: String? = null
         // Wait for the line to the house to be signed in before asking (up to about fifteen seconds; opening the app from another one
-        // can beat it), then ask. A command that fails on a live line was refused: its code says why.
+        // can beat it), then ask. A command that fails on a live line was refused: its code says why. Just after Home Assistant restarts the line
+        // is up before Church Drive has loaded, and it answers "unknown command" to everything; that is waited out (up to about a minute) rather
+        // than taken to mean it needs updating.
         suspend fun ask(type: String, params: JSONObject): Any? {
-            repeat(3) {
+            var starting = 0
+            var attempts = 0
+            while (attempts < 3) {
                 var waited = 0
                 while (!ha.connected && waited < 15_000) {
                     kotlinx.coroutines.delay(500)
                     waited += 500
                 }
                 if (!ha.connected) return null
-                ha.ask(type, params)?.let { return it }
+                ha.ask(type, params)?.let { code = null; return it }
                 code = ha.lastErrorCode
+                if (ha.connected && code == "unknown_command" && starting < 12) {
+                    starting++
+                    kotlinx.coroutines.delay(5_000)
+                    continue
+                }
                 if (ha.connected && code != null) return null
-                // The line dropped while asking: wait for it and ask again.
+                attempts++ // the line dropped while asking: wait for it and ask again
             }
             return null
         }
         val lists = parseInboxLists(ask("church_drive/inbox", JSONObject()))
         if (code != null) {
+            // Nothing was sent (the quiet check for tasks waiting from earlier, made as the app opens): never a box for that, whatever the answer.
+            if (text == null) {
+                onClose()
+                return@LaunchedEffect
+            }
             state = if (inboxProblem(code, ha.connected) == InboxProblem.OutOfDate) InboxState.Refused else InboxState.Failed(code)
             return@LaunchedEffect
         }

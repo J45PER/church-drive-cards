@@ -33,6 +33,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val userName: StateFlow<String?> = client.userName
     val refreshing: StateFlow<Boolean> = client.refreshing
     val restarting: StateFlow<Boolean> = client.restarting
+    val integrationLoading: StateFlow<Boolean> = client.integrationLoading
 
     /** Reads the whole house again after a minute away and every five minutes while open, so anything that missed a live event does not stay stale. */
     private val freshness = com.churchdrive.app.ha.FreshnessWatcher(viewModelScope, client, onDead = {

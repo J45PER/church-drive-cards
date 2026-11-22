@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.186.1
+
+No change to this app; it ships with the shared version.
+
 ## 0.186.0
 
 No change to this app; it ships with the shared version (the house now dims sensor-controlled lights before they go off).

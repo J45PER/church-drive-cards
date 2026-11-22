@@ -58,6 +58,17 @@ class PresenceTest {
         assertNull(com.churchdrive.app.ui.presenceFor(room, null, entities, emptyMap()))
     }
 
+    @Test fun aSingleLightCardTakesThePresenceOfTheGroupMadeOnlyOfIt() {
+        val bulb = light("light.front_light")
+        val group = light("light.front", "light.front_light")
+        val other = light("light.porch")
+        val entities = listOf(bulb, group, other).associateBy { it.entityId }
+        val p = Presence(false, null, 30, "Front", 0L, true)
+        val all = mapOf("light.front" to p)
+        assertEquals(p, com.churchdrive.app.ui.presenceFor(bulb, null, entities, all))
+        assertNull(com.churchdrive.app.ui.presenceFor(other, null, entities, all))
+    }
+
     @Test fun aMotionDetectorSaysMotionNotSomeone() {
         val motion = Presence(true, null, 10, "Landings", 0L, true)
         assertEquals("Motion detected", presenceLine(motion, null))
