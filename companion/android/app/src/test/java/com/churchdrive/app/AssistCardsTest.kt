@@ -157,6 +157,9 @@ class AssistCardsTest {
         assertEquals(up, done("""{"detail":"Upstairs","icon":"mdi:roller-shade"}"""))
         assertEquals(DoneMotion.Swap("cd:bulb", "cd:bulb-lit", 450), done("""{"detail":"Turned on","icon":"mdi:lightbulb"}"""))
         assertEquals(DoneMotion.Spin("cd:fan", 1100, 3), done("""{"detail":"On, speed 2","icon":"mdi:fan"}"""))
+        // A fan that is turned off ends on the crossed-out fan, as a light goes out.
+        assertEquals(DoneMotion.Swap("cd:fan", "cd:fan-off", 450), done("""{"name":"Bedroom Fan","detail":"Turned off","icon":"mdi:fan"}"""))
+        assertEquals(DoneMotion.Swap("cd:fan", "cd:fan-off", 450), done("""{"name":"Bedroom Fan","detail":"Off","icon":"mdi:fan-off"}"""))
         assertEquals(DoneMotion.Swap("cd:lock-open", "cd:lock", 650), done("""{"detail":"Locked","icon":"mdi:lock"}"""))
         assertEquals(DoneMotion.Swap("cd:lock", "cd:lock-open", 650), done("""{"detail":"Unlocked","icon":"mdi:lock"}"""))
         assertEquals(DoneMotion.Cycle(listOf("cd:volume-low", "cd:volume-medium", "cd:volume-high"), 480), done("""{"detail":"Volume 40%","icon":"mdi:volume-high"}"""))
@@ -165,7 +168,6 @@ class AssistCardsTest {
     @Test fun aPlainDoneKeepsItsTick() {
         assertNull(done("""{"name":"Alarm","detail":"Armed away","icon":"mdi:shield-lock"}"""))
         assertNull(done("""{"name":"Energy","icon":"mdi:lightning-bolt"}"""))
-        assertNull(done("""{"name":"Fan","detail":"Turned off","icon":"mdi:fan"}"""))
         assertNull(done("""{"name":"Blind","detail":"Stopped","icon":"mdi:blinds"}"""))
         assertNull(done("""{"name":"Done"}"""))
         // A failure shows its cross, never a motion.

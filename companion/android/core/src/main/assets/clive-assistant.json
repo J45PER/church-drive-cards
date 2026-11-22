@@ -166,7 +166,12 @@
    "also": [
     "off"
    ],
-   "motion": null
+   "motion": {
+    "type": "swap",
+    "from": "cd:fan",
+    "to": "cd:fan-off",
+    "ms": 450
+   }
   },
   {
    "icon": [
@@ -176,7 +181,12 @@
     "off",
     "stop"
    ],
-   "motion": null
+   "motion": {
+    "type": "swap",
+    "from": "cd:fan",
+    "to": "cd:fan-off",
+    "ms": 450
+   }
   },
   {
    "icon": [
