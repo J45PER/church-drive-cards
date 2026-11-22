@@ -97,7 +97,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val device = colourSource(head, entities)?.takeIf { it.entityId != room.head }
     val rowsShown = if (device != null) emptyList() else room.rows
     // The room's colour on its pill and slider is the colour most of its lights that are on and showing one have (the group itself reports whichever changed last).
-    val tintLights = if (device != null) listOf(device.entityId) else majorityColourLights(head?.lightMembers().orEmpty().flatMap { id -> entities[id]?.lightMembers()?.takeIf { it.size > 1 } ?: listOf(id) }.mapNotNull { entities[it] })
+    val tintLights = roomTintLights(head, device, entities)
     // The scenes on the card are the same ones its settings show: the room's, then the ones you made.
     val library = LocalSceneLooks.current.library
     val sceneList = if (room.scenes.isEmpty()) room.scenes else room.scenes + library.values.filter { it.custom && room.scenes.none { s -> s.key == it.key } }.sortedBy { it.name }.map { LightScene(it.key, room.head) }
@@ -234,6 +234,17 @@ private fun brightnessPct(light: EntityState?): Int =
     ((light?.num("brightness") ?: 255.0) / 255.0 * 100).roundToInt().coerceIn(1, 100)
 
 private val COLOUR_MODES = setOf("hs", "rgb", "rgbw", "rgbww", "xy")
+
+/**
+ * The lights a room card takes its pill and slider colour from: the device's own light, else the most common colour among the lights of the room or zone
+ * (a zone inside it counts by its own lights), and for a card that is one single light (the Front Garden's front light), that light itself.
+ */
+internal fun roomTintLights(head: EntityState?, device: EntityState?, entities: Map<String, EntityState>): List<String> {
+    if (device != null) return listOf(device.entityId)
+    val members = head?.lightMembers().orEmpty()
+    val ids = if (members.isEmpty()) listOfNotNull(head?.entityId) else members.flatMap { id -> entities[id]?.lightMembers()?.takeIf { it.size > 1 } ?: listOf(id) }
+    return majorityColourLights(ids.mapNotNull { entities[it] })
+}
 
 /** The lights whose colour is the most common among the lights that are on and in a colour mode (colours within a small step count as the same), or none. */
 internal fun majorityColourLights(lights: List<EntityState>): List<String> =
