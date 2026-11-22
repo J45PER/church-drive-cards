@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.190.0
+
+The Tasks card no longer lists a website edit waiting as a separate line: it is now a real task on your own list, so it is in the main app and the To-Do app too.
+
 ## 0.189.0
 
 No change to this app; it ships with the shared version.

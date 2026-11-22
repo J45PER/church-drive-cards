@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.190.0
+
+No change you will see in this app beyond tasks: a website edit waiting ("Colours edit waiting") is now a task on the administrator's own list, so it shows here.
+
 ## 0.189.0
 
 - **A receipt card for commands the house handles itself.** "Turn on the kitchen lights" is answered instantly by the house's own rules, which gave no card. The phone now makes the receipt (the device, what was done, the moving bulb, fan or blind) from what the house reports it did. Commands that go through Clive keep his own card.
