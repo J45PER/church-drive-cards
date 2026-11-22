@@ -48,6 +48,8 @@ class HaClient(private val scope: CoroutineScope) {
     @Volatile var lastRefreshChanged = false
         private set
     private val _restarting = MutableStateFlow(false)
+    private val _integrationLoading = MutableStateFlow(false)
+    private val pendingTypes = java.util.concurrent.ConcurrentHashMap<Int, String>()
 
     /**
      * True when Home Assistant has said it is restarting (it closed the line itself, or reported it is not running yet) and its
@@ -56,9 +58,30 @@ class HaClient(private val scope: CoroutineScope) {
     val restarting: StateFlow<Boolean> = _restarting
 
     /** Everything the status pill is drawn from, in one value. */
-    val link: StateFlow<LinkStatus> = kotlinx.coroutines.flow.combine(_connection, _statesLoaded, _refreshing, _restarting) { c, s, r, x ->
-        LinkStatus(c, s, r, x)
+    val link: StateFlow<LinkStatus> = kotlinx.coroutines.flow.combine(_connection, _statesLoaded, _refreshing, _restarting, _integrationLoading) { c, s, r, x, l ->
+        LinkStatus(c, s, r, x, l)
     }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, LinkStatus())
+
+    /**
+     * True while Home Assistant is up but Church Drive in it has not finished loading: it answers "unknown command" to every Church Drive command
+     * (just after a restart). The pill keeps saying Home Assistant is restarting until a Church Drive command is answered, so nothing reads as broken.
+     */
+    val integrationLoading: StateFlow<Boolean> = _integrationLoading
+
+    /** Church Drive's commands are not there yet: say so, and ask a light one every few seconds until it answers. */
+    private fun noteIntegrationLoading() {
+        if (_integrationLoading.value) return
+        _integrationLoading.value = true
+        scope.launch {
+            var tries = 0
+            while (_integrationLoading.value && tries < 60) {
+                delay(5_000L)
+                tries++
+                if (authed) request("church_drive/presence", timeoutMs = 5_000L) { }
+            }
+            _integrationLoading.value = false
+        }
+    }
 
     private fun noteRestarting() {
         if (_restarting.value) return
@@ -171,6 +194,8 @@ class HaClient(private val scope: CoroutineScope) {
         _statesLoaded.value = false
         lastSyncAt = 0L
         _restarting.value = false
+        _integrationLoading.value = false
+        pendingTypes.clear()
     }
 
     /**
@@ -185,13 +210,18 @@ class HaClient(private val scope: CoroutineScope) {
         }
         val id = id()
         pending[id] = onResult
+        if (type.startsWith("church_drive/")) pendingTypes[id] = type
         // An answer that never comes (a slow house, a dropped line) is a failure the caller can try again, not a page left empty.
         scope.launch {
             delay(timeoutMs)
+            pendingTypes.remove(id)
             pending.remove(id)?.invoke(null)
         }
         val msg = JSONObject(params.toString()).put("id", id).put("type", type)
-        if (!ws.send(msg.toString())) pending.remove(id)?.invoke(null)
+        if (!ws.send(msg.toString())) {
+            pendingTypes.remove(id)
+            pending.remove(id)?.invoke(null)
+        }
     }
 
     /** Shows the name remembered from last time until the live one arrives, so the account button is not a "?". */
@@ -350,6 +380,10 @@ class HaClient(private val scope: CoroutineScope) {
                     if (callback != null) {
                         val ok = msg.optBoolean("success")
                         lastErrorCode = if (ok) null else msg.optJSONObject("error")?.optString("code")?.takeIf { it.isNotBlank() } ?: "error"
+                        // Any answer but "unknown command" to a Church Drive command means Church Drive is loaded; that one means it is not yet.
+                        if (pendingTypes.remove(msg.optInt("id")) != null) {
+                            if (lastErrorCode == "unknown_command") noteIntegrationLoading() else _integrationLoading.value = false
+                        }
                         callback(if (ok) msg.opt("result") else null)
                     } else if (msg.optBoolean("success")) when (msg.optInt("id")) {
                         getStatesId -> {

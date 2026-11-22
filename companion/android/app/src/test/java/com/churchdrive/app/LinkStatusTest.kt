@@ -26,6 +26,12 @@ class LinkStatusTest {
         assertEquals(PillKind.Updating, pillKind(up.copy(refreshing = true), 0))
     }
 
+    @Test fun restartingStaysUntilChurchDriveHasLoaded() {
+        assertEquals(PillKind.Restarting, pillKind(up.copy(integrationLoading = true), 0))
+        assertEquals(PillKind.None, pillKind(up.copy(integrationLoading = false), 0))
+        assertEquals(PillKind.None, pillKind(LinkStatus(ConnectionState.AuthFailed, integrationLoading = true), 0))
+    }
+
     @Test fun restartingBeatsNoConnectionAndLastsUntilItemsLoad() {
         val down = LinkStatus(ConnectionState.Disconnected, restarting = true)
         assertEquals(PillKind.Restarting, pillKind(down, NO_CONNECTION_AFTER_MS * 5))

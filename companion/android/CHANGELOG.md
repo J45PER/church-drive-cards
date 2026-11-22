@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.186.1
 
-- **No more "needs updating" box after a restart.** After Home Assistant restarts, the app no longer says Church Drive needs updating to 0.39.0. The quiet check for waiting tasks stays silent when the house isn't ready, and a task sent from text or voice waits up to a minute for Church Drive to load before giving up.
+- **No more "needs updating" box after a restart.** After Home Assistant restarts, the app no longer says Church Drive needs updating to 0.39.0. The quiet check for waiting tasks stays silent when the house isn't ready, and a task sent from text or voice waits up to a minute for Church Drive to load before giving up. The pill at the top keeps saying Home Assistant is restarting until Church Drive itself has loaded, not only until the entities are back (the cards no longer sit on "Loading…" with no pill).
 
 ## 0.186.0
 

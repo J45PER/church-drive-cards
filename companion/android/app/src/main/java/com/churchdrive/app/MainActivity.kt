@@ -170,6 +170,7 @@ class MainActivity : ComponentActivity() {
                         val statesLoaded by vm.statesLoaded.collectAsStateWithLifecycle()
                         val refreshing by vm.refreshing.collectAsStateWithLifecycle()
                         val restarting by vm.restarting.collectAsStateWithLifecycle()
+                        val integrationLoading by vm.integrationLoading.collectAsStateWithLifecycle()
                         val updateAvailable by vm.updateAvailable.collectAsStateWithLifecycle()
                         val notifyOn by vm.notifyOn.collectAsStateWithLifecycle()
                         val locationOn by vm.locationOn.collectAsStateWithLifecycle()
@@ -221,6 +222,7 @@ class MainActivity : ComponentActivity() {
                                     statesLoaded = statesLoaded,
                                     refreshing = refreshing,
                                     restarting = restarting,
+                                    integrationLoading = integrationLoading,
                                     onRefresh = vm::refresh,
                                     updateAvailable = updateAvailable,
                                     account = AccountSettings(

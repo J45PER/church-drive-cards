@@ -86,6 +86,8 @@ fun HomeScreen(
     refreshing: Boolean = false,
     /** Home Assistant has said it is restarting and its items are not all back yet: the pill says so. */
     restarting: Boolean = false,
+    /** Home Assistant is up but Church Drive in it has not loaded yet: the pill says it is restarting until it has. */
+    integrationLoading: Boolean = false,
     /** Pull down to refresh the connection. */
     onRefresh: () -> Unit = {},
     updateAvailable: Boolean,
@@ -209,7 +211,7 @@ fun HomeScreen(
     ) {
     // The pull is outside the Scaffold so the collapsing title bar hears the drag first and can open before a pull starts.
     com.churchdrive.app.ui.LinkRefresh(
-        com.churchdrive.app.ha.LinkStatus(connection, statesLoaded, refreshing, restarting), onRefresh, Modifier.fillMaxSize(), assistPalette(),
+        com.churchdrive.app.ha.LinkStatus(connection, statesLoaded, refreshing, restarting, integrationLoading), onRefresh, Modifier.fillMaxSize(), assistPalette(),
     ) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),

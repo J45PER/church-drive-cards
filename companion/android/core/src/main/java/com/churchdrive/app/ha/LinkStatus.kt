@@ -9,6 +9,8 @@ data class LinkStatus(
     val refreshing: Boolean = false,
     /** Home Assistant told us it is shutting down or starting up, and its entities have not all come back yet. */
     val restarting: Boolean = false,
+    /** Home Assistant is up, but Church Drive in it has not loaded yet (it answers "unknown command"): the pill says it is restarting. */
+    val integrationLoading: Boolean = false,
 )
 
 /** What the pill at the top of every Church Drive app says. */
@@ -24,6 +26,7 @@ const val NO_CONNECTION_AFTER_MS = 6_000L
  */
 fun pillKind(s: LinkStatus, offlineForMs: Long): PillKind = when {
     s.connection == ConnectionState.AuthFailed -> PillKind.None
+    s.integrationLoading && s.connection == ConnectionState.Connected -> PillKind.Restarting
     s.restarting && (s.connection != ConnectionState.Connected || !s.statesLoaded) -> PillKind.Restarting
     s.connection != ConnectionState.Connected -> if (offlineForMs >= NO_CONNECTION_AFTER_MS) PillKind.NoConnection else PillKind.Connecting
     !s.statesLoaded || s.refreshing -> PillKind.Updating
