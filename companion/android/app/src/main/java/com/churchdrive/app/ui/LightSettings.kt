@@ -129,7 +129,7 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
         onBar = if (grouped && selected != null) ({ selected = null }) else null,
     )
     // A light a presence sensor looks after: whether someone is in, the countdown to switching it off, and the sensor. The bar is always there.
-    val presence = LocalPresence.current.let { it[light.entityId] ?: it[device.entityId] }
+    val presence = presenceFor(light, device, entities, LocalPresence.current)
     val remaining = rememberRemaining(presence)
     if (presence != null) {
         PresenceBar(presenceFraction(presence, remaining), presenceLine(presence, remaining), tint, Modifier.height(Ui.TallTileHeight))

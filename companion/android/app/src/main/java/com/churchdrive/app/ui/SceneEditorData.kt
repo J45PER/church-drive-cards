@@ -6,7 +6,7 @@ import org.json.JSONObject
 /** The most colours a scene made in the app can have; the house accepts nine. */
 const val MAX_SCENE_COLOURS = 5
 
-/** A scene being made or changed: [key] is null for a new one, [colours] are `#rrggbb`, [brightness] is a percentage (10 to 100). */
+/** A scene being made or changed: [key] is null for a new one, [colours] are `#rrggbb`, [brightness] is a percentage (1 to 100). */
 data class SceneDraft(val key: String?, val name: String, val colours: List<String>, val brightness: Int, val animated: Boolean)
 
 fun newSceneDraft(): SceneDraft = SceneDraft(null, "", listOf("#5b8cfd", "#b36bff"), 60, false)
@@ -28,7 +28,13 @@ fun SceneDraft.withAdded(hex: String): SceneDraft = if (colours.size >= MAX_SCEN
 
 fun SceneDraft.withoutColour(index: Int): SceneDraft = if (colours.size <= 1) this else copy(colours = colours.filterIndexed { i, _ -> i != index })
 
-fun SceneDraft.stepBrightness(direction: Int): SceneDraft = copy(brightness = (brightness + direction * 10).coerceIn(10, 100))
+/** The brightness steps a scene moves through: 1%, 5%, then tens up to 100%. */
+val SCENE_BRIGHTNESS_STEPS = listOf(1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+
+fun SceneDraft.stepBrightness(direction: Int): SceneDraft {
+    val at = SCENE_BRIGHTNESS_STEPS.indexOfFirst { it >= brightness }.let { if (it < 0) SCENE_BRIGHTNESS_STEPS.lastIndex else it }
+    return copy(brightness = SCENE_BRIGHTNESS_STEPS[(at + direction).coerceIn(0, SCENE_BRIGHTNESS_STEPS.lastIndex)])
+}
 
 /** The body of `church_drive/scene/save`. */
 fun sceneSaveBody(draft: SceneDraft): JSONObject = JSONObject().put(

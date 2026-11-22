@@ -420,3 +420,15 @@ class HeadlineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SensorLinesTest(unittest.TestCase):
+    def test_a_sensor_action_has_its_own_kind(self):
+        self.assertIn("sensor", al.KINDS)
+        entry = al.make_entry(1000.0, "sensor", "Cloakroom sensor", "switched on Cloakroom Down Light", "mdi:motion-sensor", "light.cloakroom_down_light")
+        self.assertEqual(entry["kind"], "sensor")
+
+    def test_a_fittings_ring_segments_are_not_worth_a_line(self):
+        self.assertFalse(al.worth_a_line("light", "turn_on", ["light.cloakroom_cloakroom_light_segment_001", "light.cloakroom_cloakroom_light_segment_002"]))
+        self.assertTrue(al.worth_a_line("light", "turn_on", ["light.cloakroom_down_light"]))
+        self.assertTrue(al.worth_a_line("light", "turn_on", ["light.cloakroom_down_light", "light.cloakroom_cloakroom_light_segment_001"]))

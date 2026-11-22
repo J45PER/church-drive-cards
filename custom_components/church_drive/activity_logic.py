@@ -10,7 +10,8 @@ from __future__ import annotations
 from datetime import datetime, tzinfo
 from typing import Any, Iterable
 
-KINDS = ("user", "clive", "clive_auto", "presence", "overruled", "device")
+KINDS = ("user", "clive", "clive_auto", "presence", "overruled", "device", "sensor")
+# `sensor`: a sensor action switched a light (someone came in, or the room emptied); `who` is the sensor action's name.
 # `clive`: the assistant did it because someone asked him (a conversation, or a person running his script). `clive_auto`: one of the
 # house's automations ran his script (the heating rules, a welcome home...), with nobody asking.
 CLIVE_KINDS = ("clive", "clive_auto")
@@ -103,6 +104,9 @@ def worth_a_line(domain: str, service: str, entity_ids: Iterable[str]) -> bool:
     """noted(), and not a camera's Take Snapshot button: pictures are refreshed on a timer, not by anyone wanting a line in the log."""
     ids = list(entity_ids)
     if domain == "button" and ids and all(e.endswith("_take_snapshot") for e in ids):
+        return False
+    # The segments of a Govee fitting's ring are its insides: the light as a whole has its own line, and thirteen more for one tap are noise.
+    if ids and all("_segment_" in e for e in ids):
         return False
     return noted(domain, service)
 

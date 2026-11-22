@@ -30,9 +30,12 @@ class SceneEditorDataTest {
         assertEquals(listOf("#123456"), d.withColour(0, "#123456").colours)
     }
 
-    @Test fun brightnessMovesInTensWithinTenToAHundred() {
+    @Test fun brightnessMovesFromOnePercentThroughFiveToAHundred() {
         assertEquals(70, newSceneDraft().stepBrightness(1).brightness)
-        assertEquals(10, newSceneDraft().copy(brightness = 10).stepBrightness(-1).brightness)
+        assertEquals(5, newSceneDraft().copy(brightness = 10).stepBrightness(-1).brightness)
+        assertEquals(1, newSceneDraft().copy(brightness = 5).stepBrightness(-1).brightness)
+        assertEquals(1, newSceneDraft().copy(brightness = 1).stepBrightness(-1).brightness)
+        assertEquals(10, newSceneDraft().copy(brightness = 5).stepBrightness(1).brightness)
         assertEquals(100, newSceneDraft().copy(brightness = 100).stepBrightness(1).brightness)
     }
 

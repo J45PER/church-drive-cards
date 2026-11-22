@@ -81,6 +81,7 @@ class Activity:
         self._clive: dict[str, tuple[float, str, str]] = {}  # context id -> (until, who it is for, the automation that ran it or "")
         self._autos: dict[str, tuple[float, str]] = {}  # context id of an automation run -> (until, its name)
         self._scripts: dict[str, float] = {}  # context id of a person's own script run -> until
+        self._suppress: dict[str, float] = {}  # context id of a scene or theme a person applied -> until: the lights it then sets are the same line
         self._called: dict[str, float] = {}  # context id of any service call -> until: a change with one of these is Home Assistant's own
         self._last_call: dict[str, float] = {}  # domain -> when something last asked for it
         self._clive_set: dict[str, tuple[float, dict[str, Any]]] = {}  # entity -> (when he last set it, what he set: state, target)
@@ -134,7 +135,7 @@ class Activity:
     # ---- listening ----------------------------------------------------
 
     def _forget_old(self, now: float) -> None:
-        for table in (self._clive, self._scripts, self._autos, self._called):
+        for table in (self._clive, self._scripts, self._autos, self._called, self._suppress):
             for key in [k for k, v in table.items() if (v[0] if isinstance(v, tuple) else v) < now]:
                 del table[key]
 
@@ -199,8 +200,12 @@ class Activity:
             if is_clive(f"script.{service}") or any(is_clive(e) for e in entities_in(data)):
                 return  # the assistant's script, listed under him when it starts
             self._scripts[ctx.id] = now + RUN_S
+        if domain == "light" and self._suppress.get(ctx.id, 0) >= now:
+            return  # what a scene or theme they applied does to the lights is already that line
         if worth_a_line(domain, service, entities_in(data)):
             self._record("user", self._for_whom(ctx), domain, service, data, user_id=ctx.user_id)
+            if domain == "church_drive" and service in ("apply_scene", "apply_hybrid"):
+                self._suppress[ctx.id] = now + 30
 
     def _record(self, kind: str, who: str, domain: str, service: str, data: dict[str, Any], by: str = "", user_id: str = "", rule: str = "") -> None:
         ids = entities_in(data)
@@ -296,6 +301,11 @@ class Activity:
                 self._reported.discard(entity_id)
                 self._add(make_entry(now, "device", "", f"{new.name} is back online", icon_for(new.domain), entity_id,
                                      headline=availability_headline(new.name, True), state="online"))
+
+    @callback
+    def note_sensor(self, who: str, text: str, entity: str = "") -> None:
+        """A sensor action switched a light: a line of its own (nobody asked, so it would otherwise leave none)."""
+        self._add(make_entry(time.time(), "sensor", who, text, "mdi:motion-sensor", entity))
 
     def _add(self, entry: dict[str, Any]) -> None:
         add(self.entries, entry)

@@ -30,7 +30,7 @@ from homeassistant.helpers.event import async_call_later
 
 from .const import DOMAIN, SIGNAL_ACTIVE
 from .hue import async_get_bridge_api
-from .library import turn_on_data
+from .library import MIN_BRIGHTNESS, turn_on_data
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ async def _async_deal_colours(
 ) -> None:
     lights = sorted(lights)
     for light, (xy, level) in zip(lights, spread(spec["colors"], _levels(spec), len(lights)), strict=True):
-        brightness = max(1, round(level * 255 / 100))
+        brightness = max(1, round(max(MIN_BRIGHTNESS, level) * 255 / 100))
         await hass.services.async_call(
             "light",
             "turn_on",

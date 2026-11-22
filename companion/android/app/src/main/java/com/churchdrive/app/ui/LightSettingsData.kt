@@ -58,8 +58,8 @@ fun kelvinWord(k: Int): String = when {
 /** The white scenes in Church Drive's library, in the order a light's White section shows them. */
 val WHITE_SCENES = listOf("bright", "cool_bright", "dimmed", "read", "concentrate", "energise", "relax", "rest", "nightlight")
 
-/** A brightness bar moves in 5% steps, from 5% to 100%: the nearest step to [fraction] (0 to 1), as a percentage. */
-fun snapBrightness(fraction: Float): Int = ((fraction * 100f / 5f).roundToInt() * 5).coerceIn(5, 100)
+/** A brightness bar moves to 1%, then in 5% steps from 5% to 100%: the nearest step to [fraction] (0 to 1), as a percentage. */
+fun snapBrightness(fraction: Float): Int = if (fraction * 100f < 3f) 1 else ((fraction * 100f / 5f).roundToInt() * 5).coerceIn(5, 100)
 
 /** Saved colours as hue and saturation pairs, kept as "hue,sat;hue,sat". Anything unreadable is left out. */
 fun decodeSavedColours(text: String?): List<Pair<Double, Double>> =

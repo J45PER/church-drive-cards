@@ -148,10 +148,10 @@ export function energySnapshot(states, now = Date.now()) {
 export const DAYS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['24h', 'Last 24 hours'], ['week', 'Last 7 days'], ['month', 'Last 30 days'], ['all', 'All dates']];
 export const TIMES = [['all', 'All day', null, null], ['morning', 'Morning (06:00 to 12:00)', '06:00', '12:00'], ['afternoon', 'Afternoon (12:00 to 18:00)', '12:00', '18:00'],
   ['evening', 'Evening (18:00 to 22:00)', '18:00', '22:00'], ['night', 'Night (22:00 to 06:00)', '22:00', '06:00']];
-export const ACTIONS = [['all', []], ['people', ['user']], ['assistant', ['clive', 'clive_auto']], ['asked', ['clive']], ['automatic', ['clive_auto']], ['presence', ['presence']], ['overruled', ['overruled']], ['devices', ['device']]];
+export const ACTIONS = [['all', []], ['people', ['user']], ['assistant', ['clive', 'clive_auto']], ['asked', ['clive']], ['automatic', ['clive_auto']], ['presence', ['presence']], ['overruled', ['overruled']], ['devices', ['device']], ['sensors', ['sensor']]];
 
 export function actionLabel(id, assistant) {
-  return { all: 'All actions', people: 'People', assistant: `${assistant} (all)`, asked: `${assistant}: asked`, automatic: `${assistant}: automatic`, presence: 'Coming and going', overruled: `Overruled ${assistant}`, devices: 'Devices not answering' }[id];
+  return { all: 'All actions', people: 'People', assistant: `${assistant} (all)`, asked: `${assistant}: asked`, automatic: `${assistant}: automatic`, presence: 'Coming and going', overruled: `Overruled ${assistant}`, devices: 'Devices not answering', sensors: 'Sensor actions' }[id];
 }
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -182,6 +182,7 @@ export function dayLabel(ms, now = new Date()) {
 export function activityNote(line, assistant = 'the assistant') {
   if (line.kind === 'clive') return line.by ? `asked by ${line.by}` : 'asked';
   if (line.kind === 'clive_auto') return line.rule ? `automatic: ${line.rule}` : 'automatic';
+  if (line.kind === 'sensor') return 'automatic: sensor action';
   if (line.kind === 'overruled') return `overruled ${assistant} from outside the app${line.clive ? ` (set at ${clock(line.clive)})` : ''}`;
   return null;
 }
