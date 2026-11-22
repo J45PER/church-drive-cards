@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.185.0
+
+- **Sensor action editor and themed pickers.** The sensor action editor is rebuilt as a card for each area that you can fold (Sensors, When someone is there, When the room is empty, Only when, Sensor settings), in the app's grey acrylic instead of the bright light colour, with the right icons on its buttons. Scenes and themes are chosen from their coloured tiles, a time slot shows a bar in its scene's colour, and the switches take the app's colours. Pickers are themed to the app: the role and choice dialogs, a clock dialog for times (also on routines and one-off actions) and a new length-of-time picker for \"After\", which takes any time from 1 second to 60 minutes, with quick choices. The house now accepts a countdown as short as 1 second (it was 10). The last of the old grey Android pickers are now the app's own: the Activity filters and date range (a date dialog, then the clock), the Manager's choice lists and times, and the date picker on one-off actions.
+
 ## 0.184.2
 
 - **Fan off card.** A fan that Clive turns off ends its card on the crossed-out fan, as a light goes out. A sensor action can now go back to how the lights were when someone came in (the new Go back choice for when the room is empty): the house notes each light and the Hue scene its room or zone was showing, and puts it back after the countdown, so a front light returns to its night scene.

@@ -1,6 +1,5 @@
 package com.churchdrive.app.ui
 
-import android.app.DatePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -209,7 +208,6 @@ private fun deviceKind(entity: String): String = when (entity.substringBefore('.
 private fun OneOffEditor(existing: RoutineInfo?, entities: Map<String, EntityState>, onDone: () -> Unit) {
     val api = LocalHaApi.current
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val devices = remember(entities) { schedulableDevices(entities) }
     val names = devices.toMap()
     val today = LocalDate.now()
@@ -219,8 +217,10 @@ private fun OneOffEditor(existing: RoutineInfo?, entities: Map<String, EntitySta
     var date by remember(existing?.id) { mutableStateOf(startDate) }
     var time by remember(existing?.id) { mutableStateOf(existing?.onceAt?.drop(11)?.take(5)?.takeIf { it.length == 5 } ?: "08:15") }
     var changing by remember { mutableStateOf(false) }
+    var pickingDate by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    if (pickingDate) DatePickDialog(date, { date = it; message = null; pickingDate = false }, { pickingDate = false })
     val tone = toneColors(upcomingTone(deviceKind(device)))
     val ink = tone.onContainer
     EntityCard(tone.container, ink) {
@@ -256,7 +256,7 @@ private fun OneOffEditor(existing: RoutineInfo?, entities: Map<String, EntitySta
                 TileItem("", "Today", date == today) { date = today; message = null },
                 TileItem("", "Tomorrow", date == today.plusDays(1)) { date = today.plusDays(1); message = null },
                 TileItem("", if (date == today || date == today.plusDays(1)) "Pick a date" else "${date.dayOfMonth}/${date.monthValue}", date != today && date != today.plusDays(1)) {
-                    DatePickerDialog(context, { _, y, m, d -> date = LocalDate.of(y, m + 1, d); message = null }, date.year, date.monthValue - 1, date.dayOfMonth).show()
+                    pickingDate = true
                 },
             ),
             tone, ink,

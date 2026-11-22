@@ -30,8 +30,10 @@ class Clean(unittest.TestCase):
         self.assertEqual(sl.clean_sensor({**CLOAK, "on_action": "scene", "scene": "relax"})["scene"], "relax")
 
     def test_numbers_are_kept_in_range(self):
-        item = sl.clean_sensor({**CLOAK, "off_delay": 1, "dim_pct": 500, "dark_lux": "40"})
-        self.assertEqual((item["off_delay"], item["dim_pct"], item["dark_lux"]), (10, 100, 40))
+        item = sl.clean_sensor({**CLOAK, "off_delay": 0, "dim_pct": 500, "dark_lux": "40"})
+        self.assertEqual((item["off_delay"], item["dim_pct"], item["dark_lux"]), (1, 100, 40))
+        self.assertEqual(sl.clean_sensor({**CLOAK, "off_delay": 7200})["off_delay"], 3600)
+        self.assertEqual(sl.clean_sensor({**CLOAK, "off_delay": 1})["off_delay"], 1)
 
     def test_a_change_keeps_what_wasnt_sent_and_the_id(self):
         old = sl.clean_sensor({**CLOAK, "off_delay": 120})

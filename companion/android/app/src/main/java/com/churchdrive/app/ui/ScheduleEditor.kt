@@ -175,24 +175,38 @@ fun ScheduleEditor(
     }
 }
 
-/** A time as a wide tile: its label, the time large, a tap opens the clock; a cross clears it when it can be left out. */
+/** A time as a wide acrylic tile: its label, the time large in the accent colour, a tap opens the clock; a cross clears it when it can be left out. */
 @Composable
 internal fun ScheduleTime(label: String, time: String?, optional: Boolean, ink: Color, onPick: (String?) -> Unit) {
-    val context = LocalContext.current
+    var picking by remember { mutableStateOf(false) }
+    val accent = toneColors(Tone.Grey).accent
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f)).clickable(onClickLabel = "Change $label") {
-            val hour = time?.substringBefore(':')?.toIntOrNull() ?: 7
-            val minute = time?.substringAfter(':', "0")?.toIntOrNull() ?: 30
-            TimePickerDialog(context, { _, h, m -> onPick("%02d:%02d".format(h, m)) }, hour, minute, true).show()
-        }.padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f)).clickable(onClickLabel = "Change $label") { picking = true }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
-            Text(time ?: "Not set", style = MaterialTheme.typography.headlineMedium, color = if (time != null) MaterialTheme.colorScheme.primary else ink.copy(alpha = 0.6f))
+            Text(time ?: "Not set", style = MaterialTheme.typography.headlineMedium, color = if (time != null) accent else ink.copy(alpha = 0.6f))
         }
         if (optional && time != null) {
             HaIcon("cd:close", CdVectors.Close, ink.copy(alpha = 0.7f), 24.dp, Modifier.clip(RoundedCornerShape(50)).clickable(onClickLabel = "Clear $label") { onPick(null) }.padding(8.dp))
         }
     }
+    if (picking) TimePickDialog(time, { onPick(it) }, { picking = false })
+}
+
+/** A length of time as a wide acrylic tile, the same shape as [ScheduleTime]: its label and the time ("20 s", "1 min 30 s"); a tap opens the duration picker. */
+@Composable
+internal fun DurationTile(label: String, seconds: Int, ink: Color, onPick: (Int) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    val accent = toneColors(Tone.Grey).accent
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f)).clickable(onClickLabel = "Change $label") { picking = true }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
+        Text(delayText(seconds), style = MaterialTheme.typography.headlineMedium, color = accent)
+    }
+    if (picking) DurationPickDialog(label, seconds, onPick) { picking = false }
 }
