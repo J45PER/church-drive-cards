@@ -51,12 +51,14 @@ private val GasGlow = CliveColours.Gas.colour
 
 /**
  * The Home page: Tasks, then House (Security, Who's home, Energy), Clive (his devices) and System (Device health, Updates and backups), each under its title. A tap on a card (not its
- * arrow) opens the page that has more of it: [openHealth], [openEnergy] or [openDevices]; Tasks opens [openManager].
+ * arrow) opens the page that has more of it: [openHealth], [openEnergy] or [openDevices]; Tasks opens [openTodo] (the To-Do app, on a task when one is tapped),
+ * or [openManager] where [openTodo] isn't given.
  */
 @Composable
 fun AdminHome(
     entities: Map<String, EntityState>, registry: Registry, areaNames: Map<String, String>,
     openManager: () -> Unit, openHealth: () -> Unit, openEnergy: () -> Unit, openDevices: () -> Unit, openSecurity: () -> Unit,
+    openTodo: ((list: String?, uid: String?) -> Unit)? = null,
 ) {
     val now = remember(entities) { System.currentTimeMillis() }
     val health = remember(entities, registry, areaNames) { deviceHealthList(entities, registry, areaNames) }
@@ -64,7 +66,7 @@ fun AdminHome(
     val clive = rememberWs("church_drive/clive/devices")
     // Each group is the phone app's section: its icon, the title in the section's colour, then its cards.
     Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
-        HomeTasks(entities, openManager)
+        HomeTasks(entities, openTodo ?: { _, _ -> openManager() })
         // A heading that has a page opens it (the arrow at its end); a card with a page of its own and no such heading has a View details button.
         SectionPanel("House and Security", icon = CdVectors.Home, tone = Tone.Blue, onClick = openSecurity) {
             HomeCard("security", "Security", securitySummary(entities, registry, now), ring = true)
@@ -198,34 +200,48 @@ private fun StatusRing(colour: Color, sizeCells: Float, cell: androidx.compose.u
 }
 
 /**
- * Tasks, at the top and always there as on the main app's Home: up to three lines (the house's jobs for this person, then the edits waiting
- * on the website), the rest behind "+N more"; the button opens the Manager, where the jobs and their lists are.
+ * Tasks, at the top and always there as on the main app's Home: up to three lines (this person's own tasks, the shared list and the house's jobs for them, the
+ * same as the main app shows, then the edits waiting on the website), the rest behind "+N more"; the button and a task open the To-Do app.
  */
 @Composable
-private fun HomeTasks(entities: Map<String, EntityState>, openManager: () -> Unit) {
+private fun HomeTasks(entities: Map<String, EntityState>, openTodo: (String?, String?) -> Unit) {
     val me = LocalUserName.current
     val first = me?.trim()?.substringBefore(' ')
+    val mine = myTodoList(me)
+    val own = rememberTodoItems(mine.orEmpty(), entities)
+    val shared = rememberTodoItems(SHARED_LIST, entities)
     val house = rememberTodoItems(HOUSE_LIST, entities)
-    val jobs = house?.let { todoHighlights(mapOf(HOUSE_LIST to it), first) }.orEmpty()
+    val jobs = todoHighlights(
+        buildMap {
+            if (mine != null) own?.let { put(mine, it) }
+            shared?.let { put(SHARED_LIST, it) }
+            house?.let { put(HOUSE_LIST, it) }
+        },
+        first,
+    )
+    val teal = toneColors(Tone.Teal)
+    val indigo = toneColors(Tone.Shopping)
     val edits = editsWaiting(entities)
     val purple = toneColors(Tone.Tasks)
     val red = toneColors(Tone.Red)
     val green = toneColors(Tone.Green)
     val coral = toneColors(Tone.TodoHouse)
-    val lines = jobs.map { Triple(it.text, it.icon, if (it.overdue) red else coral) } + edits.map { Triple(it, "mdi:pencil", purple) }
+    // (words, icon, colour, the task it opens in the To-Do app, if it is one)
+    val lines = jobs.map { h -> TaskLine(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else if (h.auto) coral else purple, h) } +
+        edits.map { TaskLine(it, "mdi:pencil", purple, null) }
     val shown = lines.take(3)
     val extra = lines.size - shown.size
     EntityCard(purple.container, purple.onContainer) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shown.isEmpty()) {
-                    val loaded = house != null
-                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, null)
+                    val loaded = own != null || shared != null || house != null
+                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, { openTodo(null, null) })
                 }
-                shown.forEach { (text, icon, tone) -> HighlightPill(text, icon, tone, null, null) }
+                shown.forEach { line -> HighlightPill(line.text, line.icon, line.tone, null, line.task?.let { t -> { openTodo(t.list, t.uid) } }) }
             }
             Column(
-                Modifier.width(58.dp).fillMaxHeight().background(purple.accent.copy(alpha = 0.22f), RoundedCornerShape(12.dp)).clickable { openManager() },
+                Modifier.width(58.dp).fillMaxHeight().background(purple.accent.copy(alpha = 0.22f), RoundedCornerShape(12.dp)).clickable { openTodo(null, null) },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -235,6 +251,9 @@ private fun HomeTasks(entities: Map<String, EntityState>, openManager: () -> Uni
         }
     }
 }
+
+/** One line of the Admin Home's Tasks card. */
+private class TaskLine(val text: String, val icon: String, val tone: ToneColors, val task: Highlight?)
 
 /** The last seven finished days, read from the house's long-term statistics and read again every half hour; null until they have been read. */
 @Composable
