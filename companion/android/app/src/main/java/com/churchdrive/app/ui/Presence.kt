@@ -69,6 +69,11 @@ fun presenceFor(light: EntityState?, device: EntityState?, entities: Map<String,
     if (all.isEmpty()) return null
     all[light?.entityId]?.let { return it }
     all[device?.entityId]?.let { return it }
+    // A card for a room's single light (the Front Garden's front light) takes the presence of the group made only of that light (the Hue room "Front").
+    val own = light?.entityId
+    if (own != null) {
+        all.entries.firstOrNull { (id, _) -> entities[id]?.lightMembers()?.let { m -> m.isNotEmpty() && m.all { it == own } } == true }?.let { return it.value }
+    }
     val members = light?.lightMembers()?.toSet().orEmpty()
     if (members.isEmpty()) return null
     return all.entries.firstOrNull { (id, _) ->
