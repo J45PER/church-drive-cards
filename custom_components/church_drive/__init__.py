@@ -2719,6 +2719,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def start(_event: Event | None = None) -> None:
         # The Hue integration is up once HA has started.
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        # Clive's front door (a conversation agent): on its own, so that a fault here can never stop the rest from loading.
+        try:
+            await hass.config_entries.async_forward_entry_setups(entry, [Platform.CONVERSATION])
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning("Clive's conversation agent could not be set up", exc_info=True)
         await sync_scenes()
 
     if hass.state is CoreState.running:
@@ -2756,6 +2761,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     url = hass.data.get(DOMAIN, {}).get("cards_url")
     if url:
         remove_extra_js_url(hass, url)
+    try:
+        await hass.config_entries.async_unload_platforms(entry, [Platform.CONVERSATION])
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Clive's conversation agent was not loaded", exc_info=True)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.187.0
+
+No change to this app. In the house, Clive now sends plain commands to a faster model.
+
 ## 0.186.3
 
 No change to this app. Clive's done card now goes out with the action instead of after it (a change to his instructions and the show-card script in the house).
