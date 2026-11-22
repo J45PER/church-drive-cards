@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.187.0
+
+No change to this app; it ships with the shared version.
+
 ## 0.186.3
 
 No change to this app; it ships with the shared version.
