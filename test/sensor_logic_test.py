@@ -153,6 +153,12 @@ class OffIfOn(unittest.TestCase):
 
 
 class Groups(unittest.TestCase):
+    def test_the_dim_warning_is_on_unless_switched_off(self):
+        self.assertTrue(sl.clean_sensor(CLOAK)["dim_warning"])
+        item = sl.clean_sensor({**CLOAK, "dim_warning": False})
+        self.assertFalse(item["dim_warning"])
+        self.assertFalse(sl.clean_sensor({"off_delay": 30}, item)["dim_warning"])
+
     def test_a_group_keeps_the_first_sensor_and_the_others_once(self):
         item = sl.clean_sensor({**CLOAK, "sensors": ["binary_sensor.b", "binary_sensor.cloakroom_presence", "binary_sensor.b", "light.x", ""]})
         self.assertEqual(item["sensors"], ["binary_sensor.cloakroom_presence", "binary_sensor.b"])

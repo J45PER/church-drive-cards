@@ -149,6 +149,7 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
     var pct by remember(key) { mutableIntStateOf(action?.pct ?: 0) }
     var slots by remember(key) { mutableStateOf(action?.slots ?: emptyList()) }
     var offIfOn by remember(key) { mutableStateOf(action?.offIfOn ?: false) }
+    var dimWarning by remember(key) { mutableStateOf(action?.dimWarning ?: true) }
     val themes = LocalHybrids.current.hybrids
     val themeName = { id: String -> themes.firstOrNull { it.id == id }?.name ?: "A theme" }
     val looks = LocalSceneLooks.current
@@ -303,6 +304,9 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
             if (offAction == "off" || offAction == "dim") {
                 SwitchLine("Switch off even if it was already on", offIfOn, ink) { offIfOn = it }
             }
+            if (offAction == "off") {
+                SwitchLine("Dim to half before it goes off", dimWarning, ink) { dimWarning = it }
+            }
             if (offAction == "dim") {
                 StepLine("Dim to", "$dimPct%", ink, tone, { dimPct = (dimPct - 5).coerceAtLeast(5) }, { dimPct = (dimPct + 5).coerceAtMost(100) })
             }
@@ -350,7 +354,7 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
                             val body = sensorBody(
                                 action?.id, sensor.entityId, action?.name?.takeIf { it.isNotBlank() } ?: memberInfos.joinToString(" + ") { it.name.removeSuffix(" Sensor").trim() }.ifBlank { sensor.name.removeSuffix(" Sensor").trim() }, chosen, onAction, scene, offAction,
                                 offDelay, dimPct, onlyDark, darkLux, luxEntity ?: "", if (windowOn) windowStart else null,
-                                if (windowOn) windowEnd else null, enabled, pct, slots, offIfOn, members, luxSensors,
+                                if (windowOn) windowEnd else null, enabled, pct, slots, offIfOn, members, luxSensors, dimWarning,
                             )
                             val result = api?.ask("church_drive/sensor_actions/set", body)
                             saving = false

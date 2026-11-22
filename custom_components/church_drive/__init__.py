@@ -1469,6 +1469,7 @@ def ws_sensor_actions(hass: HomeAssistant, connection: websocket_api.ActiveConne
         vol.Optional("pct"): vol.Coerce(int),
         vol.Optional("slots"): [dict],
         vol.Optional("off_if_on"): bool,
+        vol.Optional("dim_warning"): bool,
         vol.Optional("sensors"): [cv.entity_id],
         vol.Optional("lux_sensors"): [cv.entity_id],
         vol.Optional("enabled"): bool,

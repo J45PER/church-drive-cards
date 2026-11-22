@@ -60,6 +60,8 @@ data class SensorAction(
     val slots: List<SensorSlot> = emptyList(),
     /** Whether the light goes off after the room empties even if it was already on when someone came in. */
     val offIfOn: Boolean = false,
+    /** The light dims to half at the middle of the countdown before it goes off. */
+    val dimWarning: Boolean = true,
     /** Every sensor of the group (the first is [sensor]); one alone is the usual case. */
     val sensors: List<String> = emptyList(),
     val luxSensors: List<String> = emptyList(),
@@ -91,7 +93,7 @@ fun parseSensorActions(result: Any?): SensorActionsData? {
                 offDelay = o.optInt("off_delay", 60), dimPct = o.optInt("dim_pct", 20), onlyDark = o.optBoolean("only_dark"),
                 darkLux = o.optInt("dark_lux", 30), luxSensor = o.optString("lux_sensor"),
                 windowStart = w?.optString("start")?.takeIf { it.isNotBlank() }, windowEnd = w?.optString("end")?.takeIf { it.isNotBlank() },
-                enabled = o.optBoolean("enabled", true), summary = o.optString("summary"), pct = o.optInt("pct", 0), offIfOn = o.optBoolean("off_if_on"), sensors = o.optJSONArray("sensors").strings(), luxSensors = o.optJSONArray("lux_sensors").strings(),
+                enabled = o.optBoolean("enabled", true), summary = o.optString("summary"), pct = o.optInt("pct", 0), offIfOn = o.optBoolean("off_if_on"), dimWarning = o.optBoolean("dim_warning", true), sensors = o.optJSONArray("sensors").strings(), luxSensors = o.optJSONArray("lux_sensors").strings(),
                 slots = o.optJSONArray("slots")?.let { a ->
                     (0 until a.length()).mapNotNull { j ->
                         val x = a.optJSONObject(j) ?: return@mapNotNull null
@@ -159,7 +161,7 @@ fun sensorProblem(lights: List<String>, scene: String, onAction: String, needsHu
 fun sensorBody(
     actionId: String?, sensor: String, name: String, lights: List<String>, onAction: String, scene: String, offAction: String, offDelay: Int,
     dimPct: Int, onlyDark: Boolean, darkLux: Int, luxSensor: String, windowStart: String?, windowEnd: String?, enabled: Boolean,
-    pct: Int = 0, slots: List<SensorSlot> = emptyList(), offIfOn: Boolean = false, sensors: List<String> = emptyList(), luxSensors: List<String> = emptyList(),
+    pct: Int = 0, slots: List<SensorSlot> = emptyList(), offIfOn: Boolean = false, sensors: List<String> = emptyList(), luxSensors: List<String> = emptyList(), dimWarning: Boolean = true,
 ): JSONObject = JSONObject()
     .also { if (actionId != null) it.put("action_id", actionId) else it.put("sensor", sensor) }
     .put("name", name)
@@ -176,6 +178,7 @@ fun sensorBody(
     .put("enabled", enabled)
     .put("pct", pct)
     .put("off_if_on", offIfOn)
+    .put("dim_warning", dimWarning)
     .also { if (sensors.isNotEmpty()) it.put("sensors", JSONArray(sensors)) }
     .put("lux_sensors", JSONArray(luxSensors))
     .put("slots", JSONArray(slots.map { JSONObject().put("start", it.start).put("end", it.end).put("on_action", it.onAction).put("scene", it.scene).put("pct", it.pct) }))
