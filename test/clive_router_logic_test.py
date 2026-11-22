@@ -26,6 +26,16 @@ class Plain(unittest.TestCase):
         self.assertFalse(cr.is_plain_command("turn off " + "the light " * 20))
 
 
+class Dismissals(unittest.TestCase):
+    def test_what_ends_a_conversation(self):
+        for text in ["No thank you", "no thanks", "That's it", "that\u2019s all, thanks", "Thank you", "Clive, that's it", "nope", "Bye", "nothing else please"]:
+            self.assertTrue(cr.is_dismissal(text), text)
+
+    def test_other_answers_are_not(self):
+        for text in ["yes please", "no the other light", "thanks, and turn off the fan", "no, tomorrow", "what's the weather", ""]:
+            self.assertFalse(cr.is_dismissal(text), text)
+
+
 class Routing(unittest.TestCase):
     def test_a_plain_command_goes_to_the_fast_model_when_there_is_one(self):
         r = cr.Router()

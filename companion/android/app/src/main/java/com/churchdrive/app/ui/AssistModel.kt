@@ -447,7 +447,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 if (e.conversationId != null) conversationId = e.conversationId
                 answered = true
                 continueAfter = e.continueConversation
-                if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text), pendingShow)
+                if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text), pendingShow ?: e.localCard?.let { AssistantShow(null, null, null, it) })
                 pendingShow = null
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }

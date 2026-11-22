@@ -131,6 +131,14 @@ class KeepingTest(unittest.TestCase):
         al.add(log, entry(1004, kind="clive", who="", entity="light.hall"))
         self.assertEqual(len(log), 5)
 
+    def test_switching_on_then_off_a_moment_later_stays_two_lines(self):
+        log = []
+        al.add(log, entry(1000, entity="light.kitchen", text="turned on Kitchen"))
+        al.add(log, entry(1003, entity="light.kitchen", text="turned off Kitchen"))
+        self.assertEqual([e["text"] for e in log], ["turned on Kitchen", "turned off Kitchen"])
+        al.add(log, entry(1005, entity="light.kitchen", text="turned off Kitchen"))
+        self.assertEqual(len(log), 2)  # the same again still folds into the line before
+
     def test_no_entity_never_merges(self):
         log = []
         al.add(log, entry(1000))

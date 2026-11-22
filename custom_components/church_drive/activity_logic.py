@@ -7,6 +7,8 @@ when people arrived or left. Pure logic, so it can be tested without Home Assist
 
 from __future__ import annotations
 
+import re
+
 from datetime import datetime, tzinfo
 from typing import Any, Iterable
 
@@ -403,12 +405,21 @@ def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str
     return entry
 
 
+def _power(entry: dict[str, Any]) -> str | None:
+    """Whether a line says something went on or went off, so that switching it on and then off a moment later stays two lines."""
+    words = re.findall(r"[a-z]+", str(entry.get("text", "")).lower())
+    return "off" if "off" in words else "on" if "on" in words else None
+
+
 def add(entries: list[dict[str, Any]], entry: dict[str, Any]) -> None:
     """Add a line, replacing the last one when it's the same person doing the same kind of thing to the same thing a moment ago."""
     for i in range(len(entries) - 1, max(-1, len(entries) - 25), -1):
         prev = entries[i]
         if entry["ts"] - prev["ts"] > COALESCE_S:
             break
+        # What a person or the assistant asked for: on and then off are two lines. (A device flapping by itself still folds into one.)
+        if entry["kind"] in ("user", "clive", "clive_auto") and _power(prev) and _power(entry) and _power(prev) != _power(entry):
+            continue
         if prev["kind"] == entry["kind"] and prev["who"] == entry["who"] and prev.get("entity") == entry.get("entity") and prev.get("entity") and prev.get("icon") == entry["icon"] and prev.get("by") == entry.get("by") and prev.get("rule") == entry.get("rule"):
             entries[i] = entry
             return

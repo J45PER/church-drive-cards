@@ -39,6 +39,25 @@ def is_plain_command(text: str) -> bool:
     return bool(_COMMAND.match(words)) and not _NOT_PLAIN.search(words)
 
 
+# What ends a conversation: the app closes after the answer to these, so the reply is a short sign-off and never a question ("Anything else?").
+_DISMISSALS = {
+    "no", "nope", "nah", "no thanks", "no thank you", "thanks", "thank you", "cheers", "ok thanks", "okay thanks", "ok thank you", "okay thank you",
+    "that's it", "thats it", "that's all", "thats all", "that's it thanks", "that's it thank you", "that's all thanks", "that's all thank you",
+    "nothing else", "nothing more", "never mind", "nevermind", "i'm done", "im done", "goodbye", "bye",
+}
+_NAMES = ("clive", "jarvis")
+SIGN_OFFS = ("No problem.", "Right you are.", "Of course.", "Very good.")
+
+
+def is_dismissal(text: str) -> bool:
+    """Someone saying they want nothing more ("no thank you", "that's it", "bye"), nothing else."""
+    said = re.sub(r"[^a-z' ]", " ", str(text or "").lower().replace("\u2019", "'"))
+    said = " ".join(said.split())
+    for name in _NAMES:
+        said = said.removeprefix(name + " ").removesuffix(" " + name)
+    return said.removesuffix(" please").strip() in _DISMISSALS
+
+
 class Router:
     """Chooses a model for each request and remembers which one a conversation started with."""
 

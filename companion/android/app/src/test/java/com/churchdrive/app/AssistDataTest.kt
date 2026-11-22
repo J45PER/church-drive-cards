@@ -9,6 +9,7 @@ import com.churchdrive.app.ui.forDisplay
 import com.churchdrive.app.ui.forSpeech
 import com.churchdrive.app.ui.isDismissal
 import com.churchdrive.app.ui.isNotUnderstood
+import com.churchdrive.app.ui.localDoneCard
 import com.churchdrive.app.ui.parseAssistEvent
 import com.churchdrive.app.ui.parseAssistantShow
 import org.json.JSONObject
@@ -159,6 +160,27 @@ class AssistDataTest {
             JSONObject("""{"type":"intent-end","data":{"intent_output":{"response":{"speech":{"plain":{"speech":"Done."}}}}}}"""),
         ) as AssistEvent.Answer
         assertFalse(b.continueConversation)
+    }
+
+    @Test
+    fun aCommandTheHouseHandledItselfGetsAReceiptCard() {
+        val e = parseAssistEvent(
+            JSONObject(
+                """{"type":"intent-end","data":{"processed_locally":true,"intent_output":{"response":{"speech":{"plain":{"speech":"Turned off the light"}},"data":{"success":[{"name":"Kitchen","type":"entity","id":"light.kitchen"}]}}}}}""",
+            ),
+        ) as AssistEvent.Answer
+        val card = e.localCard!!
+        assertEquals("done", card.kind)
+        assertEquals("Kitchen", card.fields.getString("name"))
+        assertEquals("Turned off", card.fields.getString("detail"))
+        assertEquals("mdi:lightbulb-off", card.fields.getString("icon"))
+        // Not handled locally (his own answer carries its own card), or not a switch or open or close: no receipt made here.
+        val his = parseAssistEvent(
+            JSONObject("""{"type":"intent-end","data":{"processed_locally":false,"intent_output":{"response":{"speech":{"plain":{"speech":"Turned off the light"}},"data":{"success":[{"name":"Kitchen","type":"entity","id":"light.kitchen"}]}}}}}"""),
+        ) as AssistEvent.Answer
+        assertNull(his.localCard)
+        assertNull(localDoneCard("Brightness set to 50%", listOf("Kitchen" to "light.kitchen")))
+        assertEquals("Kitchen and Hall", localDoneCard("Turned on the lights", listOf("Kitchen" to "light.kitchen", "Hall" to "light.hall"))!!.fields.getString("name"))
     }
 
     @Test

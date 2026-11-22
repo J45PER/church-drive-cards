@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.189.0
+
+- **A receipt card for commands the house handles itself.** "Turn on the kitchen lights" is answered instantly by the house's own rules, which gave no card. The phone now makes the receipt (the device, what was done, the moving bulb, fan or blind) from what the house reports it did. Commands that go through Clive keep his own card.
+- **Activity log without the sensor lines.** The phone's Activity log keeps to people, Clive, coming and going, overruled settings and devices that stopped answering. The sensor actions' own lines (a light switched on or put back by a sensor) are in Home Assistant's log and on the website, and the Sensor actions filter is gone from the phone.
+
 ## 0.188.2
 
 - **Single-light cards show the light's colour.** A card for one light (the Front Garden's front light) now tints its pill and brightness bar with that light's colour, as a room card does. It had only shown the colour on its details page.
