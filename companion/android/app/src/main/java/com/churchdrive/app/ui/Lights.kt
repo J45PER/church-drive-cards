@@ -100,7 +100,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val library = LocalSceneLooks.current.library
     val sceneList = if (room.scenes.isEmpty()) room.scenes else room.scenes + library.values.filter { it.custom && room.scenes.none { s -> s.key == it.key } }.sortedBy { it.name }.map { LightScene(it.key, room.head) }
     // A light a presence sensor looks after says whether someone is in and counts down to switching it off; its line and bar are always there, so the card never changes size.
-    val presence = LocalPresence.current.let { it[room.head] ?: device?.let { d -> it[d.entityId] } }
+    val presence = presenceFor(head, device, entities, LocalPresence.current)
     val remaining = rememberRemaining(presence)
     val top = if (presence != null) 2.75f else 2f
     val expandable = rowsShown.isNotEmpty() || sceneList.isNotEmpty()

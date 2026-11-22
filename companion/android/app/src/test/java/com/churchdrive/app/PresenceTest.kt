@@ -41,4 +41,20 @@ class PresenceTest {
         assertEquals("Nobody in", presenceLine(empty, null))
         assertEquals(0f, presenceFraction(empty, null), 0f)
     }
+
+    private fun light(id: String, vararg members: String) =
+        com.churchdrive.app.ha.EntityState(id, "off", JSONObject().apply { if (members.isNotEmpty()) put("entity_id", org.json.JSONArray(members.toList())) })
+
+    @Test fun aRoomTakesThePresenceOfALightOrZoneInsideIt() {
+        val room = light("light.landing", "light.lower_main", "light.upper_main", "light.spot_1")
+        val zone = light("light.landing_main", "light.lower_main", "light.upper_main")
+        val other = light("light.kitchen", "light.k1")
+        val entities = listOf(room, zone, other).associateBy { it.entityId }
+        val p = Presence(false, 4, 10, "Landings")
+        val all = mapOf("light.landing_main" to p)
+        assertEquals(p, com.churchdrive.app.ui.presenceFor(room, null, entities, all))
+        assertNull(com.churchdrive.app.ui.presenceFor(other, null, entities, all))
+        assertEquals(p, com.churchdrive.app.ui.presenceFor(zone, null, entities, all))
+        assertNull(com.churchdrive.app.ui.presenceFor(room, null, entities, emptyMap()))
+    }
 }

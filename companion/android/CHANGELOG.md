@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.184.1
+
+- **Presence on room cards.** A room's card and page show the presence line and countdown bar for a sensor that looks after a light or zone inside the room (the landings' Main zone, say), not only the room's own light. A motion sensor counts down from the last movement it saw.
+
 ## 0.184.0
 
 - **Sensor groups and a standard picker.** Sensors can be grouped: one sensor action can list several sensors (the two Hue landing sensors, say). Someone seen by any of them counts as someone there, the lights go off after all have seen nobody, and the daylight check uses the brightest light reading of the group. Add sensors to a group from the sensor's page, and a group shows as one card. Drop-downs (a light's role, the cleaning settings) now open Android's standard picker in the middle of the screen with large rows.

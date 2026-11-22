@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.churchdrive.app.ha.EntityState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -58,6 +59,21 @@ fun presenceFraction(p: Presence, remaining: Int?): Float = when {
     p.present -> 1f
     remaining != null && p.delay > 0 -> (remaining.toFloat() / p.delay).coerceIn(0f, 1f)
     else -> 0f
+}
+
+/**
+ * What the presence sensors say about a room's card or page: the sensors' action looks after a light, which may be the room's own light, its device light
+ * or a zone or light inside the room (the landings' Main zone, say), so a presence light that is one of the room's lights, or a group made only of them, counts.
+ */
+fun presenceFor(light: EntityState?, device: EntityState?, entities: Map<String, EntityState>, all: Map<String, Presence>): Presence? {
+    if (all.isEmpty()) return null
+    all[light?.entityId]?.let { return it }
+    all[device?.entityId]?.let { return it }
+    val members = light?.lightMembers()?.toSet().orEmpty()
+    if (members.isEmpty()) return null
+    return all.entries.firstOrNull { (id, _) ->
+        id in members || entities[id]?.lightMembers()?.let { inner -> inner.isNotEmpty() && members.containsAll(inner) } == true
+    }?.value
 }
 
 /** The lights a presence sensor looks after, kept up to date while the app is open. */
