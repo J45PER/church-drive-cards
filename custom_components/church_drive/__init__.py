@@ -339,7 +339,7 @@ CUSTOM_SCENE = vol.Schema(
         vol.Required("name"): vol.All(cv.string, vol.Length(min=1, max=32)),
         vol.Required("kind"): vol.In(["white", "colour"]),
         vol.Optional("kelvin", default=2700): vol.All(vol.Coerce(int), vol.Range(min=2000, max=6500)),
-        vol.Optional("brightness", default=100): vol.All(vol.Coerce(float), vol.Range(min=5, max=100)),
+        vol.Optional("brightness", default=100): vol.All(vol.Coerce(float), vol.Range(min=1, max=100)),
         vol.Optional("colors", default=[]): vol.All([HEX], vol.Length(max=9)),
         vol.Optional("dynamic", default=False): cv.boolean,
         vol.Optional("speed", default=0.63): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),

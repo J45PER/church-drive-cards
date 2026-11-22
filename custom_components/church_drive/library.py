@@ -18,8 +18,8 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-# No scene starts dimmer than this percentage.
-MIN_BRIGHTNESS = 5.0
+# No scene starts dimmer than this percentage (the built-in ones are never below 5%; a scene you make can go down to 1% for a night light).
+MIN_BRIGHTNESS = 1.0
 
 WHITE: dict[str, dict] = {
     "bright": {"name": "Bright", "mirek": 370, "brightness": 100.0},
