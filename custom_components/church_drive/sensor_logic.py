@@ -148,6 +148,17 @@ def is_dark(item: dict[str, Any], lux: float | None, sun_down: bool) -> bool:
     return sun_down
 
 
+# How long a room that was dark when its light came on is still taken to be dark: the light itself raises what its sensor reads, and a motion
+# sensor is slow to read the drop after the light goes off, so for a while the reading says "bright" about a room the light has just left.
+LIT_HOLD_ON_S = 600
+LIT_HOLD_OFF_S = 240
+
+
+def lux_for_decision(lux: float | None, held: bool) -> float | None:
+    """The light level to decide "is it dark" from: nothing brighter than the dark level while the action's own light is, or has just been, on."""
+    return 0.0 if held else lux
+
+
 def pick_look(item: dict[str, Any], now_minutes: int) -> dict[str, Any]:
     """What to do for someone being seen at this time of day: the first time slot that covers it, else the sensor's own look."""
     for slot in item["slots"]:
