@@ -126,6 +126,13 @@ fun TimePickDialog(initial: String?, onPick: (String) -> Unit, onDismiss: () -> 
     }
 }
 
+/** A length of time in words: "20 s", "1 min", "1 min 30 s". */
+fun delayText(seconds: Int): String = when {
+    seconds < 60 -> "$seconds s"
+    seconds % 60 == 0 -> "${seconds / 60} min"
+    else -> "${seconds / 60} min ${seconds % 60} s"
+}
+
 /** The quick choices under a duration's boxes, in seconds. */
 private val DURATION_PRESETS = listOf(5, 10, 20, 30, 60, 300, 600, 1800, 3600)
 

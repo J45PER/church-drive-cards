@@ -1,6 +1,5 @@
 package com.churchdrive.app.ui
 
-import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -434,14 +433,10 @@ fun NumberInput(entity: EntityState, call: CallService) {
 @Composable
 fun SelectInput(entity: EntityState, call: CallService) {
     var open by remember { mutableStateOf(false) }
-    Box {
-        Text(entity.state, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.clip(CircleShape).clickable { open = true }.padding(horizontal = 12.dp, vertical = 6.dp))
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            entity.options().forEach { o ->
-                DropdownMenuItem(text = { Text(o) }, onClick = { open = false; call("input_select", "select_option", entity.entityId, data("option" to o)) })
-            }
-        }
+    Text(entity.state, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge,
+        modifier = Modifier.clip(CircleShape).clickable { open = true }.padding(horizontal = 12.dp, vertical = 6.dp))
+    if (open) {
+        PickDialog(entity.friendlyName, entity.options(), entity.state, { it }, { open = false }) { o -> call("input_select", "select_option", entity.entityId, data("option" to o)) }
     }
 }
 
@@ -477,14 +472,11 @@ fun SettingsEntitiesCard(config: JSONObject, entities: Map<String, EntityState>,
 
 @Composable
 fun TimeInput(entity: EntityState, call: CallService) {
-    val context = LocalContext.current
+    var picking by remember { mutableStateOf(false) }
     val time = entity.state.take(5)
     Text(time, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge,
-        modifier = Modifier.clip(CircleShape).clickable {
-            val hour = time.substringBefore(':').toIntOrNull() ?: 0
-            val minute = time.substringAfter(':', "0").toIntOrNull() ?: 0
-            TimePickerDialog(context, { _, h, m -> call("input_datetime", "set_datetime", entity.entityId, data("time" to "%02d:%02d:00".format(h, m))) }, hour, minute, true).show()
-        }.padding(horizontal = 12.dp, vertical = 6.dp))
+        modifier = Modifier.clip(CircleShape).clickable { picking = true }.padding(horizontal = 12.dp, vertical = 6.dp))
+    if (picking) TimePickDialog(time, { call("input_datetime", "set_datetime", entity.entityId, data("time" to "$it:00")) }, { picking = false })
 }
 
 /** Plain text of a markdown line: the stars and backticks of bold, italic and code taken out. */

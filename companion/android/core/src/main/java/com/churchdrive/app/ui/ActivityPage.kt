@@ -1,7 +1,5 @@
 package com.churchdrive.app.ui
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -70,7 +68,6 @@ private const val ACTIVITY_PAGE = 100
 @Composable
 fun ActivityPage() {
     val api = LocalHaApi.current
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var filters by remember { mutableStateOf(ActivityFilters()) }
     var result by remember { mutableStateOf<ActivityResult?>(null) }
@@ -96,6 +93,19 @@ fun ActivityPage() {
     val r = result
     val assistant = r?.assistant ?: "Clive"
     val now = System.currentTimeMillis()
+    // A custom range's end is picked as a date and then a time, each in the app's own dialog.
+    var rangeEnd by remember { mutableStateOf<String?>(null) }
+    var rangeDate by remember { mutableStateOf<java.time.LocalDate?>(null) }
+    val zone = ZoneId.systemDefault()
+    rangeEnd?.let { end ->
+        val initial = Instant.ofEpochMilli((if (end == "from") filters.from else filters.to) ?: now).atZone(zone)
+        val date = rangeDate
+        if (date == null) DatePickDialog(initial.toLocalDate(), { rangeDate = it }, { rangeEnd = null })
+        else TimePickDialog("%02d:%02d".format(initial.hour, initial.minute), { picked ->
+            val moment = ZonedDateTime.of(date, java.time.LocalTime.parse(picked), zone).toInstant().toEpochMilli()
+            filters = if (end == "from") filters.copy(from = moment) else filters.copy(to = moment)
+        }, { rangeEnd = null; rangeDate = null })
+    }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActivityDropdown("Dates", filters.day.label, ActivityDay.entries.map { it.label }, Modifier.weight(1f)) { filters = filters.withDay(ActivityDay.entries[it], now) }
@@ -105,12 +115,8 @@ fun ActivityPage() {
         }
         if (filters.day == ActivityDay.Custom) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ActivityField("From", filters.from?.let { activityStamp(it) } ?: "Any time", Modifier.weight(1f)) {
-                    pickDateTime(context, filters.from ?: now) { filters = filters.copy(from = it) }
-                }
-                ActivityField("To", filters.to?.let { activityStamp(it) } ?: "Any time", Modifier.weight(1f)) {
-                    pickDateTime(context, filters.to ?: now) { filters = filters.copy(to = it) }
-                }
+                ActivityField("From", filters.from?.let { activityStamp(it) } ?: "Any time", Modifier.weight(1f)) { rangeEnd = "from" }
+                ActivityField("To", filters.to?.let { activityStamp(it) } ?: "Any time", Modifier.weight(1f)) { rangeEnd = "to" }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -159,11 +165,7 @@ fun ActivityDropdown(label: String, value: String, options: List<String>, modifi
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         ActivityField(label, value, Modifier.fillMaxWidth()) { open = true }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            options.forEachIndexed { i, text ->
-                DropdownMenuItem(text = { Text(text, fontWeight = if (text == value) FontWeight.Bold else FontWeight.Normal) }, onClick = { open = false; onPick(i) })
-            }
-        }
+        if (open) PickDialog(label, options.indices.toList(), options.indexOf(value), { options[it] }, { open = false }, onPick)
     }
 }
 
@@ -180,17 +182,6 @@ private fun ActivityField(label: String, value: String, modifier: Modifier, onCl
         }
         Icon(CdVectors.ChevronDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-}
-
-/** Asks for a date, then a time, with Android's own pickers, and gives the moment chosen (milliseconds). */
-private fun pickDateTime(context: Context, initial: Long, onPicked: (Long) -> Unit) {
-    val zone = ZoneId.systemDefault()
-    val at = Instant.ofEpochMilli(initial).atZone(zone)
-    DatePickerDialog(context, { _, year, month, day ->
-        TimePickerDialog(context, { _, hour, minute ->
-            onPicked(ZonedDateTime.of(year, month + 1, day, hour, minute, 0, 0, zone).toInstant().toEpochMilli())
-        }, at.hour, at.minute, true).show()
-    }, at.year, at.monthValue - 1, at.dayOfMonth).show()
 }
 
 private val ActivityRowShape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 32.dp, bottomEnd = 32.dp)

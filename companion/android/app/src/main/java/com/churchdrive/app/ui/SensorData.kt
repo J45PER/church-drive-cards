@@ -133,12 +133,6 @@ fun stepDelay(seconds: Int, direction: Int): Int {
     return SENSOR_DELAYS[(at + direction).coerceIn(0, SENSOR_DELAYS.lastIndex)]
 }
 
-fun delayText(seconds: Int): String = when {
-    seconds < 60 -> "$seconds s"
-    seconds % 60 == 0 -> "${seconds / 60} min"
-    else -> "${seconds / 60} min ${seconds % 60} s"
-}
-
 /** "Church Drive" for a sensor that has an action, "Hue app" for a Hue one that doesn't (its lights are set on the Hue bridge), else "Not set up". */
 fun sensorBadge(sensor: SensorInfo, action: SensorAction?): String = when {
     action != null -> if (action.enabled) "Church Drive" else "Off"
