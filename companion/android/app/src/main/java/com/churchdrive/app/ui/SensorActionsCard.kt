@@ -66,7 +66,7 @@ private fun AreaCard(icon: String, title: String, summary: String, key: String, 
     var open by rememberSaveable(key) { mutableStateOf(startOpen) }
     EntityCard(tone.container, tone.onContainer) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Fold $title" else "Open $title"),
+            Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Fold $title" else "Open $title") { open = !open },
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(Modifier.size(40.dp).background(tone.accent, CircleShape), contentAlignment = Alignment.Center) { HaIcon(icon, CdVectors.Info, tone.onAccent, 22.dp) }
