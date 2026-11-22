@@ -211,6 +211,13 @@ class SensorActions:
                         cancels.append(async_call_later(self.hass, item["off_delay"] / 2, callback(lambda _now, sid=sid: self._on_halfway(sid))))
                     self._timers[sid] = lambda cancels=cancels: [cancel() for cancel in cancels]
 
+    def holding(self, light: str) -> bool:
+        """Whether a sensor action is looking after this light right now: someone is there, or its countdown to put the light back is running."""
+        for item in self._items.values():
+            if item["enabled"] and light in item["lights"] and (self._any_sensor_on(item) or item["id"] in self._due):
+                return True
+        return False
+
     def _any_sensor_on(self, item: dict[str, Any]) -> bool:
         states = (self.hass.states.get(sensor) for sensor in item["sensors"])
         return any(state is not None and state.state == "on" for state in states)
