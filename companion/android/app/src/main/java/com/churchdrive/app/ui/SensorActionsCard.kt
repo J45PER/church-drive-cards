@@ -342,7 +342,7 @@ private fun SensorActionsPage(all: SensorActionsData, entities: Map<String, Enti
     val tone = toneColors(Tone.Lights)
     val ink = tone.onContainer
     var editing by remember { mutableStateOf<SensorInfo?>(null) }
-    FullPage("Sensor actions", onClose) {
+    FullPage(editing?.name ?: "Sensor actions", onClose, handleBack = { if (editing != null) { editing = null; true } else false }) {
         val e = editing
         if (e != null) {
             SensorEditorCard(e, all.actionFor(e), entities, call) { editing = null; onChanged() }

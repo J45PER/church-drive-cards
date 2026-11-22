@@ -26,15 +26,16 @@ import androidx.compose.ui.unit.dp
 /**
  * A full-screen page for editing something (a task, the tasks to check): a back arrow and a title, then a scrolling body. It
  * respects the screen's edges and the keyboard, so the last buttons can always be reached. Back (the arrow or the phone's)
- * calls [onBack].
+ * calls [onBack]. [handleBack] runs first on the arrow and the system back; when it returns true (a page that has a view of its own open, such as an editor,
+ * closing that view) the page stays.
  */
 @Composable
-fun FullPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    PopupWindow(onDismissRequest = onBack) { close ->
+fun FullPage(title: String, onBack: () -> Unit, handleBack: () -> Boolean = { false }, content: @Composable ColumnScope.() -> Unit) {
+    PopupWindow(onDismissRequest = onBack, handleBack = handleBack) { close ->
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.clickable(onClickLabel = "Back") { close() }.padding(12.dp)) {
+                    Box(modifier = Modifier.clickable(onClickLabel = "Back") { if (!handleBack()) close() }.padding(12.dp)) {
                         HaIcon("mdi:arrow-left", CdVectors.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
                     }
                     Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, modifier = Modifier.weight(1f))

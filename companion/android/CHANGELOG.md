@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.183.3
 
-- **Cloakroom shows off when it is off.** Fix: the Cloakroom card's colour and the floor's "rooms on" count follow the Govee light's own state, not the room group's (which keeps the last ring segment's state), so an off Cloakroom no longer shows lit. The home screen widgets do the same.
+- **Cloakroom shows off when it is off.** Fix: the Cloakroom card's colour and the floor's "rooms on" count follow the Govee light's own state, not the room group's (which keeps the last ring segment's state), so an off Cloakroom no longer shows lit. The home screen widgets do the same. Back from setting up a sensor or editing a routine goes back to the list, not out to the Lights page.
 
 ## 0.183.2
 
