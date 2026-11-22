@@ -225,6 +225,7 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
             listOf(
                 TileItem("cd:bulb-off", "Turn off", offAction == "off") { offAction = "off" },
                 TileItem("cd:moon", "Dim", offAction == "dim") { offAction = "dim" },
+                TileItem("cd:restore", "Go back", offAction == "restore") { offAction = "restore" },
                 TileItem("cd:close", "Nothing", offAction == "none") { offAction = "none" },
             ),
             tone, ink,
@@ -232,7 +233,10 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
         if (offAction != "none") {
             StepLine("After", delayText(offDelay), ink, tone, { offDelay = stepDelay(offDelay, -1) }, { offDelay = stepDelay(offDelay, 1) })
         }
-        if (offAction != "none") {
+        if (offAction == "restore") {
+            Text("The lights go back to how they were when someone came in, such as a night scene.", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+        }
+        if (offAction == "off" || offAction == "dim") {
             SwitchLine("Switch off even if it was already on", offIfOn, ink) { offIfOn = it }
         }
         if (offAction == "dim") {

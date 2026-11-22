@@ -163,3 +163,11 @@ class Groups(unittest.TestCase):
         self.assertTrue(sl.is_dark({**item, "dark_lux": 30}, 10.0, False))
         self.assertFalse(sl.is_dark({**item, "dark_lux": 30}, 80.0, True))
         self.assertTrue(sl.is_dark(sl.clean_sensor(CLOAK), None, True))
+
+
+class RestoreAfter(unittest.TestCase):
+    def test_a_light_can_go_back_to_how_it_was(self):
+        item = sl.clean_sensor({**CLOAK, "off_action": "restore", "off_delay": 30})
+        self.assertEqual(item["off_action"], "restore")
+        self.assertIn("goes back to how it was after 30 s", sl.summary(item))
+        self.assertEqual(sl.clean_sensor({**CLOAK, "off_action": "nonsense"})["off_action"], "off")

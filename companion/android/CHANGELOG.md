@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.184.2
 
-- **Fan off card.** A fan that Clive turns off ends its card on the crossed-out fan, as a light goes out.
+- **Fan off card.** A fan that Clive turns off ends its card on the crossed-out fan, as a light goes out. A sensor action can now go back to how the lights were when someone came in (the new Go back choice for when the room is empty): the house notes each light and the Hue scene its room or zone was showing, and puts it back after the countdown, so a front light returns to its night scene.
 
 ## 0.184.1
 

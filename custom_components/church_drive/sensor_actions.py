@@ -52,6 +52,8 @@ class SensorActions:
         self._due: dict[str, float] = {}
         # Which sensor actions found their light already on when someone came in (kept until the room empties).
         self._was_on: dict[str, bool] = {}
+        # The scene that holds how an action's lights were before someone came in (action id -> scene entity), for the ones that go back to it.
+        self._snap: dict[str, str] = {}
         self._migrated = False
         self._unsub_started: Callable[[], None] | None = None
 
@@ -189,7 +191,7 @@ class SensorActions:
             if new.state == "on":
                 self._cancel(item["id"])
                 self._was_on.setdefault(item["id"], self._any_on(item))
-                self.hass.async_create_task(self._async_present(item))
+                self.hass.async_create_task(self._async_arrive(item))
             elif new.state == "off":
                 if self._any_sensor_on(item):  # another sensor of the group still sees someone
                     continue
@@ -243,6 +245,28 @@ class SensorActions:
         names = [(s.name if (s := self.hass.states.get(light)) is not None else light) for light in item["lights"]]
         return ", ".join(names[:-2] + [" and ".join(names[-2:])]) if len(names) > 1 else (names[0] if names else "")
 
+    async def _async_arrive(self, item: dict[str, Any]) -> None:
+        """Someone came in: note how the lights are (when they are to go back to it), then do the "someone's there" action."""
+        now = dt_util.now()
+        if item["off_action"] == "restore" and item["id"] not in self._snap and should_act_on_presence(item, now.hour * 60 + now.minute, self._lux(item), self._sun_down()):
+            await self._async_snapshot(item)
+        await self._async_present(item)
+
+    async def _async_snapshot(self, item: dict[str, Any]) -> None:
+        """Keep each light's state, and the Hue scene its room or zone is showing, as a scene to go back to."""
+        entities = list(item["lights"])
+        for light in item["lights"]:
+            select = f"select.{light.split('.', 1)[1]}_scene"
+            if self.hass.states.get(select) is not None:
+                entities.append(select)
+        scene_id = f"church_drive_sensor_{item['id']}"
+        try:
+            async with asyncio.timeout(CALL_TIMEOUT):
+                await self.hass.services.async_call("scene", "create", {"scene_id": scene_id, "snapshot_entities": entities}, blocking=True)
+            self._snap[item["id"]] = f"scene.{scene_id}"
+        except Exception as err:  # noqa: BLE001 - without a snapshot the lights are simply left as they are
+            _LOGGER.warning("Sensor action %s: couldn't note how the lights were: %s", item["name"], err)
+
     async def _async_present(self, item: dict[str, Any]) -> None:
         now = dt_util.now()
         minutes = now.hour * 60 + now.minute
@@ -266,6 +290,13 @@ class SensorActions:
 
     async def _async_empty(self, item: dict[str, Any]) -> None:
         # A light that was already on when someone came in is left on, unless this action is set to switch it off anyway.
+        if item["off_action"] == "restore":
+            self._was_on.pop(item["id"], None)
+            scene = self._snap.pop(item["id"], None)
+            if scene is not None:  # no snapshot means the "someone's there" action never ran, so there is nothing to put back
+                await self._call("scene", "turn_on", {"entity_id": scene}, item)
+                self._note(item, f"put {self._light_names(item)} back as it was", item["lights"][0] if len(item["lights"]) == 1 else "")
+            return
         if self._was_on.pop(item["id"], False) and not item["off_if_on"]:
             return
         for light in item["lights"]:
