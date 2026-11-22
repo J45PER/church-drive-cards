@@ -21,6 +21,7 @@ from homeassistant.helpers.sun import get_astral_event_date
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .const import DOMAIN
 from .routines_logic import DOMAINS, MAX_ROUTINES, call_for, clean_routine, clean_routines, next_run, occurrences, resolve_entity, summary
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +32,8 @@ TRIES = 3
 BETWEEN_TRIES = 60
 CALL_TIMEOUT = 30
 CATCH_UP = 30 * 60  # seconds
+WAIT_FOR_SENSOR = 15 * 60  # the most a routine waits for a sensor action to finish with a light
+SENSOR_SETTLE = 4  # seconds after it lets go (it puts the light back as it was)
 
 
 class Routines:
@@ -174,7 +177,26 @@ class Routines:
             old.cancel()
         self._tasks[rid] = self.hass.async_create_task(self._async_run(rid))
 
+    async def _async_wait_for_sensors(self, entities: list[str]) -> None:
+        """A routine waits while a sensor action has someone in the room, or is about to put the light back, so it never switches off on a person nor is
+        undone by the light going back to how it was before. Gives up after a quarter of an hour."""
+        actions = self.hass.data.get(DOMAIN, {}).get("sensor_actions")
+        if actions is None:
+            return
+        waited = 0
+        held = False
+        while waited < WAIT_FOR_SENSOR and any(actions.holding(e) for e in entities):
+            held = True
+            await asyncio.sleep(5)
+            waited += 5
+        if held:
+            await asyncio.sleep(SENSOR_SETTLE)
+
     async def _async_run(self, rid: str) -> None:
+        item = self._items.get(rid)
+        if item is None:
+            return
+        await self._async_wait_for_sensors([e for e in item["entities"] if e.startswith("light.")])
         item = self._items.get(rid)
         if item is None:
             return
