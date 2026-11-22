@@ -61,7 +61,7 @@ from .activity_logic import (
     select,
     who_list,
 )
-from .const import EVENT_ACTIVITY
+from .const import DOMAIN, EVENT_ACTIVITY
 
 STORE_KEY = "church_drive.activity"
 RUN_S = 13 * 3600  # how long a script's context is followed (his timed heating waits up to 12 hours before it puts things back)
@@ -203,6 +203,11 @@ class Activity:
         if domain == "light" and self._suppress.get(ctx.id, 0) >= now:
             return  # what a scene or theme they applied does to the lights is already that line
         if worth_a_line(domain, service, entities_in(data)):
+            chats = self.hass.data.get(DOMAIN, {}).get("chats")
+            if chats is not None and domain != "church_drive" and chats.asking(now):
+                # They were talking to him as this happened (a plain command the house's own rules carried out): his, done for them.
+                self._record("clive", "", domain, service, data, by=self._for_whom(ctx))
+                return
             self._record("user", self._for_whom(ctx), domain, service, data, user_id=ctx.user_id)
             if domain == "church_drive" and service in ("apply_scene", "apply_hybrid"):
                 self._suppress[ctx.id] = now + 30

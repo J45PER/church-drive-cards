@@ -75,6 +75,14 @@ class Chats:
         except Exception:  # noqa: BLE001
             _LOGGER.warning("A chat with Clive could not be recorded", exc_info=True)
 
+    def asking(self, now: float) -> bool:
+        """Whether someone is talking to Clive right now: a turn begun a moment ago that is still being answered, or was answered a moment ago."""
+        for entry in self.entries[-30:]:
+            end = entry["ts"] + (entry.get("seconds") or 10)
+            if entry["ts"] - 1 <= now <= end + 3:
+                return True
+        return False
+
     async def async_query(self, **filters: Any) -> dict[str, Any]:
         out = select(self.entries, **filters)
         return {**out, "available": self.available, "reason": self.reason, "retention_days": 30}

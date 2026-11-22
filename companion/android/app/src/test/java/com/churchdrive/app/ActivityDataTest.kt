@@ -116,7 +116,9 @@ class ActivityDataTest {
     @Test
     fun theQuestionCarriesOnlyWhatWasChosen() {
         val plain = activityQuery(ActivityFilters(), now, london)
-        assertFalse(plain.has("start") || plain.has("end") || plain.has("kinds") || plain.has("who") || plain.has("offset"))
+        assertFalse(plain.has("start") || plain.has("end") || plain.has("who") || plain.has("offset"))
+        // (Asking for everything still names the kinds: the sensor actions' own lines are left out of the phone's log.)
+        assertTrue(plain.has("kinds"))
         assertEquals(100, plain.getInt("limit"))
         val q = activityQuery(ActivityFilters(time = ActivityTime.Night, action = ActivityAction.Assistant, who = "Hayley"), now, london, limit = 50, offset = 100)
         assertEquals("22:00", q.getString("start"))
