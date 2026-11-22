@@ -18,7 +18,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import intent
 
-from .clive_router_logic import FAST, STRONG, Router
+from .clive_router_logic import FAST, SIGN_OFFS, STRONG, Router, is_dismissal
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ class CliveRouter(ConversationEntity):
     def __init__(self, entry: ConfigEntry) -> None:
         self._attr_unique_id = f"{entry.entry_id}_clive_router"
         self._router = Router()
+        self._sign_off = 0
 
     @property
     def supported_languages(self) -> list[str] | str:
@@ -48,6 +49,13 @@ class CliveRouter(ConversationEntity):
 
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         """Hand the request on. (Not _async_handle_message: the chosen agent keeps the chat log, so this one does not open a second.)"""
+        if is_dismissal(user_input.text):
+            # Nothing to think about: a short sign-off, with no question (the app closes after it, and "Anything else?" would be asked of nobody).
+            speech = SIGN_OFFS[self._sign_off % len(SIGN_OFFS)]
+            self._sign_off += 1
+            response = intent.IntentResponse(language=user_input.language)
+            response.async_set_speech(speech)
+            return ConversationResult(response=response, conversation_id=user_input.conversation_id, continue_conversation=False)
         model = self._router.choose(user_input.text, user_input.conversation_id, self._fast_available())
         result = await self._ask(user_input, FAST_AGENT if model == FAST else STRONG_AGENT)
         if model == FAST and result.response.response_type == intent.IntentResponseType.ERROR:

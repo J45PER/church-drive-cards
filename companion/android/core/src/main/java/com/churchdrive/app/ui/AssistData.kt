@@ -176,7 +176,7 @@ fun parseAssistantShow(event: JSONObject, userId: String?): AssistantShow? {
 /** What one event of Home Assistant's `assist_pipeline/run` means for the screen. */
 sealed interface AssistEvent {
     /** The house's written answer. */
-    data class Answer(val text: String, val conversationId: String?, val continueConversation: Boolean = false) : AssistEvent
+    data class Answer(val text: String, val conversationId: String?, val continueConversation: Boolean = false, val localCard: AssistantCard? = null) : AssistEvent
 
     /** The spoken answer is ready to play at [path] (an address on the house). */
     data class Audio(val path: String) : AssistEvent
@@ -207,7 +207,12 @@ fun parseAssistEvent(event: JSONObject): AssistEvent? {
         "intent-end" -> {
             val out = data?.optJSONObject("intent_output")
             val speech = out?.optJSONObject("response")?.optJSONObject("speech")?.optJSONObject("plain")?.optString("speech").orEmpty()
-            AssistEvent.Answer(speech, out?.optString("conversation_id")?.takeIf { it.isNotBlank() }, out?.optBoolean("continue_conversation", false) ?: false)
+            // A command the house's own rules handled (no model, so no card of his): its receipt is made here from what it did.
+            val success = out?.optJSONObject("response")?.optJSONObject("data")?.optJSONArray("success")
+            val done = if (data?.optBoolean("processed_locally", false) == true && success != null) {
+                (0 until success.length()).mapNotNull { success.optJSONObject(it) }.filter { it.optString("type") == "entity" }.map { it.optString("name") to it.optString("id") }
+            } else emptyList()
+            AssistEvent.Answer(speech, out?.optString("conversation_id")?.takeIf { it.isNotBlank() }, out?.optBoolean("continue_conversation", false) ?: false, localDoneCard(speech, done))
         }
         "tts-end" -> data?.optJSONObject("tts_output")?.optString("url")?.takeIf { it.isNotBlank() }?.let { AssistEvent.Audio(it) }
         "error" -> {
@@ -221,6 +226,33 @@ fun parseAssistEvent(event: JSONObject): AssistEvent? {
         "stt-vad-end" -> AssistEvent.SpeechEnded
         else -> null
     }
+}
+
+/**
+ * The receipt card for a command the house handled by its own rules ("Turned off the light"): the device's name, what was done and an icon that
+ * makes the card's icon move, or null when the answer isn't one of those. [targets] are the devices's names and ids it changed.
+ */
+fun localDoneCard(speech: String, targets: List<Pair<String, String>>): AssistantCard? {
+    if (targets.isEmpty()) return null
+    val said = speech.trim().lowercase()
+    val (detail, on) = when {
+        said.startsWith("turned on") -> "Turned on" to true
+        said.startsWith("turned off") -> "Turned off" to false
+        said.startsWith("opened") -> "Opened" to true
+        said.startsWith("closed") -> "Closed" to false
+        else -> return null
+    }
+    val domain = targets.first().second.substringBefore('.')
+    val icon = when (domain) {
+        "light" -> if (on) "mdi:lightbulb-on" else "mdi:lightbulb-off"
+        "fan" -> if (on) "mdi:fan" else "mdi:fan-off"
+        "cover" -> "mdi:blinds"
+        "switch" -> if (on) "mdi:toggle-switch" else "mdi:toggle-switch-off"
+        else -> "mdi:check-circle"
+    }
+    val names = targets.map { it.first.ifBlank { it.second.substringAfter('.').replace('_', ' ') } }.distinct()
+    val name = when (names.size) { 1 -> names[0]; 2 -> "${names[0]} and ${names[1]}"; else -> "${names[0]} and ${names.size - 1} more" }
+    return parseAssistantCard(JSONObject().put("kind", "done").put("name", name).put("detail", detail).put("icon", icon))
 }
 
 /** The address of a spoken answer: the house's address and the path it gave (which may already be a whole address). */
