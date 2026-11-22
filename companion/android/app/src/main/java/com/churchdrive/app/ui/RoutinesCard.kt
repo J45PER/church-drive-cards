@@ -174,7 +174,7 @@ private fun LightRoutinesPage(list: List<RoutineInfo>, entities: Map<String, Ent
     val ink = tone.onContainer
     var editing by remember { mutableStateOf<RoutineInfo?>(null) }
     var adding by remember { mutableStateOf(false) }
-    FullPage("Light routines", onClose) {
+    FullPage("Light routines", onClose, handleBack = { if (editing != null || adding) { editing = null; adding = false; true } else false }) {
         if (editing != null || adding) {
             RoutineEditorCard(editing, entities) { editing = null; adding = false; onChanged() }
         } else {

@@ -53,7 +53,10 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.data
 import kotlin.math.roundToInt
 
-fun roomsOn(rooms: List<LightRoom>, entities: Map<String, EntityState>) = rooms.count { entities[it.head]?.state == "on" }
+/** Whether a room's light is on: a room with a ring of segments (the Cloakroom's Govee) is on when its own light is, not when its group says so, which keeps the last segment's state. */
+fun lightRoomOn(head: String, entities: Map<String, EntityState>): Boolean = colourSource(entities[head], entities)?.state == "on"
+
+fun roomsOn(rooms: List<LightRoom>, entities: Map<String, EntityState>) = rooms.count { lightRoomOn(it.head, entities) }
 
 fun lightsSummary(rooms: List<LightRoom>, entities: Map<String, EntityState>): String {
     val n = roomsOn(rooms, entities)
@@ -88,7 +91,7 @@ private fun roomTitle(room: LightRoom, head: EntityState?, areaNames: Map<String
 @Composable
 fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames: Map<String, String>, call: CallService) {
     val head = entities[room.head]
-    val on = head?.state == "on"
+    val on = lightRoomOn(room.head, entities)
     val tone = toneColors(if (on) Tone.Lights else Tone.Grey)
     // A room with a ring of segments (the Cloakroom's Govee) is one device: its Down light and Up light rows aren't shown, and its scenes go to the device's own light.
     val device = colourSource(head, entities)?.takeIf { it.entityId != room.head }

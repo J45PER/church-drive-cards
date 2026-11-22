@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.183.3
+
+- **Cloakroom shows off when it is off.** Fix: the Cloakroom card's colour and the floor's "rooms on" count follow the Govee light's own state, not the room group's (which keeps the last ring segment's state), so an off Cloakroom no longer shows lit. The home screen widgets do the same. Back from setting up a sensor or editing a routine goes back to the list, not out to the Lights page.
+
 ## 0.183.2
 
 - **Automation cards and the already-on setting.** The Lights page's Light routines and Sensor actions cards are a fixed size, with no fold arrow and no hint: each shows its title and count and the next two (routines by time, sensors by name with a short note). A sensor action can play a theme as well as a scene, at any time of day. New setting on a sensor action: Switch off even if it was already on. With it off, a light that was already on when someone came in is left on when they go; it is on for the Cloakroom.
