@@ -1397,7 +1397,7 @@ def ws_routines(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
         vol.Optional("name"): cv.string,
         vol.Optional("entities"): [cv.entity_id],
         vol.Optional("action"): cv.string,
-        vol.Optional("value"): vol.Any(None, vol.Coerce(float)),
+        vol.Optional("value"): vol.Any(None, vol.Coerce(float), cv.string),
         vol.Optional("when"): dict,
         vol.Optional("enabled"): bool,
     }
@@ -1640,7 +1640,7 @@ async def ws_upcoming(hass: HomeAssistant, connection: websocket_api.ActiveConne
     items = build_upcoming(
         now, msg.get("days", 7), routines=routines.items() if routines else [], names={}, blinds=blinds, words=blind_words,
         purifier=purifier, tests=tests, overnight=overnight, tasks=tasks,
-        charging=charging, automations=automations, known_automations=UPCOMING_AUTOMATIONS,
+        charging=charging, automations=automations, known_automations=UPCOMING_AUTOMATIONS, sun=routines.sun if routines else None,
     )
     connection.send_result(msg["id"], {"items": items, "now": now.replace(tzinfo=None).isoformat(timespec="minutes")})
 

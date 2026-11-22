@@ -96,5 +96,43 @@ class Resolve(unittest.TestCase):
         self.assertIsNone(rl.resolve_entity("light.hayleys_bedroom_blind", self.KNOWN)[0])
 
 
+
+class Sun(unittest.TestCase):
+    @staticmethod
+    def sun(day, event):
+        # A sunset at 15:58 and a sunrise at 07:43 (UTC) on any day.
+        return datetime(day.year, day.month, day.day, 15, 58, tzinfo=timezone.utc) if event == "sunset" else datetime(day.year, day.month, day.day, 7, 43, tzinfo=timezone.utc)
+
+    def routine(self, **when):
+        return rl.clean_routine({"entities": "light.front", "action": "theme", "value": "dusk", "when": {"kind": "repeat", **when}}, NOW)
+
+    def test_a_routine_can_follow_the_sun(self):
+        r = self.routine(sun="sunset", offset=-30)
+        self.assertEqual(r["when"], {"kind": "repeat", "sun": "sunset", "offset": -30, "days": [0, 1, 2, 3, 4, 5, 6]})
+        due = rl.occurrences(r, NOW.replace(hour=0, minute=0), NOW.replace(hour=23, minute=59), self.sun)
+        self.assertEqual([d.strftime("%H:%M") for d in due], ["15:28"])
+        self.assertEqual(rl.next_run(r, NOW.replace(hour=16), self.sun).strftime("%d %H:%M"), "21 15:28")
+
+    def test_without_the_sun_it_is_never_due_and_a_bad_offset_is_clamped(self):
+        r = self.routine(sun="sunrise", offset=9999)
+        self.assertEqual(r["when"]["offset"], rl.MAX_SUN_OFFSET)
+        self.assertEqual(rl.occurrences(r, NOW - timedelta(days=2), NOW + timedelta(days=2)), [])
+
+    def test_how_it_reads(self):
+        self.assertEqual(rl.describe_when(self.routine(sun="sunset")["when"], NOW), "Every day at sunset")
+        self.assertEqual(rl.describe_when(self.routine(sun="sunset", offset=-30)["when"], NOW), "Every day 30 min before sunset")
+        self.assertEqual(rl.describe_when(self.routine(sun="sunrise", offset=15, days=[5, 6])["when"], NOW), "Weekends 15 min after sunrise")
+
+    def test_a_light_can_play_a_scene_or_a_theme(self):
+        scene = rl.clean_routine({"entities": "light.front", "action": "scene", "value": "soho", "when": {"kind": "repeat", "time": "18:00"}}, NOW)
+        self.assertEqual(rl.call_for("light.front", scene["action"], scene["value"]), ("church_drive", "apply_scene", {"entity_id": "light.front", "scene": "soho"}))
+        theme = self.routine(sun="sunset")
+        self.assertEqual(rl.call_for("light.front", theme["action"], theme["value"]), ("church_drive", "apply_hybrid", {"id": "dusk"}))
+        with self.assertRaises(ValueError):
+            rl.clean_routine({"entities": "light.front", "action": "theme", "when": {"kind": "repeat", "time": "18:00"}}, NOW)
+        with self.assertRaises(ValueError):
+            rl.clean_routine({"entities": "switch.porch", "action": "scene", "value": "soho", "when": {"kind": "repeat", "time": "18:00"}}, NOW)
+
+
 if __name__ == "__main__":
     unittest.main()

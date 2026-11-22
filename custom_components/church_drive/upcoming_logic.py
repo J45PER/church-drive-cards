@@ -41,14 +41,14 @@ def _days(now: datetime, days: int) -> list[Any]:
     return [(now + timedelta(days=i)).date() for i in range(days + 1)]
 
 
-def from_routines(now: datetime, end: datetime, routines: list[dict[str, Any]], names: dict[str, str]) -> list[dict[str, Any]]:
+def from_routines(now: datetime, end: datetime, routines: list[dict[str, Any]], names: dict[str, str], sun: Any = None) -> list[dict[str, Any]]:
     out = []
     for r in routines:
         if not r["enabled"]:
             continue
         kind = kind_of(r["entities"][0])
         once = r["when"]["kind"] == "once"
-        for at in occurrences(r, now, end):
+        for at in occurrences(r, now, end, sun):
             out.append(_item(at, r["name"], kind, "user" if r.get("src") == "user" else "clive", {"to": "oneoff" if once else "routine", "id": r["id"]}, by=r.get("by", ""), card=""))
     return out
 
@@ -204,7 +204,8 @@ def from_automations(now: datetime, end: datetime, automations: list[dict[str, A
 
 def build(now: datetime, days: int, *, routines: list[dict[str, Any]], names: dict[str, str], blinds: dict[str, dict[str, Any]], words: Any,
           purifier: dict[str, Any] | None, tests: list[dict[str, Any]], overnight: dict[str, Any] | None, tasks: list[dict[str, Any]],
-          charging: dict[str, Any] | None = None, automations: list[dict[str, Any]] | None = None, known_automations: dict[str, tuple[str, str, str]] | None = None) -> list[dict[str, Any]]:
+          charging: dict[str, Any] | None = None, automations: list[dict[str, Any]] | None = None, known_automations: dict[str, tuple[str, str, str]] | None = None,
+          sun: Any = None) -> list[dict[str, Any]]:
     """Everything due in the next `days` days (1 to 31), soonest first."""
     days = max(1, min(int(days), MAX_DAYS))
     end = now + timedelta(days=days)
@@ -217,7 +218,7 @@ def build(now: datetime, days: int, *, routines: list[dict[str, Any]], names: di
             return []
 
     items = (
-        safely(from_routines, now, end, routines, names) + safely(from_blinds, now, end, blinds, words) + safely(from_purifier, now, end, purifier)
+        safely(from_routines, now, end, routines, names, sun) + safely(from_blinds, now, end, blinds, words) + safely(from_purifier, now, end, purifier)
         + safely(from_tests, now, end, tests) + safely(from_overnight, now, end, overnight) + safely(from_tasks, now, end, tasks)
         + safely(from_charging, now, end, charging) + safely(from_automations, now, end, automations or [], known_automations or {})
     )
