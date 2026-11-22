@@ -149,7 +149,7 @@ class LightsGlanceWidget : GlanceAppWidget() {
 private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: WidgetData, withScenes: Boolean, p: WidgetPalette, size: SizeClass, height: androidx.compose.ui.unit.Dp, width: androidx.compose.ui.unit.Dp) {
     val e = data.entities
     val amber = p.tone(Tone.Amber)
-    val any = rooms.any { e[it.head]?.state == "on" }
+    val any = rooms.any { com.churchdrive.app.ui.lightRoomOn(it.head, e) }
     val tone = if (any) amber else p.tone(Tone.Grey)
     if (rooms.size == 1) {
         val room = rooms.first()
