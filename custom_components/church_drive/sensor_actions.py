@@ -119,6 +119,8 @@ class SensorActions:
                 "off_in": max(0, round(due - now)) if due is not None else None,
                 "delay": item["off_delay"] if item["off_action"] != "none" else 0,
                 "sensor": item["name"],
+                # A motion detector (the Hue ones) only sees movement, so its card says "Motion detected" where a presence sensor says "Someone's in".
+                "motion": all((s := self.hass.states.get(e)) is not None and s.attributes.get("device_class") == "motion" for e in item["sensors"]),
             }
             for light in item["lights"]:
                 out[light] = info
@@ -320,6 +322,7 @@ class SensorActions:
                 "name": device.name_by_user or device.name or entry.original_name or entry.entity_id,
                 "model": device.model,
                 "platform": entry.platform,
+                "device_class": device_class,
                 "area": device.area_id or entry.area_id,
                 "state": state.state if state else "unavailable",
                 "readings": readings,

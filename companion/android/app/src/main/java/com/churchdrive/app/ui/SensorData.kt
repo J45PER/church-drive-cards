@@ -28,7 +28,10 @@ data class SensorInfo(
     val temperatureEntity: String?,
     val settings: List<SensorSetting>,
     val actionId: String?,
+    /** "motion" for a motion detector (the Hue ones), "occupancy" or "presence" for a presence sensor. */
+    val deviceClass: String = "",
 ) {
+    val isMotion: Boolean get() = deviceClass == "motion"
     /** A Hue sensor's lights are set on the Hue bridge, which Church Drive can't read. */
     val isHue: Boolean get() = platform == "hue"
 }
@@ -115,7 +118,7 @@ fun parseSensorActions(result: Any?): SensorActionsData? {
             SensorInfo(
                 entityId = o.optString("entity_id"), name = o.optString("name"), model = o.optString("model"), platform = o.optString("platform"),
                 batteryEntity = o.readingEntity("battery"), luxEntity = o.readingEntity("illuminance"), temperatureEntity = o.readingEntity("temperature"),
-                settings = settings, actionId = if (o.isNull("action")) null else o.optString("action").takeIf { it.isNotBlank() },
+                settings = settings, actionId = if (o.isNull("action")) null else o.optString("action").takeIf { it.isNotBlank() }, deviceClass = o.optString("device_class"),
             )
         }
     }.orEmpty()
@@ -189,6 +192,50 @@ fun slotLookText(slot: SensorSlot, sceneName: (String) -> String): String = when
     "hybrid" -> "Theme · ${sceneName(slot.scene)}"
     "none" -> "Nothing"
     else -> if (slot.pct > 0) "Turn on · ${slot.pct}%" else "Turn on"
+}
+
+private fun slotMinutes(time: String): Int = time.substringBefore(':').toInt() * 60 + time.substringAfter(':').toInt()
+
+private fun slotClock(minutes: Int): String = "%02d:%02d".format(((minutes % 1440) + 1440) % 1440 / 60, ((minutes % 1440) + 1440) % 1440 % 60)
+
+/** Minutes from [from] round to [to] on the clock; a full day when they are the same. */
+private fun slotSpan(from: String, to: String): Int = ((slotMinutes(to) - slotMinutes(from)) % 1440 + 1440) % 1440
+
+/** Whether the slots go once round the clock in order, each starting where it should: no overlap, and a slot never has no length. */
+fun slotsRoundTheClock(slots: List<SensorSlot>): Boolean {
+    if (slots.size < 2) return true
+    val spans = slots.indices.map { i -> slotSpan(slots[i].start, slots[(i + 1) % slots.size].start) }
+    return spans.all { it > 0 } && spans.sum() == 1440
+}
+
+/**
+ * Moves the time one slot ends and the next begins: slot [index] now starts at [time] and the one before it ends then, so the slots always cover the
+ * day with no gap (the first starts where the last ends). Null when that would put it past another slot's time.
+ */
+fun moveSlotBoundary(slots: List<SensorSlot>, index: Int, time: String): List<SensorSlot>? {
+    if (slots.size < 2 || index !in slots.indices) return slots
+    val before = (index - 1 + slots.size) % slots.size
+    val moved = slots.mapIndexed { i, x -> when (i) { index -> x.copy(start = time); before -> x.copy(end = time); else -> x } }
+    return moved.takeIf { slotsRoundTheClock(it.map { x -> x.copy(end = x.end) }) }
+}
+
+/** Takes slot [index] out: the one before it carries on to where it ended. Fewer than two slots is no slots, which means the sensor's own look all day. */
+fun removeSlot(slots: List<SensorSlot>, index: Int): List<SensorSlot> {
+    if (index !in slots.indices) return slots
+    val before = (index - 1 + slots.size) % slots.size
+    val out = slots.mapIndexedNotNull { i, x -> if (i == index) null else if (i == before) x.copy(end = slots[index].end) else x }
+    return if (out.size < 2) emptyList() else out
+}
+
+/** Adds a slot: the first two cover the day (daytime, then evening and night); after that the longest slot is split in two and the new one is the second half. */
+fun addSlot(slots: List<SensorSlot>): List<SensorSlot> {
+    if (slots.size >= MAX_SENSOR_SLOTS) return slots
+    if (slots.isEmpty()) return listOf(SensorSlot("06:00", "18:00", "on", "", 0), SensorSlot("18:00", "06:00", "scene", "relax", 0))
+    val at = slots.indices.maxByOrNull { slotSpan(slots[it].start, slots[it].end).let { d -> if (d == 0) 1440 else d } } ?: return slots
+    val slot = slots[at]
+    val span = slotSpan(slot.start, slot.end).let { if (it == 0) 1440 else it }
+    val mid = slotClock(slotMinutes(slot.start) + (span / 2) / 5 * 5)
+    return slots.take(at) + slot.copy(end = mid) + slot.copy(start = mid) + slots.drop(at + 1)
 }
 
 /** A new slot starts as the evening, relaxed. */

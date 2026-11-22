@@ -2,6 +2,10 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ui.SENSOR_DELAYS
 import com.churchdrive.app.ui.SensorSlot
+import com.churchdrive.app.ui.addSlot
+import com.churchdrive.app.ui.moveSlotBoundary
+import com.churchdrive.app.ui.removeSlot
+import com.churchdrive.app.ui.slotsRoundTheClock
 import com.churchdrive.app.ui.newSensorSlot
 import com.churchdrive.app.ui.slotLookText
 import com.churchdrive.app.ui.SensorAction
@@ -150,5 +154,32 @@ class SensorDataTest {
         val body = sensorBody("g1", "binary_sensor.lower", "Landings", listOf("light.a"), "on", "", "off", 20, 20, true, 30, "sensor.l", null, null, true, 0, emptyList(), false, action.sensors, action.luxSensors)
         assertEquals(2, body.getJSONArray("sensors").length())
         assertEquals(2, body.getJSONArray("lux_sensors").length())
+    }
+
+    @Test fun slotsAlwaysGoRoundTheClock() {
+        val day = SensorSlot("06:00", "18:00", "on", "", 0)
+        val night = SensorSlot("18:00", "06:00", "scene", "relax", 0)
+        val three = addSlot(listOf(day, night))
+        assertEquals(3, three.size)
+        assertTrue(slotsRoundTheClock(three))
+        assertEquals(three[0].end, three[1].start)
+        assertEquals(three.last().end, three[0].start)
+        // Changing when one ends changes when the next begins.
+        val moved = moveSlotBoundary(listOf(day, night), 1, "20:00")!!
+        assertEquals("20:00", moved[0].end)
+        assertEquals("20:00", moved[1].start)
+        assertEquals("06:00", moved[1].end)
+        // The first slot's start is the last one's end.
+        val wrapped = moveSlotBoundary(listOf(day, night), 0, "07:00")!!
+        assertEquals("07:00", wrapped[1].end)
+        assertEquals("07:00", wrapped[0].start)
+        // Past another slot's time is refused.
+        assertNull(moveSlotBoundary(three, 1, "05:00"))
+        // Removing one carries the one before on; fewer than two slots is none.
+        val removed = removeSlot(three, 1)
+        assertEquals(2, removed.size)
+        assertTrue(slotsRoundTheClock(removed))
+        assertEquals(emptyList<SensorSlot>(), removeSlot(listOf(day, night), 0))
+        assertEquals(2, addSlot(emptyList()).size)
     }
 }

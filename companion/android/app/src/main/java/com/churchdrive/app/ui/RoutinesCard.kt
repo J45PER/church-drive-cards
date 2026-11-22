@@ -87,17 +87,7 @@ fun RoutineEditorCard(routine: RoutineInfo?, entities: Map<String, EntityState>,
             ),
             tone, ink,
         )
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("At", style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
-            Text(time, style = MaterialTheme.typography.titleMedium, color = ink)
-        }
-        TileRow(
-            listOf(
-                TileItem("cd:minus", "Earlier", false) { time = stepTime(time, -1, 5) ?: time },
-                TileItem("cd:plus", "Later", false) { time = stepTime(time, 1, 5) ?: time },
-            ),
-            tone, ink,
-        )
+        ScheduleTime("At", time, false, ink) { t -> if (t != null) time = t }
         Text("Which lights", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
         TileRow(
             chosen.map { id -> TileItem("cd:bulb-lit", names[id] ?: entities[id]?.friendlyName ?: id, true) { chosen = chosen - id; message = null } } +

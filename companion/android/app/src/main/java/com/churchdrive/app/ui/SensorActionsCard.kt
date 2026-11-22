@@ -125,7 +125,8 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
             SwitchLine("Action on", enabled, ink) { enabled = it }
         }
 
-        Text("When someone is there", style = MaterialTheme.typography.titleSmall, color = ink)
+        val motionOnly = memberInfos.isNotEmpty() && memberInfos.all { it.isMotion }
+        Text(if (motionOnly) "When motion is detected" else "When someone is there", style = MaterialTheme.typography.titleSmall, color = ink)
         Text("Which lights", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
         TileRow(
             chosen.map { id -> TileItem("cd:bulb-lit", names[id] ?: entities[id]?.friendlyName ?: id, true) { chosen = chosen - id; message = null } } +
@@ -171,8 +172,9 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
         slots.forEachIndexed { i, slot ->
             if (openSlot == i) {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StepLine("From", slot.start, ink, tone, { setSlot(i, slot.copy(start = stepTime(slot.start, -1, 30) ?: slot.start)) }, { setSlot(i, slot.copy(start = stepTime(slot.start, 1, 30) ?: slot.start)) })
-                    StepLine("Until", slot.end, ink, tone, { setSlot(i, slot.copy(end = stepTime(slot.end, -1, 30) ?: slot.end)) }, { setSlot(i, slot.copy(end = stepTime(slot.end, 1, 30) ?: slot.end)) })
+                    // The slots always cover the whole day: changing when one ends changes when the next begins.
+                    ScheduleTime("From", slot.start, false, ink) { t -> if (t != null) moveSlotBoundary(slots, i, t)?.let { slots = it; message = null } ?: run { message = "That time would go past another time slot." } }
+                    ScheduleTime("Until", slot.end, false, ink) { t -> if (t != null) moveSlotBoundary(slots, (i + 1) % slots.size, t)?.let { slots = it; message = null } ?: run { message = "That time would go past another time slot." } }
                     TileRow(
                         listOf(
                             TileItem("cd:power", "Turn on", slot.onAction == "on") { setSlot(i, slot.copy(onAction = "on")) },
@@ -194,7 +196,7 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
                     }
                     TileRow(
                         listOf(
-                            TileItem("cd:bin", "Remove", false) { slots = slots.filterIndexed { j, _ -> j != i }; openSlot = null },
+                            TileItem("cd:bin", "Remove", false) { slots = removeSlot(slots, i); openSlot = null },
                             TileItem("cd:check", "Done", false) { openSlot = null },
                         ),
                         tone, ink,
@@ -215,10 +217,10 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
             }
         }
         if (slots.size < MAX_SENSOR_SLOTS) {
-            TileRow(listOf(TileItem("cd:plus", "Add a time slot", false) { slots = slots + newSensorSlot(); openSlot = slots.lastIndex }), tone, ink)
+            TileRow(listOf(TileItem("cd:plus", "Add a time slot", false) { slots = addSlot(slots); openSlot = null }), tone, ink)
         }
 
-        Text("When the room is empty", style = MaterialTheme.typography.titleSmall, color = ink)
+        Text(if (motionOnly) "When there has been no motion" else "When the room is empty", style = MaterialTheme.typography.titleSmall, color = ink)
         TileRow(
             listOf(
                 TileItem("cd:bulb-off", "Turn off", offAction == "off") { offAction = "off" },
@@ -248,8 +250,8 @@ fun SensorEditorCard(sensor: SensorInfo, action: SensorAction?, entities: Map<St
         }
         SwitchLine("Between set times", windowOn, ink) { windowOn = it }
         if (windowOn) {
-            StepLine("From", windowStart, ink, tone, { windowStart = stepTime(windowStart, -1, 30) ?: windowStart }, { windowStart = stepTime(windowStart, 1, 30) ?: windowStart })
-            StepLine("Until", windowEnd, ink, tone, { windowEnd = stepTime(windowEnd, -1, 30) ?: windowEnd }, { windowEnd = stepTime(windowEnd, 1, 30) ?: windowEnd })
+            ScheduleTime("From", windowStart, false, ink) { t -> if (t != null) windowStart = t }
+            ScheduleTime("Until", windowEnd, false, ink) { t -> if (t != null) windowEnd = t }
         }
 
         if (memberInfos.any { it.settings.isNotEmpty() }) {

@@ -261,17 +261,7 @@ private fun OneOffEditor(existing: RoutineInfo?, entities: Map<String, EntitySta
             ),
             tone, ink,
         )
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("At", style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
-            Text(time, style = MaterialTheme.typography.titleMedium, color = ink)
-        }
-        TileRow(
-            listOf(
-                TileItem("cd:minus", "Earlier", false) { time = stepTime(time, -1, 5) ?: time; message = null },
-                TileItem("cd:plus", "Later", false) { time = stepTime(time, 1, 5) ?: time; message = null },
-            ),
-            tone, ink,
-        )
+        ScheduleTime("At", time, false, ink) { t -> if (t != null) { time = t; message = null } }
         Text("Runs once, at the house's time. Anything that repeats is set on its own page.", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
         message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
         TileRow(

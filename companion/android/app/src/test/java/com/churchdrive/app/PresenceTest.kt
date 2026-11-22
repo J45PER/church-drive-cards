@@ -57,4 +57,13 @@ class PresenceTest {
         assertEquals(p, com.churchdrive.app.ui.presenceFor(zone, null, entities, all))
         assertNull(com.churchdrive.app.ui.presenceFor(room, null, entities, emptyMap()))
     }
+
+    @Test fun aMotionDetectorSaysMotionNotSomeone() {
+        val motion = Presence(true, null, 10, "Landings", 0L, true)
+        assertEquals("Motion detected", presenceLine(motion, null))
+        assertEquals("No motion", presenceLine(motion.copy(present = false), null))
+        assertEquals("Off in 3 s", presenceLine(motion.copy(present = false, offIn = 3), 3))
+        assertEquals("Someone's in", presenceLine(Presence(true, null, 20, "Cloakroom"), null))
+        assertEquals(true, parsePresence(JSONObject("""{"lights":{"light.a":{"present":true,"off_in":null,"delay":10,"sensor":"S","motion":true}}}"""), 0L)!!["light.a"]!!.motion)
+    }
 }
