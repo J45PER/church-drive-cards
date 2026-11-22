@@ -100,7 +100,7 @@ def clean_sensor(raw: dict[str, Any], old: dict[str, Any] | None = None) -> dict
         "on_action": on_action,
         "scene": scene[:60],
         "off_action": item["off_action"] if item["off_action"] in OFF_ACTIONS else "off",
-        "off_delay": _int(item["off_delay"], 10, 3600, 60),
+        "off_delay": _int(item["off_delay"], 1, 3600, 60),
         "dim_pct": _int(item["dim_pct"], 1, 100, 20),
         "only_dark": bool(item["only_dark"]),
         "dark_lux": _int(item["dark_lux"], 1, 2000, 30),

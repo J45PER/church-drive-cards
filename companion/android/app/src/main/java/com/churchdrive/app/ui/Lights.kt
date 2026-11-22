@@ -187,6 +187,14 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     if (cardSettings && head != null) LightSettings(room.head, roomTitle(room, head, areaNames), entities, call, sceneList) { cardSettings = false }
 }
 
+/** The colours a scene's tile is drawn in: the look set on the dashboards, then the scene's own colours; then a built-in look, then one worked out
+ * from a white scene's colour temperature; and last, a colour made from its name so tiles aren't all alike. */
+internal fun sceneColours(scene: LightScene, looks: SceneLooks): List<Color> =
+    looks.colours(scene.key, scene.name)?.map { Color(it) }
+        ?: SCENE_COLOURS[scene.key]
+        ?: looks.whiteColours(scene.key, scene.name)?.map { Color(it) }
+        ?: nameColours(scene.key)
+
 /** A scene as a tile: its colours as a gradient, an icon and its name; the playing scene has a ring. */
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -194,10 +202,7 @@ internal fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modi
     val looks = LocalSceneLooks.current
     // The look set on the dashboards, then the scene's own colours; then a built-in look, then one worked out
     // from a white scene's colour temperature; and last, a colour made from its name so tiles aren't all alike.
-    val colours = (looks.colours(scene.key, scene.name)?.map { Color(it) }
-        ?: SCENE_COLOURS[scene.key]
-        ?: looks.whiteColours(scene.key, scene.name)?.map { Color(it) }
-        ?: nameColours(scene.key))
+    val colours = sceneColours(scene, looks)
     // Dark or white text, whichever has the better contrast on this tile's colours.
     val ink = if (SceneLooks.darkInkOn(colours.map { it.toArgb() })) Color(0xFF202124) else Color.White
     val shape = RoundedCornerShape(18.dp)
