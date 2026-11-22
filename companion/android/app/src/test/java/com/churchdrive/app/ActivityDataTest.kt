@@ -130,7 +130,8 @@ class ActivityDataTest {
     @Test
     fun everyActionOptionAsksForTheRightKinds() {
         fun kinds(a: ActivityAction): List<String> = activityQuery(ActivityFilters(action = a), now, london).optJSONArray("kinds")?.let { k -> (0 until k.length()).map { k.getString(it) } } ?: emptyList()
-        assertEquals(emptyList<String>(), kinds(ActivityAction.All))
+        // "All" is the essentials: no sensor lines.
+        assertEquals(listOf("user", "clive", "clive_auto", "presence", "overruled", "device"), kinds(ActivityAction.All))
         assertEquals(listOf("user"), kinds(ActivityAction.People))
         assertEquals(listOf("clive", "clive_auto"), kinds(ActivityAction.Assistant))
         assertEquals(listOf("clive"), kinds(ActivityAction.Asked))
@@ -188,7 +189,7 @@ class ActivityDataTest {
     @Test
     fun theActionListNamesTheAssistant() {
         assertEquals(
-            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going", "Overruled Gregg", "Devices not answering", "Sensor actions"),
+            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going", "Overruled Gregg", "Devices not answering"),
             ActivityAction.entries.map { activityActionLabel(it, "Gregg") },
         )
     }

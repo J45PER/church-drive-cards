@@ -25,11 +25,12 @@ enum class ActivityTime(val label: String, val start: String?, val end: String?)
 /**
  * Which kinds of line: `user` (a person), `clive` (the assistant, because someone asked), `clive_auto` (the assistant, run by an automation),
  * `presence` (arrived or left), `overruled` (something the assistant set was changed from outside the app: the thermostat's own dial or app, a
- * switch or a remote), `device` (a device stopped answering, or answered again), `sensor` (a sensor action switched a light). [kinds] empty is everything.
+ * switch or a remote), `device` (a device stopped answering, or answered again). The app lists only these essentials: what people and the assistant did, and
+ * who came and went. The sensor actions' own lines (`sensor`) are in Home Assistant's log and on the website, not here, so "All" asks for the others by name.
  */
 enum class ActivityAction(val kinds: List<String>) {
-    All(emptyList()), People(listOf("user")), Assistant(listOf("clive", "clive_auto")), Asked(listOf("clive")), Automatic(listOf("clive_auto")), Presence(listOf("presence")),
-    Overruled(listOf("overruled")), Devices(listOf("device")), Sensors(listOf("sensor")),
+    All(listOf("user", "clive", "clive_auto", "presence", "overruled", "device")), People(listOf("user")), Assistant(listOf("clive", "clive_auto")), Asked(listOf("clive")), Automatic(listOf("clive_auto")), Presence(listOf("presence")),
+    Overruled(listOf("overruled")), Devices(listOf("device")),
 }
 
 /** What is being asked for. [who] is a first name (null = everyone). [from] and [to] (milliseconds) are the range for [ActivityDay.Custom]. */
@@ -149,7 +150,6 @@ fun activityActionLabel(action: ActivityAction, assistant: String): String = whe
     ActivityAction.Devices -> "Devices not answering"
     ActivityAction.Presence -> "Coming and going"
     ActivityAction.Overruled -> "Overruled $assistant"
-    ActivityAction.Sensors -> "Sensor actions"
 }
 
 /** The lines under their day ("Today", "Yesterday", "Monday 21 Sep"), keeping the newest-first order. */

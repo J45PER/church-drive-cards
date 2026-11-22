@@ -7,6 +7,7 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.189.0
 
 - **A receipt card for commands the house handles itself.** "Turn on the kitchen lights" is answered instantly by the house's own rules, which gave no card. The phone now makes the receipt (the device, what was done, the moving bulb, fan or blind) from what the house reports it did. Commands that go through Clive keep his own card.
+- **Activity log without the sensor lines.** The phone's Activity log keeps to people, Clive, coming and going, overruled settings and devices that stopped answering. The sensor actions' own lines (a light switched on or put back by a sensor) are in Home Assistant's log and on the website, and the Sensor actions filter is gone from the phone.
 
 ## 0.188.2
 
