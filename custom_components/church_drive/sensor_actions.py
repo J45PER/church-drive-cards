@@ -23,6 +23,7 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .const import DOMAIN
 from .sensor_logic import MAX_SENSORS, clean_sensor, clean_sensors, pick_look, should_act_on_presence, summary
 
 _LOGGER = logging.getLogger(__name__)
@@ -232,6 +233,16 @@ class SensorActions:
         sun = self.hass.states.get("sun.sun")
         return sun is not None and sun.state == "below_horizon"
 
+    def _note(self, item: dict[str, Any], text: str, entity: str = "") -> None:
+        """Say in the activity log what this sensor action did."""
+        activity = self.hass.data.get(DOMAIN, {}).get("activity")
+        if activity is not None:
+            activity.note_sensor(f"{item['name']} sensor", text, entity)
+
+    def _light_names(self, item: dict[str, Any]) -> str:
+        names = [(s.name if (s := self.hass.states.get(light)) is not None else light) for light in item["lights"]]
+        return ", ".join(names[:-2] + [" and ".join(names[-2:])]) if len(names) > 1 else (names[0] if names else "")
+
     async def _async_present(self, item: dict[str, Any]) -> None:
         now = dt_util.now()
         minutes = now.hour * 60 + now.minute
@@ -241,6 +252,7 @@ class SensorActions:
         for light in item["lights"]:
             if look["on_action"] == "hybrid":
                 await self._call("church_drive", "apply_hybrid", {"id": look["scene"]}, item)
+                self._note(item, f"played a theme on {self._light_names(item)}", item["lights"][0] if len(item["lights"]) == 1 else "")
                 return
             if look["on_action"] == "scene":
                 await self._call("church_drive", "apply_scene", {"entity_id": light, "scene": look["scene"]}, item)
@@ -249,6 +261,8 @@ class SensorActions:
                 if look["pct"]:
                     data["brightness_pct"] = look["pct"]
                 await self._call("light", "turn_on", data, item)
+        scene = look["scene"].replace("_", " ") if look["on_action"] == "scene" else ""
+        self._note(item, f"switched on {self._light_names(item)}" + (f" with {scene}" if scene else ""), item["lights"][0] if len(item["lights"]) == 1 else "")
 
     async def _async_empty(self, item: dict[str, Any]) -> None:
         # A light that was already on when someone came in is left on, unless this action is set to switch it off anyway.
@@ -259,6 +273,8 @@ class SensorActions:
                 await self._call("light", "turn_on", {"entity_id": light, "brightness_pct": item["dim_pct"]}, item)
             else:
                 await self._call("light", "turn_off", {"entity_id": light}, item)
+        self._note(item, f"switched off {self._light_names(item)}" if item["off_action"] != "dim" else f"dimmed {self._light_names(item)} to {item['dim_pct']}%",
+                   item["lights"][0] if len(item["lights"]) == 1 else "")
 
     async def _call(self, domain: str, service: str, data: dict[str, Any], item: dict[str, Any]) -> None:
         try:

@@ -188,7 +188,7 @@ class ActivityDataTest {
     @Test
     fun theActionListNamesTheAssistant() {
         assertEquals(
-            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going", "Overruled Gregg", "Devices not answering"),
+            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going", "Overruled Gregg", "Devices not answering", "Sensor actions"),
             ActivityAction.entries.map { activityActionLabel(it, "Gregg") },
         )
     }
