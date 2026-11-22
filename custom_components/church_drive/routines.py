@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.sun import get_astral_event_date
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -44,6 +45,11 @@ class Routines:
         self._unsub: list[Callable[[], None]] = []
         self._tasks: dict[str, asyncio.Task] = {}
 
+    def sun(self, day: Any, event: str) -> Any:
+        """A day's sunrise or sunset as a local datetime, or None where the sun does not do it."""
+        found = get_astral_event_date(self.hass, event, day)
+        return dt_util.as_local(found) if found else None
+
     async def async_start(self) -> None:
         data = await self._store.async_load() or {}
         now = dt_util.now()
@@ -56,7 +62,7 @@ class Routines:
         if last is not None:
             start = max(dt_util.as_local(last), now - timedelta(seconds=CATCH_UP))
             for item in list(self._items.values()):
-                if item["enabled"] and occurrences(item, start, now):
+                if item["enabled"] and occurrences(item, start, now, self.sun):
                     _LOGGER.info("Routines: catching up %s", item["name"])
                     self._start(item["id"])
         await self._async_save(now)
@@ -80,7 +86,7 @@ class Routines:
 
     def _view(self, item: dict[str, Any]) -> dict[str, Any]:
         now = dt_util.now()
-        nxt = next_run(item, now)
+        nxt = next_run(item, now, self.sun)
         return {**item, "summary": summary(item, now), "next": nxt.isoformat(timespec="minutes") if nxt else None, "last": self._last_result.get(item["id"])}
 
     def items(self) -> list[dict[str, Any]]:
@@ -116,7 +122,7 @@ class Routines:
         if len(self._items) >= MAX_ROUTINES:
             raise ValueError("There are as many scheduled actions as can be kept: remove one first")
         item = clean_routine({k: v for k, v in raw.items() if k != "id"}, dt_util.now())
-        if item["when"]["kind"] == "once" and next_run(item, dt_util.now()) is None:
+        if item["when"]["kind"] == "once" and next_run(item, dt_util.now(), self.sun) is None:
             raise ValueError("That time has already gone")
         self._items[item["id"]] = item
         await self._async_save()
@@ -159,7 +165,7 @@ class Routines:
         local = dt_util.as_local(now)
         self.hass.async_create_task(self._async_save(local))
         for item in list(self._items.values()):
-            if item["enabled"] and occurrences(item, local - timedelta(seconds=1), local):
+            if item["enabled"] and occurrences(item, local - timedelta(seconds=1), local, self.sun):
                 self._start(item["id"])
 
     def _start(self, rid: str) -> None:

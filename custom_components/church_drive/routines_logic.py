@@ -20,12 +20,15 @@ from typing import Any
 
 MAX_ROUTINES = 60
 MAX_ENTITIES = 12
-ACTIONS = ("on", "off", "open", "close", "set")
+ACTIONS = ("on", "off", "open", "close", "set", "scene", "theme")
+# "scene" plays a Church Drive scene (the value is its key) on the light; "theme" plays a theme (the value is its id).
+SUN_EVENTS = ("sunrise", "sunset")
+MAX_SUN_OFFSET = 180
 DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 # What can be scheduled, and the actions each kind takes ("set" needs a value: cover position %, light brightness %, fan speed %, thermostat degrees).
 DOMAINS: dict[str, tuple[str, ...]] = {
     "cover": ("open", "close", "set"),
-    "light": ("on", "off", "set"),
+    "light": ("on", "off", "set", "scene", "theme"),
     "switch": ("on", "off"),
     "fan": ("on", "off", "set"),
     "humidifier": ("on", "off"),
@@ -65,6 +68,13 @@ def clean_when(value: Any, now: datetime) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
     if value.get("kind") == "repeat":
+        sun = value.get("sun")
+        if sun in SUN_EVENTS:  # "at sunset", or so many minutes before (negative) or after it; the day's time comes from the sun
+            try:
+                offset = max(-MAX_SUN_OFFSET, min(MAX_SUN_OFFSET, int(value.get("offset") or 0)))
+            except (TypeError, ValueError):
+                offset = 0
+            return {"kind": "repeat", "sun": sun, "offset": offset, "days": clean_days(value.get("days"))}
         time = clean_time(value.get("time"))
         return {"kind": "repeat", "time": time, "days": clean_days(value.get("days"))} if time else None
     at = parse_at(value.get("at"), now)
@@ -97,6 +107,10 @@ def clean_routine(raw: Any, now: datetime, keep: dict[str, Any] | None = None) -
         except (TypeError, ValueError):
             raise ValueError("Set needs a number") from None
         value = int(value) if value == int(value) else round(value, 1)
+    elif action in ("scene", "theme"):
+        value = str(value or "").strip()[:80]
+        if not value:
+            raise ValueError("Say which scene" if action == "scene" else "Say which theme")
     else:
         value = None
     when = clean_when(raw.get("when", old.get("when")), now)
@@ -121,7 +135,7 @@ def clean_routine(raw: Any, now: datetime, keep: dict[str, Any] | None = None) -
 def default_name(entities: list[str], action: str, value: Any) -> str:
     what = entities[0].split(".", 1)[1].replace("_", " ")
     extra = f" ({len(entities) - 1} more)" if len(entities) > 1 else ""
-    verb = {"on": "Turn on", "off": "Turn off", "open": "Open", "close": "Close", "set": "Set"}[action]
+    verb = {"on": "Turn on", "off": "Turn off", "open": "Open", "close": "Close", "set": "Set", "scene": "Play a scene on", "theme": "Play a theme on"}[action]
     return f"{verb} {what}{extra}" + (f" to {value}" if action == "set" else "")
 
 
@@ -143,6 +157,10 @@ def call_for(entity: str, action: str, value: Any) -> tuple[str, str, dict[str, 
     """(domain, service, data) for one device."""
     domain = domain_of(entity)
     data: dict[str, Any] = {"entity_id": entity}
+    if action == "scene":
+        return "church_drive", "apply_scene", {**data, "scene": str(value)}
+    if action == "theme":
+        return "church_drive", "apply_hybrid", {"id": str(value)}
     if domain == "cover":
         if action == "set":
             return "cover", "set_cover_position", {**data, "position": int(value)}
@@ -156,24 +174,39 @@ def call_for(entity: str, action: str, value: Any) -> tuple[str, str, dict[str, 
     return domain, "turn_on" if action == "on" else "turn_off", data
 
 
-def occurrences(routine: dict[str, Any], start: datetime, end: datetime) -> list[datetime]:
-    """When this routine is due in the time after `start` up to and including `end`, oldest first."""
+def occurrences(routine: dict[str, Any], start: datetime, end: datetime, sun: Any = None) -> list[datetime]:
+    """When this routine is due in the time after `start` up to and including `end`, oldest first.
+
+    `sun(day, event)` gives a day's sunrise or sunset as a local datetime (or None); a routine set to the sun is not due without it."""
     when = routine["when"]
     if when["kind"] == "once":
         at = datetime.fromisoformat(when["at"]).replace(tzinfo=end.tzinfo)
         return [at] if start < at <= end and not routine.get("done") else []
-    hour, minute = (int(x) for x in when["time"].split(":"))
+    if when.get("sun") in SUN_EVENTS:
+        if sun is None:
+            return []
+        hour = minute = 0
+    else:
+        hour, minute = (int(x) for x in when["time"].split(":"))
     out = []
     day = start.date()
     while day <= end.date():
-        at = datetime(day.year, day.month, day.day, hour, minute, tzinfo=end.tzinfo)
+        if when.get("sun") in SUN_EVENTS:
+            event = sun(day, when["sun"])
+            if event is None:
+                day += timedelta(days=1)
+                continue
+            at = event.astimezone(end.tzinfo) + timedelta(minutes=int(when.get("offset") or 0))
+            at = at.replace(second=0, microsecond=0)
+        else:
+            at = datetime(day.year, day.month, day.day, hour, minute, tzinfo=end.tzinfo)
         if day.weekday() in when["days"] and start < at <= end:
             out.append(at)
         day += timedelta(days=1)
     return out
 
 
-def next_run(routine: dict[str, Any], now: datetime) -> datetime | None:
+def next_run(routine: dict[str, Any], now: datetime, sun: Any = None) -> datetime | None:
     """The next time it will happen, or None (a one-off that has been done or has passed, or a routine that's off)."""
     if not routine["enabled"]:
         return None
@@ -181,7 +214,7 @@ def next_run(routine: dict[str, Any], now: datetime) -> datetime | None:
     if when["kind"] == "once":
         at = datetime.fromisoformat(when["at"]).replace(tzinfo=now.tzinfo)
         return at if at > now and not routine.get("done") else None
-    found = occurrences(routine, now, now + timedelta(days=8))
+    found = occurrences(routine, now, now + timedelta(days=8), sun)
     return found[0] if found else None
 
 
@@ -192,6 +225,10 @@ def describe_when(when: dict[str, Any], now: datetime) -> str:
         gap = (at.date() - now.date()).days
         day = "Today" if gap == 0 else "Tomorrow" if gap == 1 else at.strftime("%A %-d %b")
         return f"{day} at {at.strftime('%H:%M')}"
+    if when.get("sun") in SUN_EVENTS:
+        offset = int(when.get("offset") or 0)
+        how = f"at {when['sun']}" if offset == 0 else f"{abs(offset)} min {'before' if offset < 0 else 'after'} {when['sun']}"
+        return f"{describe_days(when['days'])} {how}"
     return f"{describe_days(when['days'])} at {when['time']}"
 
 
