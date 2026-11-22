@@ -133,4 +133,22 @@ class SensorDataTest {
         val parsed = parseSensorActions(JSONObject("""{"actions":[{"id":"a","sensor":"binary_sensor.x","off_if_on":true}],"sensors":[]}"""))!!
         assertTrue(parsed.actions.single().offIfOn)
     }
+
+    @Test fun sensorsInAGroupShareOneCardAndOneAction() {
+        val o = JSONObject(
+            """{"actions":[{"id":"g1","sensor":"binary_sensor.lower","sensors":["binary_sensor.lower","binary_sensor.upper"],"lux_sensors":["sensor.l","sensor.u"],"name":"Landings"}],
+              "sensors":[{"entity_id":"binary_sensor.lower","name":"Lower Landing","platform":"hue"},{"entity_id":"binary_sensor.upper","name":"Upper Landing","platform":"hue"},
+                         {"entity_id":"binary_sensor.other","name":"Other","platform":"hue"}]}""",
+        )
+        val data = parseSensorActions(o)!!
+        val action = data.actions.single()
+        assertEquals(listOf("sensor.l", "sensor.u"), action.luxSensors)
+        assertEquals(action, data.actionFor(data.sensors[1]))
+        assertNull(data.actionFor(data.sensors[2]))
+        assertEquals(listOf("Lower Landing", "Upper Landing"), data.groupOf(action).map { it.name })
+        assertEquals(listOf("Lower Landing", "Other"), data.cards().map { it.name })
+        val body = sensorBody("g1", "binary_sensor.lower", "Landings", listOf("light.a"), "on", "", "off", 20, 20, true, 30, "sensor.l", null, null, true, 0, emptyList(), false, action.sensors, action.luxSensors)
+        assertEquals(2, body.getJSONArray("sensors").length())
+        assertEquals(2, body.getJSONArray("lux_sensors").length())
+    }
 }

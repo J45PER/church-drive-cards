@@ -148,3 +148,18 @@ class OffIfOn(unittest.TestCase):
         self.assertTrue(sl.clean_sensor({**CLOAK, "off_if_on": True})["off_if_on"])
         item = sl.clean_sensor(CLOAK)
         self.assertTrue(sl.clean_sensor({"off_delay": 30}, item)["off_if_on"] is False)
+
+
+class Groups(unittest.TestCase):
+    def test_a_group_keeps_the_first_sensor_and_the_others_once(self):
+        item = sl.clean_sensor({**CLOAK, "sensors": ["binary_sensor.b", "binary_sensor.cloakroom_presence", "binary_sensor.b", "light.x", ""]})
+        self.assertEqual(item["sensors"], ["binary_sensor.cloakroom_presence", "binary_sensor.b"])
+        self.assertEqual(sl.clean_sensor(CLOAK)["sensors"], ["binary_sensor.cloakroom_presence"])
+
+    def test_the_light_readings_of_a_group_are_kept(self):
+        item = sl.clean_sensor({**CLOAK, "lux_sensor": "sensor.a", "lux_sensors": ["sensor.b", "sensor.a", "switch.c"]})
+        self.assertEqual(item["lux_sensors"], ["sensor.a", "sensor.b"])
+        self.assertEqual(item["lux_sensor"], "sensor.a")
+        self.assertTrue(sl.is_dark({**item, "dark_lux": 30}, 10.0, False))
+        self.assertFalse(sl.is_dark({**item, "dark_lux": 30}, 80.0, True))
+        self.assertTrue(sl.is_dark(sl.clean_sensor(CLOAK), None, True))

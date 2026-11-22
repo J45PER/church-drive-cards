@@ -102,7 +102,7 @@ class SensorActions:
         if self._unsub:
             self._unsub()
             self._unsub = None
-        sensors = sorted({i["sensor"] for i in self._items.values()})
+        sensors = sorted({s for i in self._items.values() for s in i["sensors"]})
         if sensors:
             self._unsub = async_track_state_change_event(self.hass, sensors, self._on_change)
 
@@ -113,10 +113,9 @@ class SensorActions:
         for item in self._items.values():
             if not item["enabled"]:
                 continue
-            state = self.hass.states.get(item["sensor"])
             due = self._due.get(item["id"])
             info = {
-                "present": state is not None and state.state == "on",
+                "present": self._any_sensor_on(item),
                 "off_in": max(0, round(due - now)) if due is not None else None,
                 "delay": item["off_delay"] if item["off_action"] != "none" else 0,
                 "sensor": item["name"],
@@ -140,11 +139,14 @@ class SensorActions:
         if old is None:
             if len(self._items) >= MAX_SENSORS:
                 raise ValueError("There are as many sensor actions as can be kept: remove one first")
-            if any(i["sensor"] == change.get("sensor") for i in self._items.values()):
+            if any(change.get("sensor") in i["sensors"] for i in self._items.values()):
                 raise ValueError("That sensor already has an action: change it instead")
         item = clean_sensor(change, old)
-        if self.hass.states.get(item["sensor"]) is None:
-            raise ValueError("I can't find that sensor")
+        for sensor in item["sensors"]:
+            if self.hass.states.get(sensor) is None:
+                raise ValueError("I can't find that sensor")
+        if any(other["id"] != item["id"] and set(other["sensors"]) & set(item["sensors"]) for other in self._items.values()):
+            raise ValueError("One of those sensors already has an action: change that one instead")
         for light in item["lights"]:
             if self.hass.states.get(light) is None:
                 raise ValueError(f"I can't find the light {light}")
@@ -179,13 +181,15 @@ class SensorActions:
             return
         sensor = event.data["entity_id"]
         for item in list(self._items.values()):
-            if item["sensor"] != sensor or not item["enabled"]:
+            if sensor not in item["sensors"] or not item["enabled"]:
                 continue
             if new.state == "on":
                 self._cancel(item["id"])
                 self._was_on.setdefault(item["id"], self._any_on(item))
                 self.hass.async_create_task(self._async_present(item))
             elif new.state == "off":
+                if self._any_sensor_on(item):  # another sensor of the group still sees someone
+                    continue
                 self._cancel(item["id"])
                 if item["off_action"] == "none":
                     self._was_on.pop(item["id"], None)
@@ -196,6 +200,10 @@ class SensorActions:
                     self._due[sid] = time.monotonic() + item["off_delay"]
                     self._timers[sid] = async_call_later(self.hass, item["off_delay"], callback(lambda _now, sid=sid: self._on_empty(sid)))
 
+    def _any_sensor_on(self, item: dict[str, Any]) -> bool:
+        states = (self.hass.states.get(sensor) for sensor in item["sensors"])
+        return any(state is not None and state.state == "on" for state in states)
+
     def _any_on(self, item: dict[str, Any]) -> bool:
         states = (self.hass.states.get(light) for light in item["lights"])
         return any(state is not None and state.state == "on" for state in states)
@@ -205,16 +213,18 @@ class SensorActions:
         self._timers.pop(sid, None)
         self._due.pop(sid, None)
         item = self._items.get(sid)
-        state = self.hass.states.get(item["sensor"]) if item else None
-        if item and item["enabled"] and state is not None and state.state == "off":
+        if item and item["enabled"] and not self._any_sensor_on(item):
             self.hass.async_create_task(self._async_empty(item))
 
     def _lux(self, item: dict[str, Any]) -> float | None:
-        state = self.hass.states.get(item["lux_sensor"]) if item["lux_sensor"] else None
-        try:
-            return float(state.state) if state is not None else None
-        except (TypeError, ValueError):
-            return None
+        readings: list[float] = []
+        for entity in item["lux_sensors"]:
+            state = self.hass.states.get(entity)
+            try:
+                readings.append(float(state.state))
+            except (AttributeError, TypeError, ValueError):
+                continue
+        return max(readings) if readings else None  # the brightest reading of a group
 
     def _sun_down(self) -> bool:
         sun = self.hass.states.get("sun.sun")
@@ -265,7 +275,7 @@ class SensorActions:
         for entry in ents.entities.values():
             if entry.device_id:
                 by_device.setdefault(entry.device_id, []).append(entry)
-        taken = {i["sensor"]: i["id"] for i in self._items.values()}
+        taken = {s: i["id"] for i in self._items.values() for s in i["sensors"]}
         out: list[dict[str, Any]] = []
         seen: set[str] = set()
         for entry in ents.entities.values():

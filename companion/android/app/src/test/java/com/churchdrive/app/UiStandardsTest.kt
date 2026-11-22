@@ -85,6 +85,8 @@ class UiStandardsTest {
             "PhoneSetupPrompt.kt" to mapOf("TextButton(" to 3),
             // The update question's "Update" and "Later" are dialog actions, not choices.
             "UpdatePrompt.kt" to mapOf("TextButton(" to 2),
+            // The picker dialog's "Cancel" is a dialog action; its choices are the rows.
+            "PickDialog.kt" to mapOf("TextButton(" to 1),
         )
         val names = listOf("Button(", "OutlinedButton(", "FilledTonalButton(", "TextButton(", "FilledIconButton(", "ChoiceButton(")
         for (file in uiFiles()) {
