@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.186.3
+
+No change to this app; it ships with the shared version.
+
 ## 0.186.2
 
 - **Tasks match the other apps.** The Tasks card on Home shows your own tasks, the shared list and the house's jobs for you, as the Church Drive app does (it showed only the house's jobs). The To-do button and each task open Church Drive To-Do, on that task; if the To-Do app isn't installed it opens the Manager as before.
