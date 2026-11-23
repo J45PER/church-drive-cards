@@ -1,8 +1,6 @@
 package com.churchdrive.app.ui
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,7 +75,7 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
     }
 
     FullPage("Edit task", onClose) {
-        OutlinedTextField(name, { name = it }, label = { Text("Task") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        WashField(name, { name = it }, "Task", tone)
         Text(if (repeating) "Next due" else "Day", style = MaterialTheme.typography.labelLarge)
         OptionRow(dueOptions, if (picked != null) "" else due, tone) { due = it; picked = null }
         // Any day, for when a repeating task's next date has to be moved by hand (the repeat carries on from it).
@@ -88,10 +86,8 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
         Text("Repeat", style = MaterialTheme.typography.labelLarge)
         OptionRow(repeatOptions, repeat, tone) { repeat = it }
         if (repeating || due != "No date" || picked != null) {
-            OutlinedTextField(
-                time, { time = it }, label = { Text("Time (24 hour, like 09:00)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                isError = cleaned == null && time.isNotBlank(),
-            )
+            // The time is chosen on the clock, like every other time in the app.
+            TimeTile(if (repeating) "Time" else "Reminder time", cleaned ?: "09:00", tone) { time = it }
         }
         if (repeating) {
             Text("Remind", style = MaterialTheme.typography.labelLarge)
@@ -102,7 +98,7 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
             OptionRow(placeChoices(all), place, tone) { place = it }
             if (place != NO_PLACE) Text("Reminds you each time you arrive, until it's done.", style = MaterialTheme.typography.bodySmall)
         }
-        OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+        WashField(notes, { notes = it }, "Notes", tone, singleLine = false, minLines = 3)
         TileRow(
             listOf(
                 TileItem("mdi:close", "Cancel", false) { onClose() },

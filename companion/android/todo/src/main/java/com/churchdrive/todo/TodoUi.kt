@@ -258,7 +258,7 @@ private fun TaskCard(vm: TodoModel, section: TodoSection) {
     }
     editing?.let { item ->
         TodoEditDialog(
-            item, vm.personName?.trim()?.substringBefore(' '),
+            item, vm.personName?.trim()?.substringBefore(' '), tone,
             onSave = { vm.save(section, it); editing = null },
             onDelete = { vm.remove(section, item); editing = null },
             onClose = { editing = null },
