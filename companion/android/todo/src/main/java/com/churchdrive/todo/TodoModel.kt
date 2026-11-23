@@ -545,6 +545,14 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /** Changes a project's name, who it is for (Mine or Shared) and its target date ("" for none). */
+    fun updateProject(list: ShoppingList, name: String, shared: Boolean, date: String) {
+        if (name.isBlank()) return
+        val who = if (shared) shopping?.people.orEmpty().ifEmpty { list.people } else listOf(first())
+        shopping = shopping?.let { st -> st.copy(lists = st.lists.map { if (it.id == list.id) it.copy(name = name.trim(), people = who, date = date) else it }) }
+        sendList("church_drive/shopping/update", JSONObject().put("list", list.id).put("name", name.trim()).put("people", JSONArray(who)).put("date", date))
+    }
+
     fun deleteProject(list: ShoppingList) {
         shopping = shopping?.let { st -> st.copy(lists = st.lists.filter { it.id != list.id }) }
         sendList("church_drive/shopping/delete", JSONObject().put("list", list.id))

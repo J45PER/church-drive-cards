@@ -356,10 +356,10 @@ private fun ProjectsPage(vm: TodoModel) {
     val finished = vm.finishedProjects()
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     var creating by rememberSaveable { mutableStateOf(false) }
-    if (creating) NewProjectDialog(tone, onCreate = { name, shared, steps -> vm.createProject(name, shared, "", steps); creating = false }, onClose = { creating = false })
+    if (creating) NewProjectDialog(tone, onCreate = { name, shared, date, steps -> vm.createProject(name, shared, date, steps); creating = false }, onClose = { creating = false })
     SectionHeader("Active projects", if (vm.shopping == null) null else active.size.toString(), tone) { Icon(CdVectors.Todo, contentDescription = null, tint = tone.accent) }
     if (vm.shopping == null) Text(vm.problem ?: "Loading…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
-    active.forEach { l -> ChecklistCard(vm, l, tone, open == l.id || (open == null && l == active.first()), canDelete = true) { open = if (open == l.id) "" else l.id } }
+    active.forEach { l -> ChecklistCard(vm, l, tone, open == l.id || (open == null && l == active.first()), canDelete = true, canEdit = true) { open = if (open == l.id) "" else l.id } }
     Row(
         Modifier.fillMaxWidth().height(48.dp).background(tone.onContainer.copy(alpha = 0.1f), RoundedCornerShape(18.dp)).clickable { creating = true }.padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -369,7 +369,7 @@ private fun ProjectsPage(vm: TodoModel) {
     }
     if (finished.isNotEmpty()) {
         SectionHeader("Finished", finished.size.toString(), tone) { Icon(CdVectors.Todo, contentDescription = null, tint = tone.accent) }
-        finished.forEach { l -> ChecklistCard(vm, l, tone, open == l.id, canDelete = true) { open = if (open == l.id) "" else l.id } }
+        finished.forEach { l -> ChecklistCard(vm, l, tone, open == l.id, canDelete = true, canEdit = true) { open = if (open == l.id) "" else l.id } }
     }
 }
 
@@ -378,7 +378,9 @@ private fun shortDate(date: String): String? =
 
 /** A steps list or project as a card: its name, who it is for, steps done, a bar; open it to tick, add and (for a project) delete. */
 @Composable
-private fun ChecklistCard(vm: TodoModel, list: ShoppingList, tone: ToneColors, expanded: Boolean, canDelete: Boolean, onToggle: () -> Unit) {
+private fun ChecklistCard(vm: TodoModel, list: ShoppingList, tone: ToneColors, expanded: Boolean, canDelete: Boolean, canEdit: Boolean = false, onToggle: () -> Unit) {
+    var editing by remember(list.id) { mutableStateOf(false) }
+    if (editing) EditProjectPage(vm, list, tone) { editing = false }
     val total = list.items.size
     val done = list.items.count { it.status != "open" }
     val next = list.items.firstOrNull { it.status == "open" }
@@ -424,6 +426,10 @@ private fun ChecklistCard(vm: TodoModel, list: ShoppingList, tone: ToneColors, e
                     }
                 }
                 AddRow("Add a step", text, { text = it }, tone) { vm.addStep(list, text); text = "" }
+                if (canEdit) com.churchdrive.app.ui.TileRow(
+                    listOf(com.churchdrive.app.ui.TileItem("mdi:pencil", "Edit project", false) { editing = true }),
+                    tone, tone.onContainer, perRow = 1,
+                )
                 if (canDelete) androidx.compose.material3.TextButton(onClick = { if (sure) vm.deleteProject(list) else sure = true }) {
                     Text(if (sure) "Tap again to delete this project" else "Delete project", color = MaterialTheme.colorScheme.error)
                 }
@@ -432,38 +438,90 @@ private fun ChecklistCard(vm: TodoModel, list: ShoppingList, tone: ToneColors, e
     }
 }
 
-/** Starts a project: its name, whether it is Mine or Shared, and its first steps (one a line). */
+/** Edit a project: its name, whether it is Mine or Shared, its target date and its steps (take one out); or delete it. */
 @Composable
-private fun NewProjectDialog(tone: ToneColors, onCreate: (String, Boolean, List<String>) -> Unit, onClose: () -> Unit) {
+private fun EditProjectPage(vm: TodoModel, list: ShoppingList, tone: ToneColors, onClose: () -> Unit) {
+    var name by remember { mutableStateOf(list.name) }
+    var shared by remember { mutableStateOf(list.people.size > 1) }
+    var date by remember { mutableStateOf(list.date) }
+    var picking by remember { mutableStateOf(false) }
+    var sure by remember { mutableStateOf(false) }
+    val steps = vm.shopping?.lists?.firstOrNull { it.id == list.id }?.items ?: list.items
+    val day = runCatching { java.time.LocalDate.parse(date) }.getOrNull()
+    com.churchdrive.app.ui.FullPage("Edit project", onClose, tone = tone) {
+        com.churchdrive.app.ui.WashField(name, { name = it }, "Name", tone)
+        Text("For", style = MaterialTheme.typography.labelLarge)
+        com.churchdrive.app.ui.OptionRow(listOf("Mine", "Shared"), if (shared) "Shared" else "Mine", tone) { shared = it == "Shared" }
+        Text("Aim to finish by", style = MaterialTheme.typography.labelLarge)
+        if (day != null) Text(com.churchdrive.app.ui.dateWords(day, java.time.LocalDate.now()), style = MaterialTheme.typography.bodySmall)
+        com.churchdrive.app.ui.TileRow(
+            listOf(
+                com.churchdrive.app.ui.TileItem("mdi:calendar-edit", "Pick a date", day != null) { picking = true },
+                com.churchdrive.app.ui.TileItem("mdi:calendar-remove", "No date", day == null) { date = "" },
+            ),
+            tone, tone.onContainer,
+        )
+        if (picking) com.churchdrive.app.ui.DatePickDialog(day, { date = it.toString(); picking = false }, { picking = false })
+        Text("Steps", style = MaterialTheme.typography.labelLarge)
+        steps.forEach { item ->
+            Row(
+                Modifier.fillMaxWidth().background(tone.onContainer.copy(alpha = 0.10f), RoundedCornerShape(18.dp)).padding(start = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(item.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
+                Box(Modifier.clickable(onClickLabel = "Remove ${item.text}") { vm.removeStep(list, item) }.padding(12.dp)) {
+                    Icon(CdVectors.Close, contentDescription = null, tint = tone.onContainer)
+                }
+            }
+        }
+        com.churchdrive.app.ui.TileRow(
+            listOf(
+                com.churchdrive.app.ui.TileItem("mdi:close", "Cancel", false) { onClose() },
+                com.churchdrive.app.ui.TileItem("mdi:check", "Save", true) { vm.updateProject(list, name, shared, date); onClose() },
+            ),
+            tone, tone.onContainer,
+        )
+        com.churchdrive.app.ui.TileRow(
+            listOf(com.churchdrive.app.ui.TileItem("mdi:delete-outline", if (sure) "Tap again to delete" else "Delete project", sure) { if (sure) { vm.deleteProject(list); onClose() } else sure = true }),
+            toneColors(Tone.Red), tone.onContainer,
+        )
+    }
+}
+
+/** Starts a project: its name, whether it is Mine or Shared, a target date and its first steps (one a line), on a page like Edit task. */
+@Composable
+private fun NewProjectDialog(tone: ToneColors, onCreate: (String, Boolean, String, List<String>) -> Unit, onClose: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var shared by remember { mutableStateOf(false) }
+    var date by remember { mutableStateOf("") }
+    var picking by remember { mutableStateOf(false) }
     var steps by remember { mutableStateOf("") }
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text("New project") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(false to "Mine", true to "Shared").forEach { (value, label) ->
-                        val on = shared == value
-                        Box(
-                            Modifier.weight(1f).height(48.dp).background(if (on) tone.accent else tone.accent.copy(alpha = 0.14f), RoundedCornerShape(18.dp)).clickable { shared = value },
-                            contentAlignment = Alignment.Center,
-                        ) { Text(label, color = if (on) tone.onAccent else MaterialTheme.colorScheme.onSurface) }
-                    }
-                }
-                OutlinedTextField(value = steps, onValueChange = { steps = it }, label = { Text("First steps, one a line") }, minLines = 3, modifier = Modifier.fillMaxWidth())
-            }
-        },
-        confirmButton = {
-            androidx.compose.material3.TextButton(
-                enabled = name.isNotBlank(),
-                onClick = { onCreate(name, shared, steps.lines().map { it.trim() }.filter { it.isNotEmpty() }) },
-            ) { Text("Create") }
-        },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text("Cancel") } },
-    )
+    val day = runCatching { java.time.LocalDate.parse(date) }.getOrNull()
+    com.churchdrive.app.ui.FullPage("New project", onClose, tone = tone) {
+        com.churchdrive.app.ui.WashField(name, { name = it }, "Name", tone)
+        Text("For", style = MaterialTheme.typography.labelLarge)
+        com.churchdrive.app.ui.OptionRow(listOf("Mine", "Shared"), if (shared) "Shared" else "Mine", tone) { shared = it == "Shared" }
+        Text("Aim to finish by", style = MaterialTheme.typography.labelLarge)
+        if (day != null) Text(com.churchdrive.app.ui.dateWords(day, java.time.LocalDate.now()), style = MaterialTheme.typography.bodySmall)
+        com.churchdrive.app.ui.TileRow(
+            listOf(
+                com.churchdrive.app.ui.TileItem("mdi:calendar-edit", "Pick a date", day != null) { picking = true },
+                com.churchdrive.app.ui.TileItem("mdi:calendar-remove", "No date", day == null) { date = "" },
+            ),
+            tone, tone.onContainer,
+        )
+        if (picking) com.churchdrive.app.ui.DatePickDialog(day, { date = it.toString(); picking = false }, { picking = false })
+        com.churchdrive.app.ui.WashField(steps, { steps = it }, "First steps, one a line", tone, singleLine = false, minLines = 3)
+        com.churchdrive.app.ui.TileRow(
+            listOf(
+                com.churchdrive.app.ui.TileItem("mdi:close", "Cancel", false) { onClose() },
+                com.churchdrive.app.ui.TileItem("mdi:check", "Create", true) {
+                    if (name.isNotBlank()) onCreate(name, shared, date, steps.lines().map { it.trim() }.filter { it.isNotEmpty() })
+                },
+            ),
+            tone, tone.onContainer,
+        )
+    }
 }
 
 @Composable
