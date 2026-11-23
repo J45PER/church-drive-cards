@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.190.0
+
+A website edit waiting to be checked now shows as a task on an administrator's own list ("Colours edit waiting").
+
 ## 0.189.0
 
 No change to this app; it ships with the shared version.

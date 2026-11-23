@@ -21,6 +21,11 @@ data class RoutineInfo(
     val src: String,
     val summary: String,
     val next: String?,
+    /** "sunrise" or "sunset" for a routine that follows the sun (then [time] is empty), with [offset] minutes before (negative) or after it. */
+    val sun: String = "",
+    val offset: Int = 0,
+    /** What a scene or theme routine plays: the scene's key or the theme's id. */
+    val value: String = "",
 )
 
 fun parseRoutines(result: Any?): List<RoutineInfo>? {
@@ -35,6 +40,7 @@ fun parseRoutines(result: Any?): List<RoutineInfo>? {
             repeats = w.optString("kind") == "repeat", onceAt = w.optString("at"), time = w.optString("time"), days = days,
             enabled = o.optBoolean("enabled", true), by = o.optString("by"), src = o.optString("src"), summary = o.optString("summary"),
             next = if (o.isNull("next")) null else o.optString("next").takeIf { it.isNotBlank() },
+            sun = w.optString("sun"), offset = w.optInt("offset"), value = if (o.isNull("value")) "" else o.opt("value")?.toString().orEmpty(),
         )
     }
 }
@@ -69,12 +75,20 @@ fun oneOffBody(routineId: String?, entity: String, action: String, date: String,
     .put("when", JSONObject().put("kind", "once").put("at", "${date}T$time"))
 
 /** The body of `church_drive/routines/set` for a routine that repeats. */
-fun repeatBody(routineId: String?, entities: List<String>, action: String, time: String, days: List<Int>): JSONObject = JSONObject()
+fun repeatBody(
+    routineId: String?, entities: List<String>, action: String, time: String, days: List<Int>, sun: String = "", offset: Int = 0, value: String = "",
+): JSONObject = JSONObject()
     .also { if (routineId != null) it.put("routine_id", routineId) }
     .put("entities", JSONArray(entities))
     .put("action", action)
+    .also { if (value.isNotBlank() && (action == "scene" || action == "theme")) it.put("value", value) }
     .put("name", "")
-    .put("when", JSONObject().put("kind", "repeat").put("time", time).put("days", JSONArray(days.sorted())))
+    .put(
+        "when",
+        JSONObject().put("kind", "repeat").put("days", JSONArray(days.sorted())).also {
+            if (sun == "sunrise" || sun == "sunset") it.put("sun", sun).put("offset", offset) else it.put("time", time)
+        },
+    )
 
 /** Why a routine can't be saved yet, or null. */
 fun routineProblem(entities: List<String>, days: List<Int>): String? = when {

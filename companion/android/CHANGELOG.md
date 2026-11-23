@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.190.0
+
+- **Overnight heating times on the clock.** From and Until are picked on the clock, with the Earlier and Later buttons gone.
+- **Hue effects.** A Hue light's details page has an Effect section: candle, fire, prism and the other effects the light offers, and None to stop one.
+- **Sunset in the routine editor.** A light routine can happen at sunset or sunrise (at, or 15 to 120 minutes before or after) as well as at a clock time. A routine that plays a scene or theme (made from the house) is kept as it is when you open and save it.
+No change you will see in this app beyond tasks: a website edit waiting ("Colours edit waiting") is now a task on the administrator's own list, so it shows here.
+
 ## 0.189.0
 
 - **A receipt card for commands the house handles itself.** "Turn on the kitchen lights" is answered instantly by the house's own rules, which gave no card. The phone now makes the receipt (the device, what was done, the moving bulb, fan or blind) from what the house reports it did. Commands that go through Clive keep his own card.

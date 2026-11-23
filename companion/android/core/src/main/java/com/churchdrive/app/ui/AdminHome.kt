@@ -201,7 +201,7 @@ private fun StatusRing(colour: Color, sizeCells: Float, cell: androidx.compose.u
 
 /**
  * Tasks, at the top and always there as on the main app's Home: up to three lines (this person's own tasks, the shared list and the house's jobs for them, the
- * same as the main app shows, then the edits waiting on the website), the rest behind "+N more"; the button and a task open the To-Do app.
+ * same as the main app shows, a website edit waiting is a task on the administrator's own list now), the rest behind "+N more"; the button and a task open the To-Do app.
  */
 @Composable
 private fun HomeTasks(entities: Map<String, EntityState>, openTodo: (String?, String?) -> Unit) {
@@ -221,14 +221,12 @@ private fun HomeTasks(entities: Map<String, EntityState>, openTodo: (String?, St
     )
     val teal = toneColors(Tone.Teal)
     val indigo = toneColors(Tone.Shopping)
-    val edits = editsWaiting(entities)
     val purple = toneColors(Tone.Tasks)
     val red = toneColors(Tone.Red)
     val green = toneColors(Tone.Green)
     val coral = toneColors(Tone.TodoHouse)
     // (words, icon, colour, the task it opens in the To-Do app, if it is one)
-    val lines = jobs.map { h -> TaskLine(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else if (h.auto) coral else purple, h) } +
-        edits.map { TaskLine(it, "mdi:pencil", purple, null) }
+    val lines = jobs.map { h -> TaskLine(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else if (h.auto) coral else purple, h) }
     val shown = lines.take(3)
     val extra = lines.size - shown.size
     EntityCard(purple.container, purple.onContainer) {

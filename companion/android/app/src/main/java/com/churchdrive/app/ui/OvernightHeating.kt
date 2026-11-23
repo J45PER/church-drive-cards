@@ -1,11 +1,15 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
@@ -137,17 +142,22 @@ fun OvernightHeatingCard(entities: Map<String, EntityState>, call: CallService) 
             1.5f, 1.5f, tone, ink, true, stacked = true,
         )
         Text(describeOvernight(d.mode, d.start, d.end, name), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f), modifier = Modifier.at(0.5f, 3.5f, 7f, 1f))
+        // A time is chosen on the clock, like every other time in the app: a tap on the tile opens it.
         @Composable
-        fun stepper(y: Float, label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
-            Row(Modifier.at(0.5f, y, 7f, 1f), verticalAlignment = Alignment.CenterVertically) {
+        fun timeTile(y: Float, label: String, value: String, onPick: (String) -> Unit) {
+            var picking by remember { mutableStateOf(false) }
+            Row(
+                Modifier.at(0.5f, y, 7f, 1f).clip(RoundedCornerShape(18.dp)).background(ink.copy(alpha = 0.10f)).clickable(onClickLabel = "Change $label") { picking = true }
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(label, style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
-                GridButton(TileItem("mdi:minus", "Earlier", false, false) { onMinus() }, tone, ink, true, false, Modifier.size(cell))
-                Text(value, style = MaterialTheme.typography.titleMedium, color = ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.width(cell * 2f))
-                GridButton(TileItem("mdi:plus", "Later", false, false) { onPlus() }, tone, ink, true, false, Modifier.size(cell))
+                Text(value, style = MaterialTheme.typography.headlineSmall, color = ink, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
             }
+            if (picking) TimePickDialog(value, { onPick(it) }, { picking = false })
         }
-        stepper(4.5f, "From", d.start, { stepTime(d.start, -1)?.let { draft = d.copy(start = it) } }, { stepTime(d.start, 1)?.let { draft = d.copy(start = it) } })
-        stepper(6f, "Until", d.end, { stepTime(d.end, -1)?.let { draft = d.copy(end = it) } }, { stepTime(d.end, 1)?.let { draft = d.copy(end = it) } })
+        timeTile(4.5f, "From", d.start) { draft = d.copy(start = it) }
+        timeTile(6f, "Until", d.end) { draft = d.copy(end = it) }
         GridTiles(
             listOf(
                 TileItem("mdi:close", "Cancel", false) { draft = null },

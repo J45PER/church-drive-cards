@@ -213,6 +213,7 @@ from .shopping_logic import STATUSES
 from .fcm import Fcm
 from .activity import Activity
 from .chats import Chats
+from .edit_tasks import EditTasks
 from .access_logic import can_use, media_call, visible_media
 from .clive_devices_logic import shape_phones, shape_satellite
 from .chats_logic import MAX_LIMIT as CHATS_MAX_LIMIT, RATINGS as CHAT_RATINGS
@@ -2339,6 +2340,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Sensor actions couldn't start; everything else still works")
         data["sensor_actions"] = None
+
+    edit_tasks = EditTasks(hass)
+    try:
+        await edit_tasks.async_start()
+        entry.async_on_unload(edit_tasks.async_stop)
+        data["edit_tasks"] = edit_tasks
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The edit tasks couldn't start; everything else still works")
+        data["edit_tasks"] = None
 
     blind_schedule = BlindSchedule(hass)
     try:
