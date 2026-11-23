@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.191.3
+
+- Every full page (Edit task, Light routines, scene and sensor editors, Notifications and the rest) has the acrylic title bar that the page blurs behind, and Edit task has the coloured ground of its list.
+
 ## 0.191.2
 
 - Edit task: the time is picked on the clock (a time tile) instead of typed, and the text boxes are on a faint wash like the rest of the app.

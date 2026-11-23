@@ -74,7 +74,7 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
         onClose()
     }
 
-    FullPage("Edit task", onClose) {
+    FullPage("Edit task", onClose, tone = tone) {
         WashField(name, { name = it }, "Task", tone)
         Text(if (repeating) "Next due" else "Day", style = MaterialTheme.typography.labelLarge)
         OptionRow(dueOptions, if (picked != null) "" else due, tone) { due = it; picked = null }

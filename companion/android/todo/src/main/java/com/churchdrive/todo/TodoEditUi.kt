@@ -78,7 +78,7 @@ fun TodoEditDialog(item: TodoItem, first: String?, tone: ToneColors, onSave: (Ma
     }
 
     // The same page as the main app's, in the list's colour: wash fields, tile choices, the clock for a time and tile buttons.
-    FullPage("Edit task", onClose) {
+    FullPage("Edit task", onClose, tone = tone) {
         WashField(name, { name = it }, "Task", tone)
         Text(if (repeating) "Next due" else "Day", style = MaterialTheme.typography.labelLarge)
         OptionRow(dueOptions, if (picked != null) "" else due, tone) { due = it; picked = null }

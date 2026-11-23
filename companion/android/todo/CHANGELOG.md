@@ -3,6 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.191.3
+
+- **Edit a project.** Open a project and tap Edit project: its name, Mine or Shared, aim-to-finish date and steps (take one out), or delete it. New project is made on the same kind of page, and can have a date.
+- **Acrylic pages.** Edit task and New or Edit project have the coloured ground of their list and a title bar the page blurs behind.
+
 ## 0.191.2
 
 - **Edit task looks like the app.** It is the full page in the list's colour, with text boxes on a faint wash (no outline), tile choices for the day, repeat and who is reminded, the calendar and the clock to pick a date and a time, and tile Cancel, Save and Delete buttons.
