@@ -124,6 +124,8 @@ class SensorActions:
                 "off_in": max(0, round(due - now)) if due is not None else None,
                 "delay": item["off_delay"] if item["off_action"] != "none" else 0,
                 "sensor": item["name"],
+                # What happens at the end of the countdown: it goes off ("off"), goes back to how it was ("restore"), or dims ("dim"); the card says which.
+                "then": item["off_action"],
                 # A motion detector (the Hue ones) only sees movement, so its card says "Motion detected" where a presence sensor says "Someone's in".
                 "motion": all((s := self.hass.states.get(e)) is not None and s.attributes.get("device_class") == "motion" for e in item["sensors"]),
             }
@@ -192,7 +194,9 @@ class SensorActions:
                 continue
             if new.state == "on":
                 self._cancel(item["id"])
-                self._was_on.setdefault(item["id"], self._any_on(item))
+                # Already on when someone came in: not when it is the light this action itself switched on a moment ago (a switch-off may still be on its way
+                # to the light, which then still reads on, and treating that as "already on" left it on for good).
+                self._was_on.setdefault(item["id"], self._any_on(item) and time.monotonic() >= self._dark_hold.get(item["id"], 0.0))
                 self.hass.async_create_task(self._async_arrive(item))
             elif new.state == "off":
                 if self._any_sensor_on(item):  # another sensor of the group still sees someone
