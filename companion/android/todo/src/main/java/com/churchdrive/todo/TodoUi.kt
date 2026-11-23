@@ -236,6 +236,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
                     }
                 }
             }
+            if (tab.canAdd) vm.notice?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
             if (tab.canAdd) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 androidx.compose.material3.TextField(
                     value = text, onValueChange = { text = it }, placeholder = { Text("Add a task") }, singleLine = true,

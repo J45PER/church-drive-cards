@@ -163,6 +163,10 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     private val loaded = mutableStateMapOf<String, List<TodoItem>>()
     var problem by mutableStateOf<String?>(null)
         private set
+
+    /** Why the last task could not be saved ("no answer from the house"), shown by the add box until the next try; null when it went well. */
+    var notice by mutableStateOf<String?>(null)
+        private set
     private val counts = HashMap<String, String?>()
 
     init {
@@ -393,8 +397,20 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     fun add(tab: TodoTab, text: String) {
         val id = listId(tab) ?: return
         if (text.isBlank() || !tab.canAdd) return
-        client.callService("todo", "add_item", id, data("item" to text.trim()))
-        changed(id)
+        val summary = text.trim()
+        notice = null
+        // Shown at once, and kept only if the house says it has it: a task sent down a line that was down used to vanish without a word.
+        val local = TodoItem("local-${System.nanoTime()}", summary, false, null, null)
+        loaded[id] = loaded[id].orEmpty() + local
+        val body = JSONObject().put("domain", "todo").put("service", "add_item").put("service_data", data("item" to summary)).put("target", JSONObject().put("entity_id", id))
+        client.request("call_service", body, 15_000L) { result ->
+            viewModelScope.launch {
+                if (result == null) {
+                    loaded[id] = loaded[id].orEmpty().filter { it.uid != local.uid }
+                    notice = "Couldn't save \"$summary\": the house didn't answer. Try again."
+                } else changed(id)
+            }
+        }
     }
 
     private fun tabOf(l: AssistantList) = when (l) {

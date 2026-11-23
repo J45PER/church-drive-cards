@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.190.2
+
+- **A task you add is no longer lost.** It shows in the list at once and is kept once the house confirms it has it. If the house doesn't answer, the app says "Couldn't save ..." under the list and takes the task off, so you can try again. Before, a task sent while the connection was down vanished without a word.
+
 ## 0.190.1
 
 No change to this app; it ships with the shared version.

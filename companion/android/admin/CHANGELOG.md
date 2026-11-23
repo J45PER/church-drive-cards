@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.190.2
+
+No change to this app; it ships with the shared version.
+
 ## 0.190.1
 
 No change to this app; it ships with the shared version.
