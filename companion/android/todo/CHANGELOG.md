@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.192.0
+
+- **Rename a step.** On Edit project each step is a box you can change, with a cross to take it out; Save keeps what you changed and whether it was done. Needs the Home Assistant integration 0.192.0.
+
 ## 0.191.3
 
 - **Edit a project.** Open a project and tap Edit project: its name, Mine or Shared, aim-to-finish date and steps (take one out), or delete it. New project is made on the same kind of page, and can have a date.

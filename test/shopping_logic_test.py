@@ -104,6 +104,23 @@ class Projects(unittest.TestCase):
         self.assertIsNone(sl.pick_list([project], "Jamie"))
 
 
+class Rename(unittest.TestCase):
+    def test_a_step_can_be_renamed_and_keeps_its_status(self):
+        items, _ = sl.add_items([], ["Buy a ladder", "Paint"], nid, "project")
+        items = sl.set_status(items, items[0]["id"], "bought", "project")
+        out = sl.rename_item(items, items[0]["id"], "  get the ladder. ", "project")
+        self.assertEqual((out[0]["text"], out[0]["status"], out[1]["text"]), ("Get the ladder", "bought", "Paint"))
+
+    def test_a_rename_cannot_be_empty_or_clash_or_miss(self):
+        items, _ = sl.add_items([], ["One", "Two"], nid, "project")
+        with self.assertRaises(ValueError):
+            sl.rename_item(items, items[0]["id"], " . ", "project")
+        with self.assertRaises(ValueError):
+            sl.rename_item(items, items[0]["id"], "two", "project")
+        with self.assertRaises(KeyError):
+            sl.rename_item(items, "nope", "Three", "project")
+
+
 if __name__ == "__main__":
     unittest.main()
 

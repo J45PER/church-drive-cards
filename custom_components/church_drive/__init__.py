@@ -93,6 +93,7 @@ from .const import (
     WS_SHOPPING_ADD,
     WS_SHOPPING_CREATE,
     WS_SHOPPING_DELETE,
+    WS_SHOPPING_RENAME,
     WS_SHOPPING_IMPORT,
     WS_SHOPPING_ITEM,
     WS_SHOPPING_UPDATE,
@@ -1191,6 +1192,16 @@ async def ws_shopping_item(hass, shopping, connection, msg):
     return {"list": await shopping.async_set_item(msg["list"], msg["item"], msg["status"], connection.context(msg))}
 
 
+@websocket_api.websocket_command(
+    {vol.Required("type"): WS_SHOPPING_RENAME, vol.Required("list"): cv.string, vol.Required("item"): cv.string, vol.Required("text"): cv.string}
+)
+@websocket_api.async_response
+@_shopping_ws
+async def ws_shopping_rename(hass, shopping, connection, msg):
+    """Change the words of one item or step."""
+    return {"list": await shopping.async_rename_item(msg["list"], msg["item"], msg["text"], connection.context(msg))}
+
+
 @websocket_api.websocket_command({vol.Required("type"): WS_SHOPPING_DELETE, vol.Required("list"): cv.string})
 @websocket_api.async_response
 @_shopping_ws
@@ -2094,7 +2105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_light_role_set, ws_presence, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
-            ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
+            ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_rename, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
             ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_sensor_actions, ws_sensor_actions_set, ws_sensor_actions_delete, ws_schedules, ws_upcoming, ws_alarm_tests, ws_alarm_tests_set,
         ):
