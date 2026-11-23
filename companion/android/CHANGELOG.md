@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.191.1
+
+- Shared code: a failed request now records why (no line, no answer, or the house's refusal and its words). Nothing changes in this app.
+
 ## 0.191.0
 
 - Shared code for the new To-Do pages (the to-do highlights card can be used by the To-Do app; a list can be a project). Nothing changes in this app.

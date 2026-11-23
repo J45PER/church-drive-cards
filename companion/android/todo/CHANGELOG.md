@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.191.1
+
+- **A task that can't be saved says why.** "Couldn't save ..." now adds the reason: there is no line to the house, the house didn't answer, or what the house said when it refused. A task added while the line is down stays on screen and is sent as soon as the line is back.
+
 ## 0.191.0
 
 - **Four pages, like the main app.** Home (My list, Shared, Steps and From the house), Shopping (the house's shopping list, which was missing here), Cleaning and Projects. The to-do highlights from the main app's Home page sit at the top of every page, page titles are white, and each section has its heading outside its cards.
