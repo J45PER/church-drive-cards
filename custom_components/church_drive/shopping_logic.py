@@ -17,7 +17,9 @@ OPEN, BOUGHT, UNAVAILABLE = "open", "bought", "unavailable"
 STATUSES = (OPEN, BOUGHT, UNAVAILABLE)
 # A list is either shopping (items bought or unavailable) or steps (a checklist: each step open or done, "bought").
 SHOPPING, STEPS = "shopping", "steps"
-KINDS = (SHOPPING, STEPS)
+# A project is a longer checklist with its own page in the apps (not a task on anyone's to-do list): steps, a target date and who it is for.
+PROJECT = "project"
+KINDS = (SHOPPING, STEPS, PROJECT)
 MARKER = "church-drive-shopping:"
 # A steps task's marker has this word after the id, so the cards and app say "to do" instead of "to get".
 STEPS_WORD = " steps"
@@ -32,6 +34,11 @@ SHOP_WORDS = (
 _LEAD = re.compile(r"^\s*(?:[-*••☐☑\[\]x ]+\s*)?(?:(?:please|also|and)\s+)?(?:buy|get|pick up|grab|need|order)\s+(?:some\s+|more\s+)?", re.I)
 
 
+def checklist(kind: str) -> bool:
+    """Whether a kind is a checklist (steps or a project): each item is open or done, never unavailable."""
+    return kind in (STEPS, PROJECT)
+
+
 def norm(text: Any) -> str:
     return " ".join(str(text or "").lower().split())
 
@@ -40,7 +47,7 @@ def clean_item(text: Any, kind: str = SHOPPING) -> str:
     """An item as shown: bullets and 'buy ' removed (not for steps, where "Get a ladder" stays as written), first letter capital, no longer than a task."""
     t = " ".join(str(text or "").split())
     t = re.sub(r"^[-*••☐]+\s*", "", t)
-    t = t.strip(" .,;") if kind == STEPS else _LEAD.sub("", t).strip(" .,;")
+    t = t.strip(" .,;") if checklist(kind) else _LEAD.sub("", t).strip(" .,;")
     return (t[:1].upper() + t[1:])[:120]
 
 
@@ -65,7 +72,7 @@ def add_items(items: list[dict[str, Any]], texts: list[str], new_id: Any, kind: 
 
 
 def set_status(items: list[dict[str, Any]], item_id: str, status: str, kind: str = SHOPPING) -> list[dict[str, Any]]:
-    if status not in STATUSES or (kind == STEPS and status == UNAVAILABLE):
+    if status not in STATUSES or (checklist(kind) and status == UNAVAILABLE):
         raise ValueError(f"Unknown status: {status}")
     if not any(i["id"] == item_id for i in items):
         raise KeyError(item_id)
@@ -99,7 +106,8 @@ def task_description(list_id: str, items: list[dict[str, Any]], kind: str = SHOP
 
 
 def kind_of(lst: dict[str, Any]) -> str:
-    return STEPS if lst.get("kind") == STEPS else SHOPPING
+    kind = lst.get("kind")
+    return kind if kind in (STEPS, PROJECT) else SHOPPING
 
 
 def parse_marker(description: Any) -> str | None:
@@ -149,7 +157,7 @@ def pick_list(lists: list[dict[str, Any]], first: str) -> dict[str, Any] | None:
 
 
 def due_today(lists: list[dict[str, Any]], today: str) -> list[dict[str, Any]]:
-    return [l for l in lists if l["date"] == today and not l.get("done")]
+    return [l for l in lists if l["date"] == today and not l.get("done") and kind_of(l) != PROJECT]
 
 
 def is_shop_zone(zone_name: str, list_places: set[str], zone_entity: str) -> bool:

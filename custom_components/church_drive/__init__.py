@@ -319,6 +319,7 @@ STEPS_CREATE_SCHEMA = vol.Schema(
         vol.Optional("date", default=""): cv.string,
         vol.Optional("time", default=""): cv.string,
         vol.Optional("at_home", default=False): cv.boolean,
+        vol.Optional("project", default=False): cv.boolean,
     }
 )
 
@@ -1128,7 +1129,7 @@ def ws_shopping(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
         vol.Optional("places", default=[]): [PLACE],
         vol.Optional("items", default=[]): [cv.string],
         vol.Optional("include_missed", default=True): cv.boolean,
-        vol.Optional("kind", default="shopping"): vol.In(["shopping", "steps"]),
+        vol.Optional("kind", default="shopping"): vol.In(["shopping", "steps", "project"]),
     }
 )
 @websocket_api.async_response
@@ -2405,7 +2406,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             places = [{"name": "Home", "address": "", "lat": home.attributes["latitude"], "lon": home.attributes["longitude"]}]
         try:
             result = await shop.async_create(
-                d["name"], d["people"] or ["everyone"], d["date"], places, d["steps"], False, call.context, d["time"], "steps"
+                d["name"], d["people"] or ["everyone"], d["date"], places, d["steps"], False, call.context, d["time"], "project" if d["project"] else "steps"
             )
         except ValueError as err:
             raise ServiceValidationError(str(err)) from err

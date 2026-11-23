@@ -67,7 +67,9 @@ import dev.chrisbanes.haze.HazeState
 import com.churchdrive.app.ui.HouseTask
 import com.churchdrive.app.ui.PersonButton
 import com.churchdrive.app.ui.TodoItem
+import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.ToneColors
+import com.churchdrive.app.ui.ShoppingList
 import com.churchdrive.app.ui.houseTask
 import com.churchdrive.app.ui.houseTaskHaPath
 import com.churchdrive.app.ui.houseTaskPage
@@ -77,27 +79,33 @@ import com.churchdrive.app.ui.taskLine
 import com.churchdrive.app.ui.glowBehind
 import com.churchdrive.app.ui.toneColors
 
-private fun TodoTab.icon(): ImageVector = when (this) {
-    TodoTab.Mine -> CdVectors.Person
-    TodoTab.Shared -> CdVectors.Group
-    TodoTab.Cleaning -> CdVectors.Gregg
-    TodoTab.House -> CdVectors.Home
-}
-
-/** A tab's icon: the house's own house for House and Gregg for Cleaning, Material's for the others. */
+/** A page's icon on the bottom bar: the house's own house for Home, Gregg for Cleaning, the cart, and the dashboard tiles for Projects. */
 @Composable
 private fun TabIcon(tab: TodoTab) {
     when (tab) {
-        TodoTab.House -> Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null)
-        // Gregg, the robot vacuum, as on the phone's Cleaning page.
+        TodoTab.Home -> Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null)
+        TodoTab.Shopping -> Icon(CdVectors.Cart, contentDescription = null)
         TodoTab.Cleaning -> com.churchdrive.app.ui.CdIcon("cd:vac", androidx.compose.material3.LocalContentColor.current, 24.dp)
-        else -> Icon(tab.icon(), contentDescription = null)
+        TodoTab.Projects -> com.churchdrive.app.ui.CdIcon("cd:view-dashboard", androidx.compose.material3.LocalContentColor.current, 24.dp)
+    }
+}
+
+/** A section's icon, in the section's colour. */
+@Composable
+private fun SectionIcon(section: TodoSection, tint: androidx.compose.ui.graphics.Color) {
+    when (section) {
+        TodoSection.Mine -> Icon(CdVectors.Person, contentDescription = null, tint = tint)
+        TodoSection.Shared -> Icon(CdVectors.Group, contentDescription = null, tint = tint)
+        TodoSection.House -> Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null, tint = tint)
+        TodoSection.Shopping -> Icon(CdVectors.Cart, contentDescription = null, tint = tint)
+        TodoSection.Cleaning -> com.churchdrive.app.ui.CdIcon("cd:vac", tint, 24.dp)
     }
 }
 
 /**
- * The signed-in app, laid out like the main Church Drive app: a collapsing title with the person's initial, a card for the
- * page's tasks, and the pages along the bottom (the person's own list, the shared one, cleaning and the house's jobs).
+ * The signed-in app, laid out like the main Church Drive app: a collapsing white title with the person's initial, the to-do
+ * highlights, then each page's sections (a heading outside, a card of tasks inside), and the pages along the bottom
+ * (Home, Shopping, Cleaning and Projects).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +143,8 @@ fun TodoApp(vm: TodoModel) {
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(tab.title, color = toneColors(tab.tone).accent) },
+                // White like the main app's page titles (the page's colour is in the bar, the cards and the summary).
+                title = { Text(tab.title, color = MaterialTheme.colorScheme.onBackground) },
                 actions = {
                     // A round button with the person's initial opens the account panel, as in the main app.
                     PersonButton(vm.personName) { panel = "account" }
@@ -168,7 +177,18 @@ fun TodoApp(vm: TodoModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.TODO_APK_URL, "Church Drive To-Do")
-            TaskCard(vm, tab)
+            TodoSummary(vm) { panel = null; vm.openTab(TodoTab.Home); toTop() }
+            when (tab) {
+                TodoTab.Home -> {
+                    Section(vm, TodoSection.Mine)
+                    Section(vm, TodoSection.Shared)
+                    StepsSection(vm)
+                    Section(vm, TodoSection.House)
+                }
+                TodoTab.Shopping -> Section(vm, TodoSection.Shopping)
+                TodoTab.Cleaning -> Section(vm, TodoSection.Cleaning)
+                TodoTab.Projects -> ProjectsPage(vm)
+            }
             Spacer(Modifier.height(16.dp))
             Spacer(Modifier.height(padding.calculateBottomPadding()))
         }
@@ -180,55 +200,94 @@ fun TodoApp(vm: TodoModel) {
     }
 }
 
-/** A page's card, in the page's colour like the main app's task cards. */
+/** The highlights card at the top of every page, as on the main app's Home page: what is waiting for this person, and a tile to the lists. */
 @Composable
-private fun TaskCard(vm: TodoModel, tab: TodoTab) {
-    val tone = toneColors(tab.tone)
-    val items = vm.items(tab)
+private fun TodoSummary(vm: TodoModel, onOpen: () -> Unit) {
+    val first = vm.personName?.trim()?.substringBefore(' ')
+    var ticked by remember { mutableStateOf(setOf<String>()) }
+    val all = com.churchdrive.app.ui.todoHighlights(vm.highlightLists(), first).filter { it.uid !in ticked }
+    val shown = all.take(3)
+    com.churchdrive.app.ui.TodoHighlightsView(shown, all.size - shown.size, vm.highlightsLoaded, onOpen, { onOpen() }) { h ->
+        ticked = ticked + h.uid
+        vm.tickByUid(h.list, h.uid)
+    }
+}
+
+/** A heading that sits outside its cards, so a section can hold several cards later. */
+@Composable
+private fun SectionHeader(title: String, count: String?, tone: ToneColors, icon: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(start = 6.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        icon()
+        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+        if (count != null) Text(
+            count, style = MaterialTheme.typography.labelMedium, color = tone.accent,
+            modifier = Modifier.background(tone.accent.copy(alpha = 0.18f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+    }
+}
+
+/** One of a page's lists: its heading, then its card. */
+@Composable
+private fun Section(vm: TodoModel, section: TodoSection) {
+    val tone = toneColors(section.tone)
+    val open = vm.items(section)?.count { !it.done }
+    // The house's list says nothing when it is empty, instead of an empty card.
+    if (section == TodoSection.House && vm.items(section).orEmpty().none { !it.done }) return
+    SectionHeader(section.title, open?.let { if (section == TodoSection.House) "$it jobs" else "$it to do" }, tone) { SectionIcon(section, tone.accent) }
+    TaskCard(vm, section)
+}
+
+/** A page's card of tasks, in the section's colour like the main app's task cards. */
+@Composable
+private fun TaskCard(vm: TodoModel, section: TodoSection) {
+    val tone = toneColors(section.tone)
+    val items = vm.items(section)
     val context = androidx.compose.ui.platform.LocalContext.current
-    var text by rememberSaveable(tab) { mutableStateOf("") }
-    var showDone by rememberSaveable(tab) { mutableStateOf(vm.showDone) }
-    var editing by remember(tab) { mutableStateOf<TodoItem?>(null) }
+    var text by rememberSaveable(section) { mutableStateOf("") }
+    var showDone by rememberSaveable(section) { mutableStateOf(vm.showDone) }
+    var editing by remember(section) { mutableStateOf<TodoItem?>(null) }
     // A task asked for from the Church Drive app's Home page opens for editing as soon as its list has arrived.
     val pending = vm.pendingUid
-    androidx.compose.runtime.LaunchedEffect(pending, items, tab) {
-        if (pending != null && items != null) {
-            items.firstOrNull { it.uid == pending && tab != TodoTab.House }?.let { editing = it }
-            vm.clearPending()
+    androidx.compose.runtime.LaunchedEffect(pending, items, section) {
+        if (pending != null && items != null && section != TodoSection.House) {
+            items.firstOrNull { it.uid == pending }?.let {
+                editing = it
+                vm.clearPending()
+            }
         }
     }
     editing?.let { item ->
         TodoEditDialog(
             item, vm.personName?.trim()?.substringBefore(' '),
-            onSave = { vm.save(tab, it); editing = null },
-            onDelete = { vm.remove(tab, item); editing = null },
+            onSave = { vm.save(section, it); editing = null },
+            onDelete = { vm.remove(section, item); editing = null },
             onClose = { editing = null },
         )
     }
     Surface(shape = RoundedCornerShape(28.dp), color = tone.container, contentColor = tone.onContainer, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.glowBehind(tone.container).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (vm.listId(tab) == null) {
+            if (vm.listId(section) == null) {
                 Text("Your list isn't ready yet.", style = MaterialTheme.typography.bodyMedium)
                 return@Column
             }
             val open = items.orEmpty().filter { !it.done }.sortedWith(compareBy<TodoItem>({ it.due == null }, { it.due }))
             when {
                 items == null -> Text(vm.problem ?: "Loading…", style = MaterialTheme.typography.bodyMedium)
-                open.isEmpty() -> Text(if (tab == TodoTab.House) "Nothing from the house right now." else "All done", style = MaterialTheme.typography.titleMedium)
+                open.isEmpty() -> Text(if (section == TodoSection.House) "Nothing from the house right now." else "All done", style = MaterialTheme.typography.titleMedium)
             }
             open.forEach { item ->
-                if (tab == TodoTab.House) HouseRow(item, houseTask(item), tone) { ChurchDriveLinkOpen(context, item, vm.houseAddress) } else TaskRow(item, tone, onEdit = { editing = item }) { vm.setDone(tab, item, true) }
+                if (section == TodoSection.House) HouseRow(item, houseTask(item), tone) { ChurchDriveLinkOpen(context, item, vm.houseAddress) } else TaskRow(item, tone, onEdit = { editing = item }) { vm.setDone(section, item, true) }
             }
             // Finished tasks, kept out of the way until asked for; tick one to bring it back.
             val finished = items.orEmpty().filter { it.done }
-            if (finished.isNotEmpty() && tab != TodoTab.House) {
+            if (finished.isNotEmpty() && section != TodoSection.House) {
                 Row(Modifier.fillMaxWidth().clickable { showDone = !showDone }, verticalAlignment = Alignment.CenterVertically) {
                     Text("Done (${finished.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                     Icon(if (showDone) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null)
                 }
                 if (showDone) finished.forEach { item ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Checkbox(checked = true, onCheckedChange = { vm.setDone(tab, item, false) }, colors = checks(tone))
+                        Checkbox(checked = true, onCheckedChange = { vm.setDone(section, item, false) }, colors = checks(tone))
                         Text(
                             item.summary, style = MaterialTheme.typography.bodyLarge, textDecoration = TextDecoration.LineThrough,
                             color = tone.onContainer.copy(alpha = 0.6f), modifier = Modifier.weight(1f).clickable { editing = item },
@@ -236,30 +295,175 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
                     }
                 }
             }
-            if (tab.canAdd) vm.notice?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
-            if (tab.canAdd) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.TextField(
-                    value = text, onValueChange = { text = it }, placeholder = { Text("Add a task") }, singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = androidx.compose.material3.TextFieldDefaults.colors(
-                        focusedContainerColor = tone.onContainer.copy(alpha = 0.12f), unfocusedContainerColor = tone.onContainer.copy(alpha = 0.08f),
-                        focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                        focusedTextColor = tone.onContainer, unfocusedTextColor = tone.onContainer,
-                        focusedPlaceholderColor = tone.onContainer.copy(alpha = 0.6f), unfocusedPlaceholderColor = tone.onContainer.copy(alpha = 0.6f),
-                        cursorColor = tone.accent,
-                    ),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { vm.add(tab, text); text = "" }),
+            if (section.canAdd) vm.notice?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+            if (section.canAdd) AddRow(
+                when (section) {
+                    TodoSection.Shopping -> "Add an item"
+                    TodoSection.Cleaning -> "Add a chore"
+                    TodoSection.Shared -> "Add a shared task"
+                    else -> "Add a task"
+                },
+                text, { text = it }, tone,
+            ) { vm.add(section, text); text = "" }
+        }
+    }
+}
+
+/** The text box and round plus button at the foot of a card. */
+@Composable
+private fun AddRow(hint: String, text: String, onText: (String) -> Unit, tone: ToneColors, onAdd: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.material3.TextField(
+            value = text, onValueChange = onText, placeholder = { Text(hint) }, singleLine = true,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                focusedContainerColor = tone.onContainer.copy(alpha = 0.12f), unfocusedContainerColor = tone.onContainer.copy(alpha = 0.08f),
+                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                focusedTextColor = tone.onContainer, unfocusedTextColor = tone.onContainer,
+                focusedPlaceholderColor = tone.onContainer.copy(alpha = 0.6f), unfocusedPlaceholderColor = tone.onContainer.copy(alpha = 0.6f),
+                cursorColor = tone.accent,
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onAdd() }),
+        )
+        FilledIconButton(
+            onClick = onAdd,
+            enabled = text.isNotBlank(),
+            colors = IconButtonDefaults.filledIconButtonColors(containerColor = tone.accent, contentColor = tone.onAccent),
+        ) { Icon(CdVectors.Plus, contentDescription = "Add") }
+    }
+}
+
+// ---- Steps lists and projects ----
+
+/** Steps lists assigned to this person or shared with them, on the Home page; each is a card that opens to its steps. */
+@Composable
+private fun StepsSection(vm: TodoModel) {
+    val lists = vm.stepsLists()
+    if (lists.isEmpty()) return
+    val tone = toneColors(Tone.Tasks)
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    SectionHeader("Steps", "${lists.size} ${if (lists.size == 1) "list" else "lists"}", tone) { Icon(CdVectors.Todo, contentDescription = null, tint = tone.accent) }
+    lists.forEach { l -> ChecklistCard(vm, l, tone, open == l.id, canDelete = false) { open = if (open == l.id) null else l.id } }
+}
+
+/** The Projects page: what is under way (the first one open), a way to start another, and what has been finished. */
+@Composable
+private fun ProjectsPage(vm: TodoModel) {
+    val tone = toneColors(TodoTab.Projects.tone)
+    val active = vm.projects()
+    val finished = vm.finishedProjects()
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    var creating by rememberSaveable { mutableStateOf(false) }
+    if (creating) NewProjectDialog(tone, onCreate = { name, shared, steps -> vm.createProject(name, shared, "", steps); creating = false }, onClose = { creating = false })
+    SectionHeader("Active projects", if (vm.shopping == null) null else active.size.toString(), tone) { Icon(CdVectors.Todo, contentDescription = null, tint = tone.accent) }
+    if (vm.shopping == null) Text(vm.problem ?: "Loading…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
+    active.forEach { l -> ChecklistCard(vm, l, tone, open == l.id || (open == null && l == active.first()), canDelete = true) { open = if (open == l.id) "" else l.id } }
+    Row(
+        Modifier.fillMaxWidth().height(48.dp).background(tone.onContainer.copy(alpha = 0.1f), RoundedCornerShape(18.dp)).clickable { creating = true }.padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(CdVectors.Plus, contentDescription = null, tint = tone.accent)
+        Text("New project", color = MaterialTheme.colorScheme.onBackground)
+    }
+    if (finished.isNotEmpty()) {
+        SectionHeader("Finished", finished.size.toString(), tone) { Icon(CdVectors.Todo, contentDescription = null, tint = tone.accent) }
+        finished.forEach { l -> ChecklistCard(vm, l, tone, open == l.id, canDelete = true) { open = if (open == l.id) "" else l.id } }
+    }
+}
+
+private fun shortDate(date: String): String? =
+    runCatching { java.time.LocalDate.parse(date).format(java.time.format.DateTimeFormatter.ofPattern("d MMM")) }.getOrNull()
+
+/** A steps list or project as a card: its name, who it is for, steps done, a bar; open it to tick, add and (for a project) delete. */
+@Composable
+private fun ChecklistCard(vm: TodoModel, list: ShoppingList, tone: ToneColors, expanded: Boolean, canDelete: Boolean, onToggle: () -> Unit) {
+    val total = list.items.size
+    val done = list.items.count { it.status != "open" }
+    val next = list.items.firstOrNull { it.status == "open" }
+    var text by rememberSaveable(list.id) { mutableStateOf("") }
+    var sure by remember(list.id) { mutableStateOf(false) }
+    Surface(shape = RoundedCornerShape(28.dp), color = tone.container, contentColor = tone.onContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.glowBehind(tone.container).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth().clickable { onToggle() }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(40.dp).background(tone.accent.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(CdVectors.Todo, contentDescription = null, tint = tone.accent)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(list.title, style = MaterialTheme.typography.titleMedium)
+                    val sub = listOfNotNull(
+                        vm.shareLabel(list),
+                        list.date.takeIf { it.isNotBlank() }?.let { d -> shortDate(d)?.let { "by $it" } },
+                        if (!expanded && next != null) "Next: ${next.text}" else null,
+                    ).joinToString(" · ")
+                    Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
+                Text(
+                    "$done of $total", style = MaterialTheme.typography.labelMedium, color = tone.accent,
+                    modifier = Modifier.background(tone.accent.copy(alpha = 0.18f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
                 )
-                FilledIconButton(
-                    onClick = { vm.add(tab, text); text = "" },
-                    enabled = text.isNotBlank(),
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = tone.accent, contentColor = tone.onAccent),
-                ) { Icon(CdVectors.Plus, contentDescription = "Add") }
+                Icon(if (expanded) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null)
+            }
+            Box(Modifier.fillMaxWidth().height(6.dp).background(tone.onContainer.copy(alpha = 0.25f), RoundedCornerShape(3.dp))) {
+                if (total > 0) Box(Modifier.fillMaxWidth(done.toFloat() / total).height(6.dp).background(tone.accent, RoundedCornerShape(3.dp)))
+            }
+            if (expanded) {
+                list.items.forEach { item ->
+                    val isDone = item.status != "open"
+                    Row(
+                        Modifier.fillMaxWidth().background(tone.accent.copy(alpha = if (item.id == next?.id) 0.22f else 0.1f), RoundedCornerShape(16.dp)).padding(end = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Checkbox(checked = isDone, onCheckedChange = { vm.tickStep(list, item, it) }, colors = checks(tone))
+                        Text(
+                            item.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
+                            textDecoration = if (isDone) TextDecoration.LineThrough else null,
+                            color = if (isDone) tone.onContainer.copy(alpha = 0.6f) else tone.onContainer,
+                        )
+                    }
+                }
+                AddRow("Add a step", text, { text = it }, tone) { vm.addStep(list, text); text = "" }
+                if (canDelete) androidx.compose.material3.TextButton(onClick = { if (sure) vm.deleteProject(list) else sure = true }) {
+                    Text(if (sure) "Tap again to delete this project" else "Delete project", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
+}
+
+/** Starts a project: its name, whether it is Mine or Shared, and its first steps (one a line). */
+@Composable
+private fun NewProjectDialog(tone: ToneColors, onCreate: (String, Boolean, List<String>) -> Unit, onClose: () -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var shared by remember { mutableStateOf(false) }
+    var steps by remember { mutableStateOf("") }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("New project") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(false to "Mine", true to "Shared").forEach { (value, label) ->
+                        val on = shared == value
+                        Box(
+                            Modifier.weight(1f).height(48.dp).background(if (on) tone.accent else tone.accent.copy(alpha = 0.14f), RoundedCornerShape(18.dp)).clickable { shared = value },
+                            contentAlignment = Alignment.Center,
+                        ) { Text(label, color = if (on) tone.onAccent else MaterialTheme.colorScheme.onSurface) }
+                    }
+                }
+                OutlinedTextField(value = steps, onValueChange = { steps = it }, label = { Text("First steps, one a line") }, minLines = 3, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                enabled = name.isNotBlank(),
+                onClick = { onCreate(name, shared, steps.lines().map { it.trim() }.filter { it.isNotEmpty() }) },
+            ) { Text("Create") }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text("Cancel") } },
+    )
 }
 
 @Composable

@@ -176,7 +176,7 @@ class Shopping:
     ) -> dict[str, Any]:
         """Make a list. Items that weren't available last time are added when [include_missed] (and returned in 'offered').
         A steps list is a checklist: it has no missed items."""
-        kind = sl.STEPS if kind == sl.STEPS else sl.SHOPPING
+        kind = kind if kind in (sl.STEPS, sl.PROJECT) else sl.SHOPPING
         who = self._people_valid(people)
         if not who:
             raise ValueError("A list needs at least one person")
@@ -284,7 +284,8 @@ class Shopping:
                 self._missed = sl.merge_missed(self._missed, sl.missed_from(lst["items"]), lst["name"] or "Shopping", dt_util.now().date().isoformat())
         elif was_done and not lst["done"]:
             lst["done_at"] = ""
-        for first in lst["people"]:
+        # A project has its own page in the apps; it is not a task on anyone's list.
+        for first in ([] if sl.kind_of(lst) == sl.PROJECT else lst["people"]):
             try:
                 await self._async_sync_task(lst, first, context)
             except Exception:  # noqa: BLE001 - the list is kept even if a to-do list can't be written
@@ -344,7 +345,7 @@ class Shopping:
     async def _async_purge(self) -> None:
         """Delete lists finished more than a day ago, with their tasks."""
         cutoff = (dt_util.utcnow() - KEEP_DONE).isoformat()
-        old = [l for l in self._lists if l["done"] and l["done_at"] and l["done_at"] < cutoff]
+        old = [l for l in self._lists if l["done"] and l["done_at"] and l["done_at"] < cutoff and sl.kind_of(l) != sl.PROJECT]
         for lst in old:
             for first in list(lst["tasks"]):
                 await self._async_remove_task(lst, first, None)
@@ -387,7 +388,7 @@ class Shopping:
         local = dt_util.as_local(now)
         today, hm = local.date().isoformat(), local.strftime("%H:%M")
         for lst in self._lists:
-            if lst["done"] or lst["date"] != today or lst.get("time") != hm:
+            if lst["done"] or lst["date"] != today or lst.get("time") != hm or sl.kind_of(lst) == sl.PROJECT:
                 continue
             where = f" at {lst['places'][0]['name']}" if lst["places"] else ""
             c = sl.counts(lst["items"])

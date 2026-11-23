@@ -84,6 +84,26 @@ class Shopping(unittest.TestCase):
         self.assertIsNone(sl.arrival_message("Tesco", [], []))
 
 
+class Projects(unittest.TestCase):
+    def test_a_project_is_a_checklist_that_is_not_a_task(self):
+        self.assertEqual(sl.kind_of({"kind": "project"}), "project")
+        self.assertEqual(sl.kind_of({"kind": "other"}), "shopping")
+        items, _ = sl.add_items([], ["Get a ladder."], nid, "project")
+        self.assertEqual(items[0]["text"], "Get a ladder")
+        with self.assertRaises(ValueError):
+            sl.set_status(items, items[0]["id"], "unavailable", "project")
+        self.assertEqual(sl.set_status(items, items[0]["id"], "bought", "project")[0]["status"], "bought")
+
+    def test_a_project_has_no_reminder_on_its_date(self):
+        project = {"id": "p", "people": ["Jamie"], "date": "2026-12-01", "done": False, "kind": "project", "items": []}
+        steps = {**project, "id": "s", "kind": "steps"}
+        self.assertEqual([l["id"] for l in sl.due_today([project, steps], "2026-12-01")], ["s"])
+
+    def test_a_project_never_takes_shared_shopping(self):
+        project = {"id": "p", "people": ["Jamie"], "date": "", "created": "1", "done": False, "kind": "project", "items": []}
+        self.assertIsNone(sl.pick_list([project], "Jamie"))
+
+
 if __name__ == "__main__":
     unittest.main()
 
