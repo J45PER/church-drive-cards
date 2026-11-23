@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.190.2
+
+No change to this app; it ships with the shared version.
+
 ## 0.190.1
 
 - **The countdown says what comes next.** A light a sensor looks after says "Off in 7 s", or "Returning in 7 s" when it will go back to how it was, or "Dimming in 7 s".
