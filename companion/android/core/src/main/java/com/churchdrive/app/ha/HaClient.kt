@@ -120,6 +120,10 @@ class HaClient(private val scope: CoroutineScope) {
     @Volatile
     var lastErrorCode: String? = null
         private set
+
+    /** The words that went with [lastErrorCode], when Home Assistant gave any. */
+    var lastErrorMessage: String? = null
+        private set
     private var job: Job? = null
     private var nextId = 1
 
@@ -205,6 +209,8 @@ class HaClient(private val scope: CoroutineScope) {
     fun request(type: String, params: JSONObject = JSONObject(), timeoutMs: Long = 30_000L, onResult: (Any?) -> Unit) {
         val ws = socket
         if (ws == null || !authed) {
+            lastErrorCode = "no_line"
+            lastErrorMessage = null
             onResult(null)
             return
         }
@@ -215,12 +221,20 @@ class HaClient(private val scope: CoroutineScope) {
         scope.launch {
             delay(timeoutMs)
             pendingTypes.remove(id)
-            pending.remove(id)?.invoke(null)
+            pending.remove(id)?.let {
+                lastErrorCode = "no_answer"
+                lastErrorMessage = null
+                it.invoke(null)
+            }
         }
         val msg = JSONObject(params.toString()).put("id", id).put("type", type)
         if (!ws.send(msg.toString())) {
             pendingTypes.remove(id)
-            pending.remove(id)?.invoke(null)
+            pending.remove(id)?.let {
+                lastErrorCode = "no_line"
+                lastErrorMessage = null
+                it.invoke(null)
+            }
         }
     }
 
@@ -380,6 +394,7 @@ class HaClient(private val scope: CoroutineScope) {
                     if (callback != null) {
                         val ok = msg.optBoolean("success")
                         lastErrorCode = if (ok) null else msg.optJSONObject("error")?.optString("code")?.takeIf { it.isNotBlank() } ?: "error"
+                        lastErrorMessage = if (ok) null else msg.optJSONObject("error")?.optString("message")?.takeIf { it.isNotBlank() }
                         // Any answer but "unknown command" to a Church Drive command means Church Drive is loaded; that one means it is not yet.
                         if (pendingTypes.remove(msg.optInt("id")) != null) {
                             if (lastErrorCode == "unknown_command") noteIntegrationLoading() else _integrationLoading.value = false

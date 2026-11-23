@@ -181,6 +181,8 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     var notice by mutableStateOf<String?>(null)
         private set
     private val counts = HashMap<String, String?>()
+    /** Tasks added while there was no line, waiting to be sent: (list, text, the uid shown meanwhile). */
+    private val queuedAdds = mutableListOf<Triple<String, String, String>>()
 
     /** Every steps list and project, null until they arrive. */
     var shopping by mutableStateOf<ShoppingState?>(null)
@@ -216,6 +218,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
                 if (connected) {
                     failures = 0
                     refreshAll()
+                    flushQueuedAdds()
                     // Steps lists and projects change in the house when anyone ticks one: read them again then.
                     if (shoppingSub >= 0) api.close(shoppingSub)
                     shoppingSub = api.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_shopping_changed")) { loadShoppingSoon() }
@@ -448,13 +451,39 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         // Shown at once, and kept only if the house says it has it: a task sent down a line that was down used to vanish without a word.
         val local = TodoItem("local-${System.nanoTime()}", summary, false, null, null)
         loaded[id] = loaded[id].orEmpty() + local
+        if (!connected) {
+            // No line to the house right now: the task stays on screen and is sent as soon as the line is back.
+            queuedAdds += Triple(id, summary, local.uid)
+            notice = "No line to the house yet. \"$summary\" will be saved when it is back."
+            connect()
+            return
+        }
+        sendAdd(id, summary, local.uid)
+    }
+
+    private fun flushQueuedAdds() {
+        val now = queuedAdds.toList()
+        queuedAdds.clear()
+        now.forEach { (list, text, uid) -> sendAdd(list, text, uid) }
+    }
+
+    private fun sendAdd(id: String, summary: String, localUid: String) {
         val body = JSONObject().put("domain", "todo").put("service", "add_item").put("service_data", data("item" to summary)).put("target", JSONObject().put("entity_id", id))
         client.request("call_service", body, 15_000L) { result ->
             viewModelScope.launch {
                 if (result == null) {
-                    loaded[id] = loaded[id].orEmpty().filter { it.uid != local.uid }
-                    notice = "Couldn't save \"$summary\": the house didn't answer. Try again."
-                } else changed(id)
+                    loaded[id] = loaded[id].orEmpty().filter { it.uid != localUid }
+                    // Say why: the house refused it (and what it said), or there was no line, or no answer came.
+                    val why = when (val code = client.lastErrorCode) {
+                        "no_line" -> "there is no line to the house"
+                        "no_answer", null -> "the house didn't answer"
+                        else -> "the house refused it (${listOfNotNull(code, client.lastErrorMessage).joinToString(": ")})"
+                    }
+                    notice = "Couldn't save \"$summary\": $why. Try again."
+                } else {
+                    notice = null
+                    changed(id)
+                }
             }
         }
     }
