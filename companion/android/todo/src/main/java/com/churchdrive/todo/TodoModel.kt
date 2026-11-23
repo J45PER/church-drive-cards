@@ -531,6 +531,14 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         sendList("church_drive/shopping/add", JSONObject().put("list", list.id).put("items", JSONArray(steps)))
     }
 
+    /** Changes the words of a step (shown at once; the house is then asked again). */
+    fun renameStep(list: ShoppingList, item: ShoppingItem, text: String) {
+        val clean = text.trim()
+        if (clean.isEmpty() || clean == item.text) return
+        shopping = shopping?.let { st -> st.copy(lists = st.lists.map { l -> if (l.id == list.id) l.copy(items = l.items.map { if (it.id == item.id) it.copy(text = clean) else it }) else l }) }
+        sendList("church_drive/shopping/rename", JSONObject().put("list", list.id).put("item", item.id).put("text", clean))
+    }
+
     fun removeStep(list: ShoppingList, item: ShoppingItem) {
         sendList("church_drive/shopping/item", JSONObject().put("list", list.id).put("item", item.id).put("status", "remove"))
     }

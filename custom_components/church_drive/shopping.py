@@ -244,6 +244,12 @@ class Shopping:
         await self._async_after(lst, context)
         return self._public(lst)
 
+    async def async_rename_item(self, list_id: str, item_id: str, text: str, context: Context | None = None) -> dict[str, Any]:
+        lst = self._find(list_id)
+        lst["items"] = sl.rename_item(lst["items"], item_id, text, sl.kind_of(lst))
+        await self._async_after(lst, context)
+        return self._public(lst)
+
     async def async_remove_item(self, list_id: str, item_id: str, context: Context | None = None) -> dict[str, Any]:
         lst = self._find(list_id)
         lst["items"] = [i for i in lst["items"] if i["id"] != item_id]

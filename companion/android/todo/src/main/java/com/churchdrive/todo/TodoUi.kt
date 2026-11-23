@@ -446,6 +446,7 @@ private fun EditProjectPage(vm: TodoModel, list: ShoppingList, tone: ToneColors,
     var date by remember { mutableStateOf(list.date) }
     var picking by remember { mutableStateOf(false) }
     var sure by remember { mutableStateOf(false) }
+    val texts = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     val steps = vm.shopping?.lists?.firstOrNull { it.id == list.id }?.items ?: list.items
     val day = runCatching { java.time.LocalDate.parse(date) }.getOrNull()
     com.churchdrive.app.ui.FullPage("Edit project", onClose, tone = tone) {
@@ -463,12 +464,10 @@ private fun EditProjectPage(vm: TodoModel, list: ShoppingList, tone: ToneColors,
         )
         if (picking) com.churchdrive.app.ui.DatePickDialog(day, { date = it.toString(); picking = false }, { picking = false })
         Text("Steps", style = MaterialTheme.typography.labelLarge)
+        // Each step is a box to change its words in, with a cross to take it out.
         steps.forEach { item ->
-            Row(
-                Modifier.fillMaxWidth().background(tone.onContainer.copy(alpha = 0.10f), RoundedCornerShape(18.dp)).padding(start = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(item.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.weight(1f)) { com.churchdrive.app.ui.WashField(texts[item.id] ?: item.text, { texts[item.id] = it }, "Step", tone) }
                 Box(Modifier.clickable(onClickLabel = "Remove ${item.text}") { vm.removeStep(list, item) }.padding(12.dp)) {
                     Icon(CdVectors.Close, contentDescription = null, tint = tone.onContainer)
                 }
@@ -477,7 +476,7 @@ private fun EditProjectPage(vm: TodoModel, list: ShoppingList, tone: ToneColors,
         com.churchdrive.app.ui.TileRow(
             listOf(
                 com.churchdrive.app.ui.TileItem("mdi:close", "Cancel", false) { onClose() },
-                com.churchdrive.app.ui.TileItem("mdi:check", "Save", true) { vm.updateProject(list, name, shared, date); onClose() },
+                com.churchdrive.app.ui.TileItem("mdi:check", "Save", true) { vm.updateProject(list, name, shared, date); steps.forEach { vm.renameStep(list, it, texts[it.id] ?: it.text) }; onClose() },
             ),
             tone, tone.onContainer,
         )

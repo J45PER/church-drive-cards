@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.192.0
+
+- No change; version kept in step with the other apps.
+
 ## 0.191.3
 
 - No change; version kept in step with the other apps.

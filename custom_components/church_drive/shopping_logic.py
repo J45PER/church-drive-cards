@@ -79,6 +79,18 @@ def set_status(items: list[dict[str, Any]], item_id: str, status: str, kind: str
     return [{**i, "status": status} if i["id"] == item_id else dict(i) for i in items]
 
 
+def rename_item(items: list[dict[str, Any]], item_id: str, text: Any, kind: str = SHOPPING) -> list[dict[str, Any]]:
+    """[items] with one item's words changed (cleaned like a new one). An empty text is refused, as is a clash with another item."""
+    clean = clean_item(text, kind)
+    if not clean:
+        raise ValueError("An item needs some words")
+    if not any(i["id"] == item_id for i in items):
+        raise KeyError(item_id)
+    if any(i["id"] != item_id and norm(i["text"]) == norm(clean) for i in items):
+        raise ValueError("Another item already says that")
+    return [{**i, "text": clean} if i["id"] == item_id else dict(i) for i in items]
+
+
 def counts(items: list[dict[str, Any]]) -> dict[str, int]:
     c = {OPEN: 0, BOUGHT: 0, UNAVAILABLE: 0}
     for i in items:

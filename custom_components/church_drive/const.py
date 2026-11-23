@@ -124,6 +124,7 @@ WS_SHOPPING_UPDATE = "church_drive/shopping/update"
 WS_SHOPPING_ADD = "church_drive/shopping/add"
 WS_SHOPPING_ITEM = "church_drive/shopping/item"
 WS_SHOPPING_DELETE = "church_drive/shopping/delete"
+WS_SHOPPING_RENAME = "church_drive/shopping/rename"
 WS_SHOPPING_IMPORT = "church_drive/shopping/import"
 
 # What the lights do when an alarm goes off (alarm_lights.py).
