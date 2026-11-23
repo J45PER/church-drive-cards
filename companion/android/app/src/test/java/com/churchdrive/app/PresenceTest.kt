@@ -75,6 +75,9 @@ class PresenceTest {
         assertEquals("No motion", presenceLine(motion.copy(present = false), null))
         assertEquals("Off in 3 s", presenceLine(motion.copy(present = false, offIn = 3), 3))
         assertEquals("Someone's in", presenceLine(Presence(true, null, 20, "Cloakroom"), null))
+        assertEquals("Returning in 7 s", presenceLine(Presence(false, 7, 30, "Front", 0L, true, "restore"), 7))
+        assertEquals("Off in 7 s", presenceLine(Presence(false, 7, 30, "Front", 0L, true, "off"), 7))
+        assertEquals("Off in 7 s", presenceLine(Presence(false, 7, 30, "Front", 0L, true), 7))
         assertEquals(true, parsePresence(JSONObject("""{"lights":{"light.a":{"present":true,"off_in":null,"delay":10,"sensor":"S","motion":true}}}"""), 0L)!!["light.a"]!!.motion)
     }
 }
