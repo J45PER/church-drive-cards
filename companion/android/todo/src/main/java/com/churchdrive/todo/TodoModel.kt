@@ -22,7 +22,11 @@ import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.AssistantList
 import com.churchdrive.app.ui.AssistantMatch
 import com.churchdrive.app.ui.AssistantTodoCommand
+import com.churchdrive.app.ui.ShoppingItem
+import com.churchdrive.app.ui.ShoppingList
+import com.churchdrive.app.ui.ShoppingState
 import com.churchdrive.app.ui.TodoItem
+import com.churchdrive.app.ui.parseShopping
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.ask
 import com.churchdrive.app.ui.houseTask
@@ -40,17 +44,27 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** The pages of the app, as on the main app's To-do page: the person's own list, the shared one, cleaning and the house's jobs. */
-enum class TodoTab(val label: String, val title: String, val tone: Tone, val canAdd: Boolean) {
-    Mine("My to-do", "My to-do", Tone.Tasks, true),
-    Shared("Shared", "Shared", Tone.TodoShared, true),
-    Cleaning("Cleaning", "Cleaning", Tone.Gregg, true),
-    House("House", "From the house", Tone.TodoHouse, false),
+/** A list the app reads: the person's own, the shared one, the house's jobs, the shopping list and the cleaning chores. */
+enum class TodoSection(val title: String, val tone: Tone, val canAdd: Boolean) {
+    Mine("My list", Tone.Tasks, true),
+    Shared("Shared", Tone.TodoShared, true),
+    House("From the house", Tone.TodoHouse, false),
+    Shopping("Shopping list", Tone.Shopping, true),
+    Cleaning("Chores", Tone.Gregg, true),
+}
+
+/** The pages along the bottom, as in the main app's to-do page: Home, Shopping, Cleaning and Projects. */
+enum class TodoTab(val label: String, val title: String, val tone: Tone, val sections: List<TodoSection>) {
+    Home("Home", "Home", Tone.Tasks, listOf(TodoSection.Mine, TodoSection.Shared, TodoSection.House)),
+    Shopping("Shopping", "Shopping", Tone.Shopping, listOf(TodoSection.Shopping)),
+    Cleaning("Cleaning", "Cleaning", Tone.Gregg, listOf(TodoSection.Cleaning)),
+    Projects("Projects", "Projects", Tone.Lights, emptyList()),
 }
 
 const val SHARED_LIST = "todo.priorities_everyone"
 const val CLEANING_LIST = "todo.cleaning"
 const val HOUSE_LIST = "todo.priorities_automatic"
+const val SHOPPING_LIST = "todo.shopping_list"
 
 /** Sign-in, the line to Home Assistant, the to-do lists and the tasks in the open one. */
 class TodoModel(app: Application) : AndroidViewModel(app) {
@@ -104,10 +118,9 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     /** Opens the page of the task's list, and the task itself once it has loaded. */
     fun openFromLink(list: String, uid: String) {
         tab = when (list) {
-            SHARED_LIST -> TodoTab.Shared
+            SHOPPING_LIST -> TodoTab.Shopping
             CLEANING_LIST -> TodoTab.Cleaning
-            HOUSE_LIST -> TodoTab.House
-            else -> TodoTab.Mine
+            else -> TodoTab.Home
         }
         pendingUid = uid
     }
@@ -125,7 +138,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     var rememberPage by mutableStateOf(settings.rememberPage)
 
     /** The page shown: My to-do, or the one last looked at when the person has asked for that. */
-    var tab by mutableStateOf(if (settings.rememberPage) TodoTab.entries.firstOrNull { it.name == settings.lastPage } ?: TodoTab.Mine else TodoTab.Mine)
+    var tab by mutableStateOf(if (settings.rememberPage) TodoTab.entries.firstOrNull { it.name == settings.lastPage } ?: TodoTab.Home else TodoTab.Home)
         private set
 
     fun openTab(t: TodoTab) {
@@ -169,6 +182,11 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         private set
     private val counts = HashMap<String, String?>()
 
+    /** Every steps list and project, null until they arrive. */
+    var shopping by mutableStateOf<ShoppingState?>(null)
+        private set
+    private var shoppingSub = -1
+
     init {
         viewModelScope.launch {
             client.userName.collect {
@@ -198,6 +216,9 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
                 if (connected) {
                     failures = 0
                     refreshAll()
+                    // Steps lists and projects change in the house when anyone ticks one: read them again then.
+                    if (shoppingSub >= 0) api.close(shoppingSub)
+                    shoppingSub = api.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_shopping_changed")) { loadShoppingSoon() }
                 }
                 // Not given up on at once: Home Assistant may be restarting. A pasted token that is refused is just wrong.
                 if (state == ConnectionState.AuthFailed && signedIn) {
@@ -332,16 +353,20 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     /** The signed-in person's own list: no one else's list is ever asked for. */
     private fun mineId() = myTodoList(personName)
 
-    fun listId(tab: TodoTab): String? = when (tab) {
-        TodoTab.Mine -> mineId()
-        TodoTab.Shared -> SHARED_LIST
-        TodoTab.Cleaning -> CLEANING_LIST
-        TodoTab.House -> HOUSE_LIST
+    fun listId(section: TodoSection): String? = when (section) {
+        TodoSection.Mine -> mineId()
+        TodoSection.Shared -> SHARED_LIST
+        TodoSection.Cleaning -> CLEANING_LIST
+        TodoSection.House -> HOUSE_LIST
+        TodoSection.Shopping -> SHOPPING_LIST
     }
 
-    private fun listIds() = TodoTab.entries.mapNotNull { listId(it) }
+    private fun listIds() = TodoSection.entries.mapNotNull { listId(it) }
 
-    private fun refreshAll() = listIds().forEach { loadItems(it) }
+    private fun refreshAll() {
+        listIds().forEach { loadItems(it) }
+        loadShopping()
+    }
 
     private fun loadItems(id: String) {
         viewModelScope.launch {
@@ -361,42 +386,63 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** The tasks of a page, null until they arrive. The house's page shows only the jobs for this person or for everyone. */
-    fun items(tab: TodoTab): List<TodoItem>? {
-        val all = listId(tab)?.let { loaded[it] } ?: return null
-        if (tab != TodoTab.House) return all
+    /** The tasks of a list, null until they arrive. The house's list shows only the jobs for this person or for everyone. */
+    fun items(section: TodoSection): List<TodoItem>? {
+        val all = listId(section)?.let { loaded[it] } ?: return null
+        if (section != TodoSection.House) return all
         val first = personName?.trim()?.substringBefore(' ')
         return sortedHouseTasks(all.map { it to houseTask(it) }.filter { houseTaskFor(it.second, first) }).map { it.first }
     }
 
-    /** How many tasks are still open on a page (for the badge on its button). */
-    fun openCount(tab: TodoTab): Int = items(tab)?.count { !it.done } ?: 0
+    /** What the highlights card at the top shows: every list's tasks by entity id (the house's already filtered to this person). */
+    fun highlightLists(): Map<String, List<TodoItem>> = buildMap {
+        TodoSection.entries.filter { it != TodoSection.Shopping && it != TodoSection.Cleaning }.forEach { s ->
+            val id = listId(s) ?: return@forEach
+            val list = if (s == TodoSection.House) loaded[id]?.let { items(s) } else loaded[id]
+            if (list != null) put(id, list)
+        }
+    }
 
-    fun setDone(tab: TodoTab, item: TodoItem, done: Boolean) {
-        val id = listId(tab) ?: return
+    /** Whether the lists the highlights use have arrived. */
+    val highlightsLoaded: Boolean get() = TodoSection.entries.any { it != TodoSection.Shopping && it != TodoSection.Cleaning && listId(it)?.let { id -> loaded.containsKey(id) } == true }
+
+    /** How many tasks are still open on a page (for the badge on its button). */
+    fun openCount(tab: TodoTab): Int =
+        if (tab == TodoTab.Projects) projectsOpen().size
+        else tab.sections.filter { it != TodoSection.House }.sumOf { s -> items(s)?.count { !it.done } ?: 0 }
+
+    fun setDone(section: TodoSection, item: TodoItem, done: Boolean) {
+        val id = listId(section) ?: return
         // Shown at once; the house's list is read again a moment later.
         loaded[id] = loaded[id].orEmpty().map { if (it.uid == item.uid) it.copy(done = done) else it }
         client.callService("todo", "update_item", id, data("item" to item.uid, "status" to if (done) "completed" else "needs_action"))
         changed(id)
     }
 
+    /** Ticks a task off from the highlights card, whichever list it is on. */
+    fun tickByUid(list: String, uid: String) {
+        loaded[list] = loaded[list].orEmpty().map { if (it.uid == uid) it.copy(done = true) else it }
+        client.callService("todo", "update_item", list, data("item" to uid, "status" to "completed"))
+        changed(list)
+    }
+
     /** Saves an edited task (the fields `todo.update_item` takes: see `updateFields`). */
-    fun save(tab: TodoTab, fields: Map<String, Any?>) {
-        val id = listId(tab) ?: return
+    fun save(section: TodoSection, fields: Map<String, Any?>) {
+        val id = listId(section) ?: return
         client.callService("todo", "update_item", id, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
         changed(id)
     }
 
-    fun remove(tab: TodoTab, item: TodoItem) {
-        val id = listId(tab) ?: return
+    fun remove(section: TodoSection, item: TodoItem) {
+        val id = listId(section) ?: return
         loaded[id] = loaded[id].orEmpty().filter { it.uid != item.uid }
         client.callService("todo", "remove_item", id, data("item" to item.uid))
         changed(id)
     }
 
-    fun add(tab: TodoTab, text: String) {
-        val id = listId(tab) ?: return
-        if (text.isBlank() || !tab.canAdd) return
+    fun add(section: TodoSection, text: String) {
+        val id = listId(section) ?: return
+        if (text.isBlank() || !section.canAdd) return
         val summary = text.trim()
         notice = null
         // Shown at once, and kept only if the house says it has it: a task sent down a line that was down used to vanish without a word.
@@ -413,17 +459,80 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun tabOf(l: AssistantList) = when (l) {
-        AssistantList.Mine -> TodoTab.Mine
-        AssistantList.Shared -> TodoTab.Shared
-        AssistantList.Cleaning -> TodoTab.Cleaning
+    // ---- Steps lists and projects (the house's own lists, kept by Church Drive) ----
+
+    private fun loadShopping() {
+        viewModelScope.launch {
+            parseShopping(api.ask("church_drive/shopping", JSONObject()))?.let { shopping = it }
+        }
     }
 
-    private fun listName(t: TodoTab) = when (t) {
-        TodoTab.Mine -> "your list"
-        TodoTab.Shared -> "the shared list"
-        TodoTab.Cleaning -> "the cleaning list"
-        TodoTab.House -> "the house list"
+    private fun first() = personName?.trim()?.substringBefore(' ').orEmpty()
+
+    /** Steps lists on the Home page: those assigned to this person or shared with them, still open. */
+    fun stepsLists(): List<ShoppingList> = shopping?.lists.orEmpty().filter { it.isSteps && !it.done && first() in it.people }
+
+    private fun projectsOpen(): List<ShoppingList> = shopping?.lists.orEmpty().filter { it.isProject && !it.done && first() in it.people }
+
+    fun projects(): List<ShoppingList> = projectsOpen().sortedWith(compareBy<ShoppingList>({ it.date.isEmpty() }, { it.date }))
+
+    fun finishedProjects(): List<ShoppingList> = shopping?.lists.orEmpty().filter { it.isProject && it.done && first() in it.people }
+
+    /** A list belongs to its person alone ("Mine") or to several ("Shared"). */
+    fun shareLabel(l: ShoppingList): String = if (l.people.size > 1) "Shared" else "Mine"
+
+    private fun sendList(type: String, body: JSONObject) {
+        api.request(type, body) { loadShoppingSoon() }
+    }
+
+    private fun loadShoppingSoon() {
+        android.os.Handler(android.os.Looper.getMainLooper()).post { loadShopping() }
+    }
+
+    /** Ticks a step or project step (shown at once; the house is then asked again). */
+    fun tickStep(list: ShoppingList, item: ShoppingItem, done: Boolean) {
+        val status = if (done) "bought" else "open"
+        shopping = shopping?.let { st -> st.copy(lists = st.lists.map { l -> if (l.id == list.id) l.copy(items = l.items.map { if (it.id == item.id) it.copy(status = status) else it }, done = l.items.all { (if (it.id == item.id) status else it.status) != "open" } && l.items.isNotEmpty()) else l }) }
+        sendList("church_drive/shopping/item", JSONObject().put("list", list.id).put("item", item.id).put("status", status))
+    }
+
+    fun addStep(list: ShoppingList, text: String) {
+        val steps = text.split('\n', ';').map { it.trim() }.filter { it.isNotEmpty() }
+        if (steps.isEmpty()) return
+        sendList("church_drive/shopping/add", JSONObject().put("list", list.id).put("items", JSONArray(steps)))
+    }
+
+    fun removeStep(list: ShoppingList, item: ShoppingItem) {
+        sendList("church_drive/shopping/item", JSONObject().put("list", list.id).put("item", item.id).put("status", "remove"))
+    }
+
+    /** Starts a project for this person, or for everyone in the house when [shared]. */
+    fun createProject(name: String, shared: Boolean, date: String, steps: List<String>) {
+        if (name.isBlank()) return
+        val who = if (shared) shopping?.people.orEmpty().ifEmpty { listOf(first()) } else listOf(first())
+        sendList(
+            "church_drive/shopping/create",
+            JSONObject().put("name", name.trim()).put("kind", "project").put("people", JSONArray(who)).put("date", date).put("items", JSONArray(steps)).put("include_missed", false),
+        )
+    }
+
+    fun deleteProject(list: ShoppingList) {
+        shopping = shopping?.let { st -> st.copy(lists = st.lists.filter { it.id != list.id }) }
+        sendList("church_drive/shopping/delete", JSONObject().put("list", list.id))
+    }
+
+    private fun tabOf(l: AssistantList): TodoSection = when (l) {
+        AssistantList.Mine -> TodoSection.Mine
+        AssistantList.Shared -> TodoSection.Shared
+        AssistantList.Cleaning -> TodoSection.Cleaning
+    }
+
+    private fun listName(t: TodoSection) = when (t) {
+        TodoSection.Mine -> "your list"
+        TodoSection.Shared -> "the shared list"
+        TodoSection.Cleaning -> "the cleaning list"
+        TodoSection.House -> "the house list"
+        TodoSection.Shopping -> "the shopping list"
     }
 
     /**
@@ -447,7 +556,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
                 "Added ${spokenList(c.items)} to ${listName(tab)}."
             }
             is AssistantTodoCommand.Done -> {
-                val tabs = c.list?.let { listOf(tabOf(it)) } ?: listOf(TodoTab.Mine, TodoTab.Shared, TodoTab.Cleaning)
+                val tabs = c.list?.let { listOf(tabOf(it)) } ?: listOf(TodoSection.Mine, TodoSection.Shared, TodoSection.Cleaning)
                 val found = tabs.flatMap { t ->
                     when (val m = matchOpenTask(items(t).orEmpty(), c.text)) {
                         is AssistantMatch.One -> listOf(t to m.item)

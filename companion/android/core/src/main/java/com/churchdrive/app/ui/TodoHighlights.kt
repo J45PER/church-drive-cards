@@ -102,6 +102,15 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
     val items = todoHighlights(lists, first).filter { it.uid !in ticked }
     val shown = items.take(3)
     val extra = items.size - shown.size
+    TodoHighlightsView(shown, extra, own != null || shared != null || house != null, onOpen, onOpenTask) { h ->
+        ticked = ticked + h.uid
+        call("todo", "update_item", h.list, data("item" to h.uid, "status" to "completed"))
+    }
+}
+
+/** The highlights card itself: up to three pills (tick circle on those that can be ticked) and the "+N more" tile that opens the to-do page. */
+@Composable
+fun TodoHighlightsView(shown: List<Highlight>, extra: Int, loaded: Boolean, onOpen: () -> Unit, onOpenTask: (Highlight) -> Unit, onTick: (Highlight) -> Unit) {
     val purple = toneColors(Tone.Tasks)
     val red = toneColors(Tone.Red)
     val green = toneColors(Tone.Green)
@@ -112,13 +121,11 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shown.isEmpty()) {
-                    val loaded = own != null || shared != null || house != null
                     HighlightPill(if (loaded) "Nothing waiting on you" else "Loading your to-dos…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, onOpen)
                 }
                 shown.forEach { h ->
                     HighlightPill(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else if (h.auto) coral else purple, if (h.auto) null else ({
-                        ticked = ticked + h.uid
-                        call("todo", "update_item", h.list, data("item" to h.uid, "status" to "completed"))
+                        onTick(h)
                     }), { onOpenTask(h) })
                 }
             }
@@ -135,7 +142,7 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
 }
 
 @Composable
-internal fun HighlightPill(text: String, icon: String, tone: ToneColors, onTick: (() -> Unit)?, onOpen: (() -> Unit)?) {
+fun HighlightPill(text: String, icon: String, tone: ToneColors, onTick: (() -> Unit)?, onOpen: (() -> Unit)?) {
     Row(
         Modifier.fillMaxWidth().height(26.dp).background(tone.accent.copy(alpha = 0.16f), RoundedCornerShape(13.dp)).then(if (onOpen != null) Modifier.clickable { onOpen() } else Modifier)
             .padding(start = 8.dp, end = if (onTick != null) 4.dp else 10.dp),

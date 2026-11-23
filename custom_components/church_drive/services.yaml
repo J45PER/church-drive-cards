@@ -292,3 +292,7 @@ steps_create:
       default: false
       selector:
         boolean:
+    project:
+      default: false
+      selector:
+        boolean:

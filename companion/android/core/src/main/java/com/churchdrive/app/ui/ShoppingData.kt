@@ -16,12 +16,13 @@ data class ShoppingList(
     val places: List<ShoppingPlace>,
     val done: Boolean,
     val items: List<ShoppingItem>,
-    /** "shopping" (the default) or "steps": a checklist that works the same way with different words. */
+    /** "shopping" (the default), "steps" (a checklist that works the same way with different words) or "project" (a longer checklist with its own page). */
     val kind: String = "shopping",
 ) {
     val open: Int get() = items.count { it.status == "open" }
     val isSteps: Boolean get() = kind == "steps"
-    val title: String get() = name.ifBlank { if (isSteps) "Steps" else "Shopping" }
+    val isProject: Boolean get() = kind == "project"
+    val title: String get() = name.ifBlank { if (isProject) "Project" else if (isSteps) "Steps" else "Shopping" }
 }
 
 /** Somewhere a list will be bought, found with a Google Maps search (any shop anywhere), kept with its coordinates. */
@@ -58,7 +59,7 @@ fun parseShoppingList(o: JSONObject): ShoppingList = ShoppingList(
     places = o.optJSONArray("places").objects().mapNotNull { parsePlace(it) },
     done = o.optBoolean("done"),
     items = o.optJSONArray("items").objects().map { ShoppingItem(it.optString("id"), it.optString("text"), it.optString("status", "open")) },
-    kind = if (o.optString("kind") == "steps") "steps" else "shopping",
+    kind = when (o.optString("kind")) { "steps" -> "steps"; "project" -> "project"; else -> "shopping" },
 )
 
 /** The reply of `church_drive/shopping`, or null if it isn't one. */
@@ -75,7 +76,7 @@ fun parseShopping(result: Any?): ShoppingState? {
 
 /** The lists still to do, soonest date first and undated last, optionally only those [first] is on. */
 fun openLists(state: ShoppingState, first: String? = null): List<ShoppingList> =
-    state.lists.filter { !it.isSteps && !it.done && (first.isNullOrBlank() || first in it.people) }
+    state.lists.filter { it.kind == "shopping" && !it.done && (first.isNullOrBlank() || first in it.people) }
         .sortedWith(compareBy<ShoppingList>({ it.date.isEmpty() }, { it.date }))
 
 private val MARKER = Regex("church-drive-shopping:([0-9a-f]{6,32})")

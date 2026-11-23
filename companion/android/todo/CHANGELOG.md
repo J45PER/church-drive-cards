@@ -3,6 +3,12 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.191.0
+
+- **Four pages, like the main app.** Home (My list, Shared, Steps and From the house), Shopping (the house's shopping list, which was missing here), Cleaning and Projects. The to-do highlights from the main app's Home page sit at the top of every page, page titles are white, and each section has its heading outside its cards.
+- **Steps lists** assigned to you or shared with you show on Home, each as a card that opens to its steps; tick them off or add one.
+- **Projects.** A longer checklist, Mine or Shared, with a progress bar. Start one with New project, add and tick steps, delete it when it is no longer wanted; finished projects are kept under Finished.
+
 ## 0.190.2
 
 - **A task you add is no longer lost.** It shows in the list at once and is kept once the house confirms it has it. If the house doesn't answer, the app says "Couldn't save ..." under the list and takes the task off, so you can try again. Before, a task sent while the connection was down vanished without a word.

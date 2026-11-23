@@ -17,6 +17,6 @@ class TodoSettings(context: Context) {
         set(v) = prefs.edit().putBoolean("remember_page", v).apply()
 
     var lastPage: String
-        get() = prefs.getString("last_page", null) ?: TodoTab.Mine.name
+        get() = prefs.getString("last_page", null) ?: TodoTab.Home.name
         set(v) = prefs.edit().putString("last_page", v).apply()
 }

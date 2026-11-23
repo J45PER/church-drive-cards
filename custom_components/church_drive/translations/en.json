@@ -225,6 +225,10 @@
         "at_home": {
           "name": "Remind at home",
           "description": "Remind each person when they arrive home."
+        },
+        "project": {
+          "name": "Project",
+          "description": "Make a project on the To-Do app's Projects page instead of a task on each person's list."
         }
       }
     },
