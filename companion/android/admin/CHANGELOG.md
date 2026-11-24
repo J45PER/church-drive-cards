@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.193.3
+
+- No change; version kept in step with the other apps.
+
 ## 0.193.2
 
 - The to-do highlights use the house's own icons by list (person, group, cart, checklist).

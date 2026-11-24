@@ -220,6 +220,12 @@ internal fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modi
             HaIcon(looks.icon(scene.key, scene.name), sceneIcon(scene.key), ink, 20.dp)
             CentredText(scene.name, ink, 10.sp, Modifier.padding(horizontal = 3.dp), lineHeight = 12.sp)
         }
+        // A scene that plays animated says so, in a small tag in the corner (the white pill of the colour's own ink), so it is not mistaken for a still colour.
+        if (looks.isDynamic(scene.key, scene.name)) {
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(4.dp).clip(RoundedCornerShape(50)).background(ink.copy(alpha = 0.22f)).padding(horizontal = 5.dp, vertical = 1.dp),
+            ) { CentredText("Animated", ink, 8.sp, lineHeight = 10.sp) }
+        }
     }
 }
 

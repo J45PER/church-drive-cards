@@ -52,6 +52,9 @@ class SceneLooks(val library: Map<String, LibraryScene>, val styles: Map<String,
         return listOf(shade(base, 1.0), shade(base, 0.55))
     }
 
+    /** Whether the scene plays animated (a dynamic Hue scene) rather than a still look. */
+    fun isDynamic(key: String, name: String): Boolean = lookup(key, name)?.dynamic == true
+
     fun icon(key: String, name: String): String? = styles[sceneKey(name)]?.icon ?: lookup(key, name)?.icon
 
     companion object {
