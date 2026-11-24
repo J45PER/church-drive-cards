@@ -29,11 +29,14 @@ fun HaIcon(iconName: String?, fallback: ImageVector, tint: Color, size: Dp, modi
     if (CdIcon(icon, tint, size, modifier)) return
     val name = icon?.takeIf { it.startsWith("phu:") }?.removePrefix("phu:")
     val pack = IconPack.text
+    val context = LocalContext.current
+    // The whole Material Design set is read the first time an icon outside the small built-in set is wanted, in every app (the To-Do and
+    // Admin apps used to draw the (i) for the flag, the people and the rest because only the phone app read it).
+    if (icon?.startsWith("mdi:") == true && MdiIcons.paths[icon.removePrefix("mdi:")] == null) LaunchedEffect(Unit) { MdiAll.load(context) }
     val all = MdiAll.paths
     val mdi = icon?.takeIf { it.startsWith("mdi:") }?.removePrefix("mdi:")?.let { MdiIcons.paths[it] ?: all?.get(it) }
     // `si:` icons are brand logos (Simple Icons), read from their own set the first time one is wanted.
     val siName = icon?.takeIf { it.startsWith("si:") }?.removePrefix("si:")
-    val context = LocalContext.current
     if (siName != null) LaunchedEffect(Unit) { SimpleIcons.load(context) }
     val si = siName?.let { SimpleIcons.paths?.get(SimpleIcons.slugFor(it)) }
     // `ol:` icons are our own logos (OwnLogos): the ones Simple Icons does not have, drawn with the even-odd rule.
