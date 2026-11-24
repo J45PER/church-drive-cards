@@ -528,15 +528,17 @@ fun rememberTodoItems(listId: String, entities: Map<String, EntityState>): List<
     LaunchedEffect(listId, count) {
         if (api != null && listId.isNotBlank()) {
             // A failed or slow answer is asked for again (a few times); it is not taken for an empty list.
+            // It keeps asking, slower each time (up to 30 seconds), until the house answers: a house that is restarting is not an empty list,
+            // and the card must not stay on "Loading…" for good because the first few tries fell inside the restart.
             var tries = 0
-            while (tries < 5) {
+            while (true) {
                 val result = api.ask("todo/item/list", data("entity_id" to listId))
                 if (result != null) {
                     items = parseTodoItems(result)
                     break
                 }
                 tries++
-                kotlinx.coroutines.delay(2_000L * tries)
+                kotlinx.coroutines.delay((2_000L * tries).coerceAtMost(30_000L))
             }
         }
     }

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.193.1
+
+- **Task icons are right again.** The flag, people and cart icons show as in the phone app, in place of the (i) on every task.
+
 ## 0.193.0
 
 - **Reminders on a task.** On Edit task, a task with a due time can remind you at the time or 5, 15 or 30 minutes, 1 or 2 hours or 1 day before. The house sends it to your phone (through the Church Drive app); tapping it opens the task here. Needs the Home Assistant integration 0.193.0.

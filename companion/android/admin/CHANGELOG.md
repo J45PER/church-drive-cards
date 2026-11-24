@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.193.1
+
+- **The to-do highlights no longer stay on Loading...** after a Home Assistant restart, and their icons are the right ones.
+
 ## 0.193.0
 
 - No change; version kept in step with the other apps.
