@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.193.2
+
+- The to-do highlights use the house's own icons by list (person, group, cart, checklist).
+
 ## 0.193.1
 
 - **The to-do highlights no longer stay on Loading...** after a Home Assistant restart, and their icons are the right ones.

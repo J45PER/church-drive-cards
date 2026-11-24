@@ -23,8 +23,8 @@ class TodoHighlightsTest {
         assertEquals(listOf("Overdue", "Shared today", "Later", "No date"), rows.map { it.text })
         assertTrue(rows[0].overdue)
         assertFalse(rows[1].overdue)
-        assertEquals("mdi:account-group", rows[1].icon)
-        assertEquals("mdi:flag", rows[0].icon)
+        assertEquals("cd:group", rows[1].icon)
+        assertEquals("cd:person", rows[0].icon)
     }
 
     @Test
@@ -54,7 +54,7 @@ class TodoHighlightsTest {
         val rows = todoHighlights(mapOf("todo.priorities_jamie" to listOf(item("s", "Shopping: Weekly (0 of 1)", note = note), item("t", "Ring school"))), "Jamie", now, ZoneOffset.UTC)
         assertEquals(listOf("Shopping: Weekly (0 of 1)", "Ring school"), rows.map { it.text })
         assertTrue(rows[0].auto)
-        assertEquals("mdi:cart-outline", rows[0].icon)
+        assertEquals("cd:cart", rows[0].icon)
         assertFalse(rows[1].auto)
     }
 

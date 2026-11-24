@@ -80,7 +80,8 @@ fun todoHighlights(lists: Map<String, List<TodoItem>>, first: String?, now: Loca
                 steps = shoppingIdOf(item.description).isNotEmpty() && isStepsTask(item.description),
                 house = task != null,
                 kind = task?.kind.orEmpty(),
-                icon = task?.icon ?: if (shoppingIdOf(item.description).isNotEmpty()) (if (isStepsTask(item.description)) "mdi:format-list-checks" else "mdi:cart-outline") else if (list == SHARED_LIST) "mdi:account-group" else "mdi:flag",
+                // The house's own icons, by where the task comes from: the person, the group, the cart, the steps list, the house.
+                icon = task?.icon ?: if (shoppingIdOf(item.description).isNotEmpty()) (if (isStepsTask(item.description)) "cd:todo" else "cd:cart") else if (list == SHARED_LIST) "cd:group" else "cd:person",
             )
         }
 }
@@ -121,7 +122,7 @@ fun TodoHighlightsView(shown: List<Highlight>, extra: Int, loaded: Boolean, onOp
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shown.isEmpty()) {
-                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading your to-dos…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, onOpen)
+                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading your to-dos…", if (loaded) "mdi:check-circle-outline" else "cd:todo", if (loaded) green else purple, null, onOpen)
                 }
                 shown.forEach { h ->
                     HighlightPill(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else if (h.auto) coral else purple, if (h.auto) null else ({
@@ -134,7 +135,7 @@ fun TodoHighlightsView(shown: List<Highlight>, extra: Int, loaded: Boolean, onOp
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                HaIcon("mdi:format-list-checks", CdVectors.Info, purple.onContainer, 22.dp)
+                HaIcon("cd:todo", CdVectors.Todo, purple.onContainer, 22.dp)
                 Text(if (extra > 0) "+$extra more" else "To-do", color = purple.onContainer, style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }
