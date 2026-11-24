@@ -234,7 +234,7 @@ private fun HomeTasks(entities: Map<String, EntityState>, openTodo: (String?, St
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shown.isEmpty()) {
                     val loaded = own != null || shared != null || house != null
-                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, { openTodo(null, null) })
+                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading…", if (loaded) "mdi:check-circle-outline" else "cd:todo", if (loaded) green else purple, null, { openTodo(null, null) })
                 }
                 shown.forEach { line -> HighlightPill(line.text, line.icon, line.tone, null, line.task?.let { t -> { openTodo(t.list, t.uid) } }) }
             }
@@ -243,7 +243,7 @@ private fun HomeTasks(entities: Map<String, EntityState>, openTodo: (String?, St
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                HaIcon("mdi:format-list-checks", CdVectors.Info, purple.onContainer, 22.dp)
+                HaIcon("cd:todo", CdVectors.Todo, purple.onContainer, 22.dp)
                 Text(if (extra > 0) "+$extra more" else "To-do", color = purple.onContainer, style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }

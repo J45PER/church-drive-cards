@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.193.2
+
+- The to-do highlights on Home use the house's own icons by list (person, group, cart, checklist) in place of the flag.
+
 ## 0.193.1
 
 - Shared code: every app reads the full icon set when an icon outside the small built-in set is drawn; a to-do list that cannot be read keeps being asked for until the house answers.
