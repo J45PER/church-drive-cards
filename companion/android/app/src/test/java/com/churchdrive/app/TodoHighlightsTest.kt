@@ -70,4 +70,16 @@ class TodoHighlightsTest {
         val rows = todoHighlights(lists, "Jamie", now, ZoneOffset.UTC)
         assertEquals(listOf("Bins", "Once only"), rows.map { it.text })
     }
+
+    @org.junit.Test
+    fun theIconCountsTasksDueTodayAndOverdueOnly() {
+        val a = com.churchdrive.app.ui.TodoItem("1", "Late", false, "2026-11-23", null)
+        val b = com.churchdrive.app.ui.TodoItem("2", "Today", false, "2026-11-24T15:00:00", null)
+        val c = com.churchdrive.app.ui.TodoItem("3", "Later", false, "2026-11-25", null)
+        val d = com.churchdrive.app.ui.TodoItem("4", "Undated", false, null, null)
+        val e = com.churchdrive.app.ui.TodoItem("5", "Done", true, "2026-11-20", null)
+        org.junit.Assert.assertEquals(2, com.churchdrive.app.ui.tasksDueCount(listOf(listOf(a, b), listOf(c, d, e)), "2026-11-24"))
+        org.junit.Assert.assertEquals("15 min before", com.churchdrive.app.ui.leadLabel(15))
+        org.junit.Assert.assertEquals("No reminder", com.churchdrive.app.ui.leadLabel(null))
+    }
 }

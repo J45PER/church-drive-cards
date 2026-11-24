@@ -123,6 +123,9 @@ fun TodoApp(vm: TodoModel) {
     androidx.compose.runtime.LaunchedEffect(Unit) { AssistantBrand.load(context) }
     androidx.compose.runtime.LaunchedEffect(vm.connected) { if (vm.connected) vm.refreshAssistantName(context) }
     val tab = vm.tab
+    // The number of tasks due on the app icon, when the person has asked for it.
+    val due = vm.dueCount()
+    androidx.compose.runtime.LaunchedEffect(due, vm.iconCount) { TaskBadge.update(context, due, vm.iconCount) }
     // Swiping left anywhere that doesn't scroll sideways opens the account panel, as in the main app, as well as its button.
     var swiped by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0f) }
     Box(
@@ -156,14 +159,12 @@ fun TodoApp(vm: TodoModel) {
         bottomBar = {
             AppNavigationBar(acrylic, sidebarOpen = panel != null, onSidebar = { panel = if (panel == null) "account" else null }) {
                 TodoTab.entries.forEach { t ->
-                    val open = vm.openCount(t)
+                    // No count on the buttons: the summary at the top of every page already says what is waiting.
                     NavigationBarItem(
                         colors = navBarItemColors(),
                         selected = t == tab && panel == null,
                         onClick = { panel = null; vm.openTab(t); toTop() },
-                        icon = {
-                            BadgedBox(badge = { if (open > 0) Badge { Text(open.toString()) } }) { TabIcon(t) }
-                        },
+                        icon = { TabIcon(t) },
                         label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
                     )
                 }
@@ -258,8 +259,8 @@ private fun TaskCard(vm: TodoModel, section: TodoSection) {
     }
     editing?.let { item ->
         TodoEditDialog(
-            item, vm.personName?.trim()?.substringBefore(' '), tone,
-            onSave = { vm.save(section, it); editing = null },
+            item, vm.personName?.trim()?.substringBefore(' '), tone, vm.leadOf(section, item), section != TodoSection.House,
+            onSave = { fields, lead -> vm.save(section, fields); vm.setLead(section, item, lead); editing = null },
             onDelete = { vm.remove(section, item); editing = null },
             onClose = { editing = null },
         )

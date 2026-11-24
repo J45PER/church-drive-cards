@@ -16,6 +16,11 @@ class TodoSettings(context: Context) {
         get() = prefs.getBoolean("remember_page", false)
         set(v) = prefs.edit().putBoolean("remember_page", v).apply()
 
+    /** The number of tasks due today and overdue on the app's icon (off until asked for). */
+    var iconCount: Boolean
+        get() = prefs.getBoolean("icon_count", false)
+        set(v) = prefs.edit().putBoolean("icon_count", v).apply()
+
     var lastPage: String
         get() = prefs.getString("last_page", null) ?: TodoTab.Home.name
         set(v) = prefs.edit().putString("last_page", v).apply()

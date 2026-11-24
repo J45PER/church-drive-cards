@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.193.0
+
+- Tapping a to-do notice opens the task in the To-Do app when it is on the phone (and the To-do page when it isn't).
+
 ## 0.192.0
 
 - No change in this app.

@@ -38,7 +38,7 @@ KIND_PAGES = {
     "smoke": "security", "heat": "security", "co": "security", "alarm_triggered": "security", "door_away": "security",
     "door_left_open": "security", "alarm_mode": "security", "tamper": "security", "doorbell": "security",
     "night_motion": "security", "vacuum": "cleaning", "damp": "climate", "frost": "climate", "left_on": "lighting",
-    "todo_new": "todo", "todo_summary": "todo", "clive_actions": "climate",
+    "todo_new": "todo", "todo_summary": "todo", "todo_due": "todo", "todo_overdue": "todo", "clive_actions": "climate",
 }
 # Kinds about a device's own health: tapping one opens the app's Device Health page (the device's page when it is known).
 HEALTH_KINDS = ("battery_report", "device_stale", "low_batteries", "devices_not_responding")

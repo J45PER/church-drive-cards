@@ -16,6 +16,8 @@ sealed interface NoticeLink {
     data class Camera(val entityId: String, val answer: Boolean) : NoticeLink
     data class Shopping(val listId: String) : NoticeLink
     data class PageLink(val page: String) : NoticeLink
+    /** A task (its list and uid): opens it in the To-Do app when that is on the phone, else the To-do page. */
+    data class Task(val list: String, val uid: String) : NoticeLink
     data class Device(val ref: String) : NoticeLink
     data object Health : NoticeLink
 }
@@ -39,8 +41,17 @@ fun parseNoticeLink(url: String?): NoticeLink? {
         val ref = link.removePrefix(DEVICE_LINK).substringBefore('?').trim()
         return if (Regex("^[A-Za-z0-9_.\\-]{1,128}$").matches(ref)) NoticeLink.Device(ref) else NoticeLink.Health
     }
+    taskFromLink(link)?.let { return NoticeLink.Task(it.first, it.second) }
     val slug = link.substringAfter("/dashboard-mobile/", "").substringBefore('?').substringBefore('/')
     return pageNameForSlug(slug)?.let { NoticeLink.PageLink(it) }
+}
+
+/** The list and task uid in a link such as `/dashboard-mobile/todo?list=todo.priorities_jamie&uid=abc`, or null. */
+fun taskFromLink(link: String): Pair<String, String>? {
+    if (!link.contains("/dashboard-mobile/todo")) return null
+    val list = Regex("[?&]list=(todo\\.[a-z0-9_]+)").find(link)?.groupValues?.get(1) ?: return null
+    val uid = Regex("[?&]uid=([A-Za-z0-9\\-]{1,64})").find(link)?.groupValues?.get(1) ?: return null
+    return list to uid
 }
 
 /** The intent that opens the app at [link] (the same extras however it got here: a tap, a button or a widget). */
@@ -49,6 +60,7 @@ fun noticeIntent(context: Context, link: NoticeLink?): Intent = Intent(context, 
         is NoticeLink.Camera -> i.putExtra("camera", link.entityId).putExtra("answer", link.answer)
         is NoticeLink.Shopping -> i.putExtra(MainActivity.EXTRA_SHOPPING_LIST, link.listId)
         is NoticeLink.PageLink -> i.putExtra("page", link.page)
+        is NoticeLink.Task -> i.putExtra("page", Page.Todo.name).putExtra(MainActivity.EXTRA_TODO_LIST, link.list).putExtra(MainActivity.EXTRA_TODO_UID, link.uid)
         is NoticeLink.Device -> i.putExtra(MainActivity.EXTRA_DEVICE, link.ref)
         NoticeLink.Health -> i.putExtra(MainActivity.EXTRA_DEVICE_HEALTH, true)
         null -> Unit
