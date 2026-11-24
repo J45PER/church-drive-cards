@@ -136,6 +136,40 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     val settings = TodoSettings(app)
     var showDone by mutableStateOf(settings.showDone)
     var rememberPage by mutableStateOf(settings.rememberPage)
+    var iconCount by mutableStateOf(settings.iconCount)
+        private set
+
+    fun changeIconCount(on: Boolean) {
+        iconCount = on
+        settings.iconCount = on
+    }
+
+    /** Tasks due today and overdue on the person's own list and the shared one: the number for the app icon. */
+    fun dueCount(): Int =
+        com.churchdrive.app.ui.tasksDueCount(listOf(TodoSection.Mine, TodoSection.Shared).mapNotNull { s -> listId(s)?.let { loaded[it] } }, java.time.LocalDate.now().toString())
+
+    /** How long before its due time each task reminds, by "list|uid" (minutes; 0 is at the time): kept by the house. */
+    private val leads = mutableStateMapOf<String, Int>()
+
+    fun leadOf(section: TodoSection, item: TodoItem): Int? = listId(section)?.let { leads["$it|${item.uid}"] }
+
+    /** Sets (or with null clears) a task's reminder lead. The house sends the reminder to the phone. */
+    fun setLead(section: TodoSection, item: TodoItem, lead: Int?) {
+        val id = listId(section) ?: return
+        if (leadOf(section, item) == lead) return
+        if (lead == null) leads.remove("$id|${item.uid}") else leads["$id|${item.uid}"] = lead
+        api.request("church_drive/task_alerts/set", JSONObject().put("list", id).put("uid", item.uid).put("lead", lead ?: JSONObject.NULL)) { }
+    }
+
+    private fun loadLeads() {
+        api.request("church_drive/task_alerts", JSONObject()) { r ->
+            val o = (r as? JSONObject)?.optJSONObject("leads") ?: return@request
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                leads.clear()
+                o.keys().forEach { k -> leads[k] = o.optInt(k) }
+            }
+        }
+    }
 
     /** The page shown: My to-do, or the one last looked at when the person has asked for that. */
     var tab by mutableStateOf(if (settings.rememberPage) TodoTab.entries.firstOrNull { it.name == settings.lastPage } ?: TodoTab.Home else TodoTab.Home)
@@ -369,6 +403,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     private fun refreshAll() {
         listIds().forEach { loadItems(it) }
         loadShopping()
+        loadLeads()
     }
 
     private fun loadItems(id: String) {

@@ -119,6 +119,16 @@ private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
                 "Keep each list's Done section open, instead of folded away until you ask for it.",
                 checked = vm.showDone, onChange = { vm.changeShowDone(it) },
             )
+            val askBadge = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok -> vm.changeIconCount(ok) }
+            val context = androidx.compose.ui.platform.LocalContext.current
+            PanelSwitchRow(
+                CdVectors.Todo, "Number on the app icon",
+                "Shows how many tasks are due today or overdue on the icon. It updates when the app reads your lists.",
+                checked = vm.iconCount,
+                onChange = { on ->
+                    if (on && !TaskBadge.canPost(context)) askBadge.launch(android.Manifest.permission.POST_NOTIFICATIONS) else vm.changeIconCount(on)
+                },
+            )
             PanelSwitchRow(
                 CdVectors.Eye, "Open on the page I left",
                 "When this is off, the app always opens on My to-do.",

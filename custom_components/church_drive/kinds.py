@@ -86,6 +86,8 @@ KINDS: list[dict[str, Any]] = [
     {"key": "todo_summary", "group": "To-dos", "name": "To-do summary", "note": "Day and time below", "default": "all",
      "needs": []},
     {"key": "todo_new", "group": "To-dos", "name": "New to-do added", "default": "all", "needs": []},
+    {"key": "todo_due", "group": "To-dos", "name": "To-do reminders", "note": "Ahead of a task's due time, as set on the task", "default": "all", "needs": []},
+    {"key": "todo_overdue", "group": "To-dos", "name": "Overdue to-dos", "note": "When it passes due, then each morning", "default": "all", "needs": []},
     # House jobs: these make a to-do for the people ticked (then "New to-do added" tells them).
     {"key": "devices_not_responding", "group": "House jobs", "name": "Devices not responding", "default": "admins",
      "needs": []},

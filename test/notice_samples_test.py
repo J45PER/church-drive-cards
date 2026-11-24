@@ -20,7 +20,7 @@ KEYS = re.findall(r'\{"key": "([a-z_]+)"', kinds_src)
 
 class SampleTest(unittest.TestCase):
     def test_every_kind_has_words_of_its_own(self):
-        missing = [k for k in KEYS if k not in ns.SAMPLES and k not in ("todo_summary", "todo_new", "devices_not_responding", "low_batteries", "filters_due", "safety_alarms", "updates", "vacuum_messages")]
+        missing = [k for k in KEYS if k not in ns.SAMPLES and k not in ("todo_summary", "todo_new", "todo_due", "todo_overdue", "devices_not_responding", "low_batteries", "filters_due", "safety_alarms", "updates", "vacuum_messages")]
         self.assertEqual(missing, [], "add a sample for these kinds in notice_samples.py")
 
     def test_a_kind_without_a_sample_says_its_name(self):

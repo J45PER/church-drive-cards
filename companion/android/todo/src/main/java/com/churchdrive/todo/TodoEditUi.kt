@@ -28,6 +28,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import com.churchdrive.app.ui.FullPage
+import com.churchdrive.app.ui.LEAD_CHOICES
+import com.churchdrive.app.ui.leadLabel
 import com.churchdrive.app.ui.OptionRow
 import com.churchdrive.app.ui.TileItem
 import com.churchdrive.app.ui.TileRow
@@ -44,7 +46,7 @@ import com.churchdrive.app.ui.toneColors
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodoEditDialog(item: TodoItem, first: String?, tone: ToneColors, onSave: (Map<String, Any?>) -> Unit, onDelete: () -> Unit, onClose: () -> Unit) {
+fun TodoEditDialog(item: TodoItem, first: String?, tone: ToneColors, lead: Int?, canRemind: Boolean, onSave: (Map<String, Any?>, Int?) -> Unit, onDelete: () -> Unit, onClose: () -> Unit) {
     val today = remember { LocalDate.now() }
     val words = remember(item) { parseTaskWords(item.description) }
     val keepDay = remember(item) { item.due?.take(10)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } }
@@ -57,6 +59,7 @@ fun TodoEditDialog(item: TodoItem, first: String?, tone: ToneColors, onSave: (Ma
     var time by remember { mutableStateOf(timeOf(words.repeat) ?: timeOf(item.due?.takeIf { 'T' in it }?.substringAfter('T')) ?: "09:00") }
     var notes by remember { mutableStateOf(words.notes) }
     var sure by remember { mutableStateOf(false) }
+    var leadChoice by remember { mutableStateOf(lead) }
 
     val dueOptions = DUE_CHOICES + if (due == "Keep") listOf("Keep") else emptyList()
     val repeatOptions = REPEAT_CHOICES + if (repeat !in REPEAT_CHOICES) listOf(repeat) else emptyList()
@@ -74,6 +77,7 @@ fun TodoEditDialog(item: TodoItem, first: String?, tone: ToneColors, onSave: (Ma
                 item.uid, name, due, if (due == "No date" && picked == null) null else timeOrNull, today,
                 buildDescription(repeatWords(repeat, cleaned ?: "09:00", day), whoWords(who, first), notes), picked,
             ),
+            leadChoice,
         )
     }
 
@@ -99,6 +103,12 @@ fun TodoEditDialog(item: TodoItem, first: String?, tone: ToneColors, onSave: (Ma
         if (repeating) {
             Text("Remind", style = MaterialTheme.typography.labelLarge)
             OptionRow(whoOptions, who, tone) { who = it }
+        }
+        // How long before its time the house reminds, on this phone (only for a task with a due time).
+        if (canRemind && (repeating || due != "No date" || picked != null)) {
+            Text("Remind me", style = MaterialTheme.typography.labelLarge)
+            OptionRow(LEAD_CHOICES.map { it.first }, leadLabel(leadChoice), tone) { picked2 -> leadChoice = LEAD_CHOICES.first { it.first == picked2 }.second }
+            Text("Overdue tasks are reminded when they pass their time, then each morning.", style = MaterialTheme.typography.bodySmall)
         }
         WashField(notes, { notes = it }, "Notes", tone, singleLine = false, minLines = 3)
         TileRow(

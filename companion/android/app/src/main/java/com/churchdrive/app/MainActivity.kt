@@ -73,6 +73,19 @@ class MainActivity : ComponentActivity() {
     /** True each time the app comes to the front, to show tasks waiting to be checked (from the "Tasks to check" notice or a voice request). */
     private var showInbox by mutableStateOf(false)
 
+    /** A tap on a to-do notice: the To-Do app opens on that task when it is on the phone (and the person hasn't turned that off). */
+    private fun openTodoFromNotice(intent: android.content.Intent?) {
+        if (intent?.getStringExtra("page") != com.churchdrive.app.ui.Page.Todo.name) return
+        val list = intent.getStringExtra(EXTRA_TODO_LIST)
+        val uid = intent.getStringExtra(EXTRA_TODO_UID)
+        if (com.churchdrive.app.TodoLink.open(this, list, uid)) {
+            intent.removeExtra("page")
+            intent.removeExtra(EXTRA_TODO_LIST)
+            intent.removeExtra(EXTRA_TODO_UID)
+            openPage = null
+        }
+    }
+
     private fun readShare(intent: android.content.Intent?) {
         intent?.getStringExtra(EXTRA_SHARE_TEXT)?.let {
             shareText = it
@@ -122,6 +135,7 @@ class MainActivity : ComponentActivity() {
         openPage = intent.getStringExtra("page")
         openCamera = intent.getStringExtra("camera")
         openCameraAnswer = intent.getBooleanExtra("answer", false)
+        openTodoFromNotice(intent)
         readShare(intent)
     }
 
@@ -134,6 +148,7 @@ class MainActivity : ComponentActivity() {
         openPage = intent?.getStringExtra("page")
         openCamera = intent?.getStringExtra("camera")
         openCameraAnswer = intent?.getBooleanExtra("answer", false) == true
+        openTodoFromNotice(intent)
         readShare(intent)
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
@@ -298,6 +313,9 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_SHOPPING_LIST = "shopping_list"
+        /** A to-do notice's task: the list and the task's uid, opened in the To-Do app. */
+        const val EXTRA_TODO_LIST = "todo_list"
+        const val EXTRA_TODO_UID = "todo_uid"
         /** A notification asked for a device's health page (an entity id or a device id), or for the Device Health list. */
         const val EXTRA_DEVICE = "device"
         const val EXTRA_DEVICE_HEALTH = "device_health"

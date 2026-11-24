@@ -154,3 +154,15 @@ fun houseTaskFor(task: HouseTask, first: String?): Boolean {
     val names = task.who.lowercase().split(',').map { it.trim() }
     return "everyone" in names || (!first.isNullOrBlank() && first.lowercase() in names)
 }
+
+/** How many open tasks are due today or overdue (a task with no due day isn't counted): the number on the To-Do app's icon. */
+fun tasksDueCount(lists: Collection<List<TodoItem>>, today: String): Int =
+    lists.sumOf { l -> l.count { !it.done && it.due != null && it.due.take(10) <= today } }
+
+/** The lengths a task can remind ahead of its due time, in minutes (0 is at the time), as the house offers them. */
+val LEAD_CHOICES = listOf(
+    "No reminder" to null, "At the time" to 0, "5 min before" to 5, "15 min before" to 15, "30 min before" to 30,
+    "1 hour before" to 60, "2 hours before" to 120, "1 day before" to 1440,
+)
+
+fun leadLabel(minutes: Int?): String = LEAD_CHOICES.firstOrNull { it.second == minutes }?.first ?: "No reminder"

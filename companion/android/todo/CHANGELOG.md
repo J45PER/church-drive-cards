@@ -3,6 +3,13 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.193.0
+
+- **Reminders on a task.** On Edit task, a task with a due time can remind you at the time or 5, 15 or 30 minutes, 1 or 2 hours or 1 day before. The house sends it to your phone (through the Church Drive app); tapping it opens the task here. Needs the Home Assistant integration 0.193.0.
+- **Overdue tasks** are announced when they pass due and then each morning at 09:00 until done, with Done and Snooze. Choose who gets them in Manager's Notifications (To-do reminders, Overdue to-dos).
+- **No counts on the page buttons**; the summary at the top says what is waiting.
+- **Number on the app icon** (Settings, off by default): how many tasks are due today or overdue. It updates when the app reads your lists.
+
 ## 0.192.0
 
 - **Rename a step.** On Edit project each step is a box you can change, with a cross to take it out; Save keeps what you changed and whether it was done. Needs the Home Assistant integration 0.192.0.

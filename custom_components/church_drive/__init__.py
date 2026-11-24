@@ -94,6 +94,8 @@ from .const import (
     WS_SHOPPING_CREATE,
     WS_SHOPPING_DELETE,
     WS_SHOPPING_RENAME,
+    WS_TASK_ALERTS,
+    WS_TASK_ALERT_SET,
     WS_SHOPPING_IMPORT,
     WS_SHOPPING_ITEM,
     WS_SHOPPING_UPDATE,
@@ -225,6 +227,8 @@ from .notice_samples import sample_for
 from .people import People
 from .reminder_logic import SNOOZE_MINUTES, actions_for
 from .reminders import Reminders
+from .task_alerts import TaskAlerts
+from .task_alerts_logic import LEADS
 
 _LOGGER = logging.getLogger(__name__)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
@@ -1263,6 +1267,44 @@ async def ws_reminder_set(hass: HomeAssistant, connection: websocket_api.ActiveC
     connection.send_result(msg["id"], {"reminder": kept})
 
 
+def _task_alerts(hass: HomeAssistant) -> TaskAlerts | None:
+    return hass.data.get(DOMAIN, {}).get("task_alerts")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_TASK_ALERTS})
+@callback
+def ws_task_alerts(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The lead (minutes before the due time) kept for each task that has one, and the lengths a task can have."""
+    alerts = _task_alerts(hass)
+    if alerts is None:
+        connection.send_error(msg["id"], "not_ready", "Task alerts aren't running")
+        return
+    connection.send_result(msg["id"], {"leads": alerts.leads(), "options": list(LEADS)})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_TASK_ALERT_SET,
+        vol.Required("list"): cv.entity_id,
+        vol.Required("uid"): cv.string,
+        vol.Optional("lead"): vol.Any(None, int),
+    }
+)
+@websocket_api.async_response
+async def ws_task_alert_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Set how long before its due time a task reminds (0 at the time), or clear it (no lead)."""
+    alerts = _task_alerts(hass)
+    if alerts is None:
+        connection.send_error(msg["id"], "not_ready", "Task alerts aren't running")
+        return
+    try:
+        kept = await alerts.async_set_lead(msg["list"], msg["uid"], msg.get("lead"))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+        return
+    connection.send_result(msg["id"], {"lead": kept})
+
+
 def _purifier_schedule(hass: HomeAssistant) -> PurifierSchedule | None:
     return hass.data.get(DOMAIN, {}).get("purifier_schedule")
 
@@ -2104,7 +2146,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for command in (
             ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_light_role_set, ws_presence, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
-            ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
+            ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set, ws_task_alerts, ws_task_alert_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_rename, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
             ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_sensor_actions, ws_sensor_actions_set, ws_sensor_actions_delete, ws_schedules, ws_upcoming, ws_alarm_tests, ws_alarm_tests_set,
@@ -2282,6 +2324,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Place reminders couldn't start; everything else still works")
         data["reminders"] = None
+
+    # Task alerts (reminders ahead of a due time, overdue notices) mustn't stop anything else loading either.
+    task_alerts = TaskAlerts(hass, data.get("people"))
+    try:
+        await task_alerts.async_start()
+        entry.async_on_unload(task_alerts.async_stop)
+        data["task_alerts"] = task_alerts
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Task alerts couldn't start; everything else still works")
+        data["task_alerts"] = None
 
     # The task inbox mustn't stop anything else loading either.
     inbox = Inbox(hass, data.get("people"))
