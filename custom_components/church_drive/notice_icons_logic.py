@@ -40,7 +40,7 @@ DEFAULT_ICONS: dict[str, str] = {
     "car_charging": "car-ev",
     "car_charged": "car-ev",
     "car_not_plugged": "car+ev-plug",
-    "internet": "globe/off",
+    "internet": "network-off",
     "backup": "device-server+restore",
     "remote_access": "globe+link",
     "device_stale": "device-health",
@@ -80,6 +80,22 @@ def _mode_of(title: str, message: str) -> str:
     return "disarmed"
 
 
+def gregg_icon(text: str) -> str:
+    """Gregg's status icon for what a notice says he is doing or has done (stuck or an error, heading home, paused, cleaning, finished)."""
+    t = text.lower()
+    if any(w in t for w in ("needs help", "stuck", "error", "fault", "trapped")):
+        return "gregg-error"
+    if any(w in t for w in ("heading home", "returning", "going home", "back to the dock")):
+        return "gregg-returning"
+    if "paused" in t:
+        return "gregg-paused"
+    if any(w in t for w in ("complete", "finished", "done", "docked")):
+        return "gregg-docked"
+    if any(w in t for w in ("cleaning", "started", "starting")):
+        return "gregg-cleaning"
+    return "gregg"
+
+
 def default_icon(kind: str | None, tag: str = "", title: str = "", message: str = "") -> str:
     """The built-in icon for a notice ("" when it has none, so the app keeps the Manager's mark)."""
     k = kind or ""
@@ -89,6 +105,8 @@ def default_icon(kind: str | None, tag: str = "", title: str = "", message: str 
         return "co-alert" if "carbon" in f"{title} {message}".lower() or " co " in f" {title.lower()} " else "smoke-detector-alert"
     if k == "clive_actions":
         return "leaf+clive" if "eco" in title.lower() else ("thermostat+clive" if "heating" in title.lower() else "home+clive")
+    if k in ("vacuum", "vacuum_messages"):
+        return gregg_icon(f"{title} {message}")
     if k.startswith("arrivals:"):
         return "home"
     if k in DEFAULT_ICONS:

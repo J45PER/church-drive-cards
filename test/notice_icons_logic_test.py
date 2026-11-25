@@ -15,9 +15,16 @@ class NoticeIconsLogic(unittest.TestCase):
         self.assertEqual(ni.default_icon("smoke"), "smoke-detector-alert")
         self.assertEqual(ni.default_icon("power_down"), "octopus+power")
         self.assertEqual(ni.default_icon("cheap_rate"), "octopus+pound")
-        self.assertEqual(ni.default_icon("internet"), "globe/off")
+        self.assertEqual(ni.default_icon("internet"), "network-off")
         self.assertEqual(ni.default_icon("car_not_plugged"), "car+ev-plug")
         self.assertEqual(ni.default_icon("todo_overdue"), "todo-clock-logo")
+
+    def test_gregg_shows_what_he_is_doing(self):
+        self.assertEqual(ni.default_icon("vacuum", title="Gregg needs help", message="Stuck in the Living Room"), "gregg-error")
+        self.assertEqual(ni.default_icon("vacuum", title="Gregg", message="Cleaning Complete at 14:10"), "gregg-docked")
+        self.assertEqual(ni.default_icon("vacuum_messages", title="Gregg", message="Heading home"), "gregg-returning")
+        self.assertEqual(ni.default_icon("vacuum", title="Gregg", message="Paused"), "gregg-paused")
+        self.assertEqual(ni.default_icon("vacuum", title="Gregg", message="Something else"), "gregg")
 
     def test_arrivals_use_the_house(self):
         self.assertEqual(ni.default_icon("arrivals:person.hayley"), "home")

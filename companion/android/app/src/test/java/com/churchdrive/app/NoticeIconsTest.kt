@@ -19,7 +19,7 @@ class NoticeIconsTest {
         assertEquals("car+ev-plug", NoticeIcons.iconNameFor("car_not_plugged", null))
         assertEquals("octopus+pound", NoticeIcons.iconNameFor("cheap_rate", null))
         assertEquals("home", NoticeIcons.iconNameFor("arrivals:person.jamie", null))
-        assertEquals("globe/off", NoticeIcons.iconNameFor("internet", null))
+        assertEquals("network-off", NoticeIcons.iconNameFor("internet", null))
         assertEquals("todo-clock-logo", NoticeIcons.iconNameFor("todo_overdue", null))
     }
 
@@ -55,7 +55,7 @@ class NoticeIconsTest {
             "todo_summary", "todo_overdue")
         kinds.forEach { assertTrue(it, NoticeIcons.drawable(IconSpec.parse(NoticeIcons.iconNameFor(it, null)))) }
         listOf("church-drive-task-x", "inbox-1", "shopping-x").forEach { assertTrue(it, NoticeIcons.drawable(IconSpec.parse(NoticeIcons.iconNameFor(null, it)))) }
-        listOf("shield-home", "shield-lock", "shield-moon", "shield-off", "leaf+clive").forEach { assertTrue(it, NoticeIcons.drawable(IconSpec.parse(it))) }
+        listOf("shield-home", "shield-lock", "shield-moon", "shield-off", "leaf+clive", "gregg-error", "gregg-docked", "gregg-returning", "gregg-paused", "gregg-cleaning").forEach { assertTrue(it, NoticeIcons.drawable(IconSpec.parse(it))) }
         assertFalse(NoticeIcons.drawable(IconSpec.parse("nothing")))
         assertTrue(CdIcons.icons.containsKey("cart"))
     }
