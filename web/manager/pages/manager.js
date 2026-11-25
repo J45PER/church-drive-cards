@@ -5,6 +5,9 @@ import { canTick, kindGoesTo, kindGroups, linksOf, modeLabel, name, presenceWord
 
 import { chips, h, soft } from './dom.js';
 import { toneVars } from '../ui.js';
+import { iconNames, iconLibrary, loadIcons } from '../icons.js';
+import { OWN_LOGOS } from './own-logos.js';
+import { OWN_BADGES, OWN_BASES, noticeIconSvg, parseSpec, specText } from './notice-icon.js';
 import { DEFAULT_SLOTS, SLOT_CATALOG, getSlots, resetSlots, setSlots } from './home-slots.js';
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export { chips, h };
@@ -86,6 +89,31 @@ async function live(slot, ctx, command, build, extra = {}) {
 
 // ---- Notifications, People
 
+/** What is being changed in the Notification icons table, kept while the card redraws: kind -> {base, badge, off}. */
+const iconDrafts = new Map();
+const noticeLib = () => ({ icons: iconLibrary().icons, octopus: OWN_LOGOS.octopusenergy });
+
+/** Every notification kind with the icon it carries; a change is saved with its button and goes out with the next notice. */
+function noticeIconsGroup(kinds, send) {
+  const lib = noticeLib(); const names = iconNames().map((n) => n.slice(3));
+  const opt = (v, label, cur) => h('option', { value: v, selected: v === cur }, label);
+  return group('Notification icons', soft('The picture each notification carries in the app. Save sends it: the next notification of that kind uses it. An icon can have a badge bottom-right, or the off slash.'),
+    h('div', { class: 'matrix-wrap' }, h('table', { class: 'matrix' }, h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Notification'), h('th', { scope: 'col' }, 'Icon'), h('th', { scope: 'col' }, 'Base'), h('th', { scope: 'col' }, 'Badge'), h('th', { scope: 'col' }, 'Off'), h('th', { scope: 'col' }, ''))),
+      h('tbody', {}, kinds.filter((k) => k.icon !== undefined).map((kind) => {
+        const saved = parseSpec(kind.icon) || { base: '', badge: null, off: false };
+        const draft = iconDrafts.get(kind.key) || saved; const spec = specText(draft);
+        const preview = h('span', { class: 'nicon' }); preview.innerHTML = noticeIconSvg(spec, lib, 32);
+        const set = (patch) => { const next = { ...draft, ...patch }; if (next.badge) next.off = false; iconDrafts.set(kind.key, next); const sp = specText(next); preview.innerHTML = noticeIconSvg(sp, lib, 32); saveBtn.disabled = sp === specText(saved); };
+        const saveBtn = h('button', { class: 'btn', type: 'button', disabled: spec === specText(saved), onclick: async () => { iconDrafts.delete(kind.key); await send('church_drive/people/icon', { kind: kind.key, icon: specText(draft) }); } }, 'Save');
+        return h('tr', {}, h('th', { scope: 'row' }, h('span', { class: 'row-title' }, kind.name), kind.icon_follows && !kind.icon_chosen ? h('span', { class: 'sub' }, 'Follows the notice') : null),
+          h('td', {}, preview),
+          h('td', {}, h('select', { class: 'field', 'aria-label': `${kind.name} icon`, onchange: (e) => set({ base: e.target.value }) }, [...OWN_BASES, ...names].map((n) => opt(n, n, draft.base)))),
+          h('td', {}, h('select', { class: 'field', 'aria-label': `${kind.name} badge`, onchange: (e) => set({ badge: e.target.value || null }) }, [opt('', 'No badge', draft.badge || ''), ...[...OWN_BADGES, ...names].map((n) => opt(n, n, draft.badge || ''))])),
+          h('td', {}, h('input', { type: 'checkbox', 'aria-label': `${kind.name} off slash`, checked: !!draft.off, disabled: !!draft.badge, onchange: (e) => set({ off: e.target.checked }) })),
+          h('td', {}, saveBtn, ' ', kind.icon_chosen ? h('button', { class: 'btn quiet', type: 'button', onclick: async () => { iconDrafts.delete(kind.key); await send('church_drive/people/icon', { kind: kind.key, icon: '' }); } }, 'Built-in') : null));
+      })))));
+}
+
 const CARDS = {
   // Who can use each TV and speaker: administrators always, and the people it is given to. A TV or speaker nobody has been given to is for administrators only.
   'church:device-access': async (slot, ctx) => {
@@ -117,7 +145,8 @@ const CARDS = {
     draw();
   },
 
-  'custom:notifications-card': (slot, ctx) => live(slot, ctx, 'church_drive/people', (d, send) => {
+  'custom:notifications-card': (slot, ctx) => live(slot, ctx, 'church_drive/people', async (d, send) => {
+    await loadIcons();
     const people = d.people || [];
     const cell = (on, click, label, disabled) => h('button', { type: 'button', class: 'cell', 'aria-pressed': String(on), 'aria-label': label, disabled, onclick: click }, on ? '✓' : '');
     const head = h('tr', {}, h('th', { scope: 'col' }, ''), h('th', { scope: 'col' }, 'Everyone'), people.map((p) => h('th', { scope: 'col' }, p.first || p.name)));
@@ -131,7 +160,7 @@ const CARDS = {
       }))))));
     const phones = group('Phones', soft('Notifications go to the phones that are switched on.'), h('div', { class: 'grid' }, people.map((p) => h('div', { class: 'kind' },
       h('p', { class: 'row-title' }, p.name + (p.admin ? ' · Admin' : '')), (p.phones || []).length ? chips(p.phones.map((ph) => [ph.name, ph.on, () => send('church_drive/people/phone', { person: p.entity_id, service: ph.service, on: !ph.on })])) : soft('No phones yet')))));
-    return [...tables, phones];
+    return [...tables, noticeIconsGroup(d.kinds || [], send), phones];
   }),
 
   'custom:people-manager-card': async (slot, ctx) => {

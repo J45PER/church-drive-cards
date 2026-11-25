@@ -180,6 +180,7 @@ from .const import (
     WS_PEOPLE_ASSIGN,
     WS_NOTICES_MISSED,
     WS_PEOPLE_MINE,
+    WS_PEOPLE_ICON,
     WS_CAMERA_EVENTS,
     WS_CAMERA_ALERT_SET,
     WS_CAMERA_LINK_SET,
@@ -413,6 +414,29 @@ async def ws_people_assign(
         connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
         return
     await people.async_set(msg["kind"], msg.get("person"), msg["on"])
+    connection.send_result(msg["id"], {"kinds": people.kinds()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_ICON,
+        vol.Required("kind"): cv.string,
+        vol.Optional("icon"): vol.Any(None, cv.string),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_icon(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Choose the icon a kind of notification carries (empty: back to the built-in one). It goes out with the very next notice."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    if not await people.async_set_icon(msg["kind"], msg.get("icon")):
+        connection.send_error(msg["id"], "invalid", "Unknown notification or icon")
+        return
     connection.send_result(msg["id"], {"kinds": people.kinds()})
 
 
@@ -2144,7 +2168,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_light_role_set, ws_presence, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_light_role_set, ws_presence, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_icon, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set, ws_task_alerts, ws_task_alert_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_rename, ws_shopping_import,
