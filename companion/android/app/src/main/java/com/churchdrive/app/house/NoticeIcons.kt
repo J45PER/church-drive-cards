@@ -43,12 +43,31 @@ object NoticeIcons {
         return synchronized(cache) { cache.getOrPut(name) { render(name) } }
     }
 
-    private fun render(name: String): IconCompat? {
+    private fun render(name: String): IconCompat? = bitmapOf(name, SIZE, 0, android.graphics.Color.WHITE)?.let { IconCompat.createWithBitmap(it) }
+
+    private val largeCache = HashMap<String, Bitmap?>()
+
+    /**
+     * The picture on the notification's card: the area's icon on a transparent ground, in light ink on a dark shade and dark ink on a light one
+     * (chosen when the notice is posted), where the Manager's own mark was a coloured square.
+     */
+    fun largeIcon(context: Context, kind: String?, tag: String?): Bitmap? {
+        val name = iconNameFor(kind, tag) ?: return null
+        val night = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        return synchronized(largeCache) {
+            largeCache.getOrPut("$name|$night") { bitmapOf(name, LARGE, LARGE / 6, if (night) 0xFFF1F3F8.toInt() else 0xFF202124.toInt()) }
+        }
+    }
+
+    private const val LARGE = 192
+
+    private fun bitmapOf(name: String, size: Int, margin: Int, ink: Int): Bitmap? {
         val shapes = CdIcons.icons[name] ?: return null
-        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; style = Paint.Style.FILL }
-        val s = SIZE / 200f
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; style = Paint.Style.FILL }
+        val s = (size - 2 * margin) / 200f
+        canvas.translate(margin.toFloat(), margin.toFloat())
         shapes.forEach { sh ->
             val path: Path = runCatching { PathParser.createPathFromPathData(sh.d) }.getOrNull() ?: return@forEach
             path.fillType = Path.FillType.EVEN_ODD
@@ -58,6 +77,6 @@ object NoticeIcons {
             canvas.drawPath(path, paint)
             canvas.restore()
         }
-        return IconCompat.createWithBitmap(bitmap)
+        return bitmap
     }
 }
