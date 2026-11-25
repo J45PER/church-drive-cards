@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.194.2
+
+- **A picture for each notification.** The card shows the area's own icon (safety, security, car, energy, house, person, device health, to-do, shopping) on a transparent ground, light on a dark shade and dark on a light one, in place of the empty space. Clive's keep his logo.
+
 ## 0.194.1
 
 - No change in this app; version kept in step with the others.
