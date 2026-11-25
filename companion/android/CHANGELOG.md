@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.193.4
+
+- No change in this app; version kept in step with the others.
+
 ## 0.193.3
 
 - **Animated scenes say so.** A dynamic Hue scene's tile has a small "Animated" tag in its corner.

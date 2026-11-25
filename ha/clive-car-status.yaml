@@ -1,6 +1,5 @@
-# Script script.clive_car_status: How the car is: plugged in or not, charging or not, the battery and range when the car's own service answers. Exposed to Assist. It puts the car card on the screen itself (through clive_show_card) and returns the exact two sentences to say, so Clive no longer has to build the card or the wording. The Vauxhall Astra's own sensors (battery, range, charging end) come from the car's cloud service and are often unavailable: then the card shows what is known and `say` does not mention the battery. A copy of the live script.
 alias: Car status
-description: 'Use this for ANY question about how the car is, whether it is plugged in or charging, or its battery. It shows the card on the screen by itself and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. If they answer yes to the offer, answer from "more" in one natural sentence (when the cheapest rate starts, the rate now, when it will be ready by, or the smart charge state).'
+description: 'Use this for ANY question about how the car is, whether it is plugged in or charging, or its battery. It shows the card on the screen by itself and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. If they answer yes to the offer, answer from "more" in one natural sentence (when the cheapest rate starts, the rate now, when it will be ready by, or the smart charge state). The car it names comes from the car role (input_select.zappi_car_role): the ID.5 when Primary, the Astra when Additional, ''the car'' when not answered; the Astra''s battery and range are only used when the Astra is the one plugged in.'
 icon: mdi:car-electric
 mode: parallel
 max: 5
@@ -8,30 +7,21 @@ sequence:
 - action: script.clive_zappi_info
   response_variable: zi
 - variables:
-    battery: '{{ states(''sensor.amz_2927_vauxhall_astra_battery'') | float(none) }}'
-    range_km: '{{ states(''sensor.amz_2927_vauxhall_astra_range'') | float(none) }}'
+    battery: '{{ states(''sensor.amz_2927_vauxhall_astra_battery'') | float(none) if zi.car_role == ''Additional'' else none }}'
+    range_km: '{{ states(''sensor.amz_2927_vauxhall_astra_range'') | float(none) if zi.car_role == ''Additional'' else none }}'
     range_unit: '{{ state_attr(''sensor.amz_2927_vauxhall_astra_range'', ''unit_of_measurement'') or '''' }}'
     watts: '{{ zi.charging_power_watts | float(0) }}'
     plugged: '{{ zi.car_connected | bool(false) }}'
+    carname: '{{ ''The ID.5'' if zi.car_role == ''Primary'' else (''The Astra'' if zi.car_role == ''Additional'' else ''The car'') }}'
+    cardname: '{{ zi.car if zi.car_role in [''Primary'', ''Additional''] else ''Car'' }}'
 - variables:
     charging: '{{ plugged and watts > 100 }}'
-    label: >-
-      {%- if not plugged -%}Not plugged in{%- elif watts > 100 -%}Charging{%- else -%}Plugged in{%- endif -%}
+    label: '{%- if not plugged -%}Not plugged in{%- elif watts > 100 -%}Charging{%- else -%}Plugged in{%- endif -%}'
 - variables:
-    card: >-
-      {%- set ns = namespace(d={'name': 'Vauxhall Astra', 'state': label}) -%}
-      {%- if battery is not none -%}{%- set ns.d = dict(ns.d, battery=battery) -%}{%- endif -%}
-      {%- if range_km is not none -%}{%- set ns.d = dict(ns.d, range=(range_km | round(0) | int) ~ ' ' ~ range_unit) -%}{%- endif -%}
-      {%- if charging -%}{%- set ns.d = dict(ns.d, power=((watts / 1000) | round(1)) ~ ' kW') -%}{%- endif -%}
-      {%- if zi.rate_known -%}{%- set ns.d = dict(ns.d, rate=(zi.current_rate_pence_per_kwh ~ 'p now')) -%}{%- endif -%}
-      {{- ns.d -}}
+    card: '{%- set ns = namespace(d={''name'': cardname, ''state'': label}) -%} {%- if battery is not none -%}{%- set ns.d = dict(ns.d, battery=battery) -%}{%- endif -%} {%- if range_km is not none -%}{%- set ns.d = dict(ns.d, range=(range_km | round(0) | int) ~ '' '' ~ range_unit) -%}{%- endif -%} {%- if charging -%}{%- set ns.d = dict(ns.d, power=((watts / 1000) | round(1)) ~ '' kW'') -%}{%- endif -%} {%- if zi.rate_known -%}{%- set ns.d = dict(ns.d, rate=(zi.current_rate_pence_per_kwh ~ ''p now'')) -%}{%- endif -%} {{- ns.d -}}'
     batt_words: '{{ '' and its battery is at '' ~ (battery | round(0) | int) ~ ''%'' if battery is not none else '''' }}'
 - variables:
-    say: >-
-      {%- if not plugged -%}The Astra isn't plugged in{{ batt_words }}. Shall I tell you when the cheapest charging starts?
-      {%- elif charging -%}The Astra's charging at {{ ((watts / 1000) | round(1)) }} kilowatts{{ batt_words }}. Shall I tell you what the rate is?
-      {%- else -%}The Astra's plugged in{{ batt_words }} but not charging at the moment. Shall I tell you when it will start?
-      {%- endif -%}
+    say: '{%- if not plugged -%}The car isn''t plugged in{{ batt_words }}. Shall I tell you when the cheapest charging starts? {%- elif charging -%}{{ carname }}''s charging at {{ ((watts / 1000) | round(1)) }} kilowatts{{ batt_words }}. Shall I tell you what the rate is? {%- else -%}{{ carname }}''s plugged in{{ batt_words }} but not charging at the moment. Shall I tell you when it will start? {%- endif -%}'
     more:
       cheapest_rate_pence_per_kwh: '{{ zi.cheapest_rate_pence_per_kwh }}'
       cheapest_rate_starts: '{{ zi.cheapest_rate_starts }}'
