@@ -251,8 +251,8 @@ def arrival_message(place: str, mine: list[dict[str, Any]], missed: list[dict[st
     if open_lists:
         names = ", ".join(list_line(l) for l in open_lists[:3])
         if all(kind_of(l) == STEPS for l in open_lists):
-            return f"At {place}: steps to do", f"{names}. Tap to open the list."
-        return f"At {place}: shopping list", f"{names}. Tap to open the list."
+            return f"At {place}: steps to do", f"{names}."
+        return f"At {place}: shopping list", f"{names}."
     if missed:
         texts = ", ".join(m["text"] for m in missed[:8]) + (" …" if len(missed) > 8 else "")
         return f"At {place}: not available last time", f"You couldn't get: {texts}."
