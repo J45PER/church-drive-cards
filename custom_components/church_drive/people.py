@@ -50,6 +50,7 @@ from .app_nudge_logic import oldest_running, should_nudge
 from .notice_log import NoticeLog
 from .phone_logic import OWN_APP_IDS, leftover_entries, location_trackers
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
+from .notice_icons_logic import DEFAULT_ICONS, clean_icon, default_icon, icon_for
 from .notice_actions_logic import actions_for, is_app_only_link, is_phone_action, tap_link_for
 from .notice_samples import sample_for
 
@@ -104,7 +105,7 @@ class People:
         self.fcm: Any = None  # Google push (fcm.py), when it's set up
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.people")
-        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "access": {}, "seen": {}, "stale_hours": STALE_HOURS, "seeded": False}
+        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "access": {}, "seen": {}, "stale_hours": STALE_HOURS, "seeded": False, "icons": {}}
         self._admins: dict[str, bool] = {}
         self._owner: str | None = None
         self._unsubs: list = []
@@ -715,6 +716,11 @@ class People:
                     "all": bool(a.get("all")),
                     "people": list(a.get("people", [])),
                     "sample": self._sample(kind),
+                    # The icon the notice carries: Manager's choice, else the built-in one (which may follow the notice).
+                    "icon": (self._data.get("icons") or {}).get(kind["key"]) or DEFAULT_ICONS.get(kind["key"], "") or default_icon(kind["key"], "", kind["name"], ""),
+                    "icon_default": DEFAULT_ICONS.get(kind["key"], "") or default_icon(kind["key"], "", kind["name"], ""),
+                    "icon_follows": kind["key"] in ("alarm_mode", "safety_alarms", "clive_actions"),
+                    "icon_chosen": bool((self._data.get("icons") or {}).get(kind["key"])),
                 }
             )
         return out
@@ -799,6 +805,22 @@ class People:
         await self._async_save()
         self._changed()
 
+    async def async_set_icon(self, kind: str, icon: Any) -> bool:
+        """Choose (or, with nothing, clear) the icon of a kind. False when the kind or the spec isn't one."""
+        if not any(k["key"] == kind for k in self._catalogue()):
+            return False
+        spec = clean_icon(icon)
+        if icon and not spec:
+            return False
+        icons = self._data.setdefault("icons", {})
+        if spec:
+            icons[kind] = spec
+        else:
+            icons.pop(kind, None)
+        await self._async_save()
+        self._changed()
+        return True
+
     async def async_set_phone(self, person: str, service: str, on: bool) -> None:
         off = [s for s in self._data["phones_off"].get(person, []) if s != service]
         if not on:
@@ -871,6 +893,9 @@ class People:
                 if mine:
                     data["actions"] = mine
                 if phone.get("own_app"):
+                    icon = icon_for(kind, self._data.get("icons"), tag, title, message)
+                    if icon:
+                        data["icon"] = icon
                     # The Church Drive app keeps the number of the last notice it saw, and asks for what it missed.
                     data["cd_seq"] = seq
                 try:

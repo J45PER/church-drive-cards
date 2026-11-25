@@ -351,6 +351,8 @@ a.design-tile .title { margin: 0 0 4px; font-size: 1.1rem; }
 .matrix th, .matrix td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--line); }
 .matrix thead th { font-weight: 600; font-size: .78rem; color: var(--soft); position: sticky; top: 0; }
 .matrix tbody th { text-align: left; font-weight: 400; min-width: 200px; }
+.nicon { display: inline-flex; color: var(--fg, currentColor); }
+.matrix select.field { max-width: 170px; }
 .matrix tbody th .row-title { display: block; }
 .matrix tbody th .sub { display: block; font-size: .78rem; }
 .cell { width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; color: var(--on-primary); font-weight: 700; cursor: pointer; }

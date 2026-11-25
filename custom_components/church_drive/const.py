@@ -51,6 +51,7 @@ EVENT_NOTICE_TEST = "church_drive_notice_test"  # fired by the Church Drive app'
 WS_PEOPLE = "church_drive/people"
 WS_PEOPLE_ASSIGN = "church_drive/people/assign"
 WS_PEOPLE_MINE = "church_drive/people/mine"
+WS_PEOPLE_ICON = "church_drive/people/icon"
 WS_NOTICES_MISSED = "church_drive/notices/missed"
 WS_PEOPLE_PHONE = "church_drive/people/phone"
 WS_PEOPLE_PLACES = "church_drive/people/places"

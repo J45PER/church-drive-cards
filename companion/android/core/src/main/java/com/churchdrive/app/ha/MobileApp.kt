@@ -25,6 +25,8 @@ data class Push(
     val seq: Long = 0,
     /** A picture to show on the notification: a house path such as `/api/camera_proxy/camera.front_door_snapshot`. */
     val image: String? = null,
+    /** The icon the house chose for this kind of notice, as a spec the app draws (see NoticeIcons); null when it sent none. */
+    val icon: String? = null,
 )
 
 /** A button on a notification: [id] is what comes back when it is pressed, [title] what it says. */
@@ -115,6 +117,7 @@ object MobileApp {
             channel = data?.text("channel") ?: "house",
             seq = data?.optLong("cd_seq", 0) ?: 0,
             image = data?.text("image"),
+            icon = data?.text("icon"),
             kind = data?.text("group")?.takeIf { it != "church-drive" },
             loud = data?.text("priority") == "high" || data?.text("channel") == "alarm_stream",
             quiet = data?.text("importance") == "low" || data?.text("channel")?.contains("quiet", ignoreCase = true) == true,

@@ -200,12 +200,13 @@ class HouseService : Service() {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
                 .setAutoCancel(true)
                 .setContentIntent(openApp(context, push.url))
-            // The area's own icon (safety, car, energy, to-do ...) in place of the Manager's mark; the titles carry no emoji.
-            if (!isAssistantNotice(push.kind)) {
-                NoticeIcons.smallIcon(context, push.kind, push.tag)?.let { builder.setSmallIcon(it) }
-                NoticeIcons.largeIcon(context, push.kind, push.tag)?.let { builder.setLargeIcon(it) }
-            }
-            if (isAssistantNotice(push.kind)) {
+            // The icon chosen for the kind (the house sends it; Manager can change it), in place of the Manager's mark; the titles carry no emoji.
+            // Clive's own notices wear his badge on it; his bare mark is only the fallback when no icon could be drawn.
+            val small = NoticeIcons.smallIcon(context, push.kind, push.tag, push.icon)
+            val large = NoticeIcons.largeIcon(context, push.kind, push.tag, push.icon)
+            small?.let { builder.setSmallIcon(it) }
+            large?.let { builder.setLargeIcon(it) }
+            if (isAssistantNotice(push.kind) && large == null) {
                 runCatching { android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.assistant_notification_logo) }.getOrNull()?.let { builder.setLargeIcon(it) }
             }
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

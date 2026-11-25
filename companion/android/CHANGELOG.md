@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.195.0
+
+- **Notification icons chosen in Manager.** A notification's icon comes from the house (chosen per kind in the Manager website) and can carry a solid circle badge bottom-right, drawn like the To-Do clock's, or the off slash. New icons: the Octopus logo with a power or pound badge, a globe with the off slash or a link badge, a server with a restore badge, a car with the EV plug, and the To-Do logo with a pin, a ! or its clock. Clive's heating notices show the heating icon with his badge.
+
 ## 0.194.2
 
 - **A picture for each notification.** The card shows the area's own icon (safety, security, car, energy, house, person, device health, to-do, shopping) on a transparent ground, light on a dark shade and dark on a light one, in place of the empty space. Clive's keep his logo.
