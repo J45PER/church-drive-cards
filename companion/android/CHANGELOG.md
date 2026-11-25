@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.194.1
+
+- No change in this app; version kept in step with the others.
+
 ## 0.194.0
 
 - **Notifications have an icon for their area, not an emoji.** The small icon in the status bar and shade is the house's own: fire alert (safety), shield (security), doorbell, car, bolt (energy), house, person, device health, checklist (to-dos) or cart (shopping). Clive's notices keep his mark; a notice with no area keeps the Manager's.
