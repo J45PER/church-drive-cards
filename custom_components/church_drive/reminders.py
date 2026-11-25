@@ -179,10 +179,10 @@ class Reminders:
         place = "Home" if zone == "zone.home" else (z.name if z else "")
         if zone:
             title = f"At {place}: {summary}"
-            message = f"You're at {place}. Tick it off on the To-do page when it's done."
+            message = "You're here."
         else:
             title = f"To-do: {summary}"
-            message = f"{summary} is due. Tick it off on the To-do page when it's done."
+            message = "Due now."
         if snoozed:
             message = "Snoozed: " + message
         if self._people is None:

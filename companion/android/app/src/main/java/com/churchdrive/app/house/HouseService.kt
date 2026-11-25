@@ -200,6 +200,8 @@ class HouseService : Service() {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
                 .setAutoCancel(true)
                 .setContentIntent(openApp(context, push.url))
+            // The area's own icon (safety, car, energy, to-do ...) in place of the Manager's mark; the titles carry no emoji.
+            if (!isAssistantNotice(push.kind)) NoticeIcons.smallIcon(context, push.kind, push.tag)?.let { builder.setSmallIcon(it) }
             if (isAssistantNotice(push.kind)) {
                 runCatching { android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.assistant_notification_logo) }.getOrNull()?.let { builder.setLargeIcon(it) }
             }

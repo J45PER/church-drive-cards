@@ -639,15 +639,15 @@ class CameraEvents:
         if what == "ding":
             return {
                 "kind": "doorbell",
-                "title": "🔔 Someone's at the door" if name.lower() in ("front door", "front doorbell") else f"🔔 {name} doorbell",
-                "message": f"The {name.lower()} doorbell was pressed at {at}.",
+                "title": "Someone's at the door" if name.lower() in ("front door", "front doorbell") else f"{name} doorbell",
+                "message": f"The {name.lower()} doorbell.",
                 "image": image, "tag": "church-drive-doorbell" if base == "front_door" else f"church-drive-doorbell-{base}",
                 "link": cam + "?answer",
             }
         return {
             "kind": "night_motion",
-            "title": f"👀 Movement: {name}",
-            "message": f"The {name.lower()} camera saw movement at {at}.",
+            "title": f"Movement: {name}",
+            "message": f"The {name.lower()} camera.",
             "image": image, "tag": f"church-drive-motion-{base}", "link": cam,
         }
 

@@ -28,7 +28,7 @@ class SampleTest(unittest.TestCase):
         self.assertEqual((s["title"], s["message"], s["camera"]), ("Mystery kind", "A note", ""))
 
     def test_an_arrival_names_the_person(self):
-        self.assertEqual(ns.sample_for("arrivals:person.jamie", "Jamie gets home or leaves")["title"], "🏠 Jamie is home")
+        self.assertEqual(ns.sample_for("arrivals:person.jamie", "Jamie gets home or leaves")["title"], "Jamie is home")
 
     def test_camera_kinds_point_at_a_camera(self):
         self.assertEqual(ns.sample_for("doorbell")["camera"], "front_door")

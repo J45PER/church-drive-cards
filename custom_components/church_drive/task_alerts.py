@@ -141,12 +141,12 @@ class TaskAlerts:
             summary = t["summary"]
             lead = t["lead"]
             title = f"Due {tl.lead_text(lead)}: {summary}" if lead else f"Due now: {summary}"
-            await self._async_send("todo_due", t, title, f"{summary} is due at {t['due_at'].strftime('%H:%M')}.")
+            await self._async_send("todo_due", t, title, f"At {t['due_at'].strftime('%H:%M')}.")
             tl.mark_lead(self._sent, t["todo"], t["uid"], t["due_at"])
             changed = True
         for t in tl.overdue_now(tasks, self._sent, now):
             words = tl.overdue_words(t["due_at"], now)
-            await self._async_send("todo_overdue", t, f"Overdue: {t['summary']}", f"{t['summary']} {words}.")
+            await self._async_send("todo_overdue", t, f"Overdue: {t['summary']}", words[:1].upper() + words[1:] + ".")
             tl.mark_overdue(self._sent, t["todo"], t["uid"], t["due_at"], now.date().isoformat())
             changed = True
         if changed:

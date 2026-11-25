@@ -198,9 +198,8 @@ class People:
             try:
                 await self.async_notify(
                     "app_update", [p["entity_id"]],
-                    "⬆️ Update the Church Drive app",
-                    f"A newer version ({newest}) is ready. "
-                    "Open the app to update it: it keeps location and notifications working properly.",
+                    "Update the Church Drive app",
+                    f"Version {newest} is ready.",
                     tag="church-drive-app-update",
                 )
             except Exception as err:  # noqa: BLE001

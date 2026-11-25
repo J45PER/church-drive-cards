@@ -385,7 +385,7 @@ class Shopping:
             steps = sl.kind_of(lst) == sl.STEPS
             await self._async_notify(
                 lst["people"], "Steps today" if steps else "Shopping today",
-                f"{lst['name'] or ('Steps' if steps else 'Shopping')}: {c[sl.OPEN]} to {'do' if steps else 'get'}. Tap to open the list.",
+                f"{lst['name'] or ('Steps' if steps else 'Shopping')}: {c[sl.OPEN]} to {'do' if steps else 'get'}.",
                 lst["id"], tag=f"shopping-day-{lst['id']}",
             )
 
@@ -401,7 +401,7 @@ class Shopping:
             steps = sl.kind_of(lst) == sl.STEPS
             await self._async_notify(
                 lst["people"], "Time for your steps" if steps else "Time to go shopping",
-                f"{lst['name'] or ('Steps' if steps else 'Shopping')}{where}: {c[sl.OPEN]} to {'do' if steps else 'get'}. Tap to open the list.",
+                f"{lst['name'] or ('Steps' if steps else 'Shopping')}{where}: {c[sl.OPEN]} to {'do' if steps else 'get'}.",
                 lst["id"], tag=f"shopping-time-{lst['id']}",
             )
 
