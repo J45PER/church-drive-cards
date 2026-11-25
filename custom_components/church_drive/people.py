@@ -719,7 +719,7 @@ class People:
                     # The icon the notice carries: Manager's choice, else the built-in one (which may follow the notice).
                     "icon": (self._data.get("icons") or {}).get(kind["key"]) or DEFAULT_ICONS.get(kind["key"], "") or default_icon(kind["key"], "", kind["name"], ""),
                     "icon_default": DEFAULT_ICONS.get(kind["key"], "") or default_icon(kind["key"], "", kind["name"], ""),
-                    "icon_follows": kind["key"] in ("alarm_mode", "safety_alarms", "clive_actions"),
+                    "icon_follows": kind["key"] in ("alarm_mode", "safety_alarms", "clive_actions", "vacuum", "vacuum_messages"),
                     "icon_chosen": bool((self._data.get("icons") or {}).get(kind["key"])),
                 }
             )

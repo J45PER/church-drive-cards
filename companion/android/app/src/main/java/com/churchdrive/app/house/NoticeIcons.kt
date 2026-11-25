@@ -12,6 +12,11 @@ import android.graphics.RectF
 import androidx.core.graphics.PathParser
 import androidx.core.graphics.drawable.IconCompat
 import com.churchdrive.app.ui.CdIcons
+import com.churchdrive.app.ui.DISC_SCALE
+import com.churchdrive.app.ui.GreggState
+import com.churchdrive.app.ui.RING_RADIUS
+import com.churchdrive.app.ui.RING_THICKNESS
+import com.churchdrive.app.ui.glyphFor
 
 /** An icon as the house sends it: a [base], optionally with a [badge] bottom-right, optionally with the [off] slash. See notice_icons_logic.py. */
 data class IconSpec(val base: String, val badge: String? = null, val off: Boolean = false) {
@@ -60,7 +65,7 @@ object NoticeIcons {
             k == "clive_actions" -> "thermostat+clive"
             k.startsWith("arrivals:") -> "home"
             k == "left_on" -> "home-alert"
-            k == "internet" -> "globe/off"
+            k == "internet" -> "network-off"
             k == "backup" -> "device-server+restore"
             k == "remote_access" -> "globe+link"
             k == "device_stale" || k == "devices_not_responding" -> "device-health"
@@ -84,7 +89,8 @@ object NoticeIcons {
         return sent ?: iconNameFor(kind, tag)?.takeIf { drawable(IconSpec.parse(it)) }
     }
 
-    private val ownBases = setOf("octopus", "todo-logo", "todo-clock-logo")
+    private val greggStates = mapOf("gregg-idle" to GreggState.Idle, "gregg-cleaning" to GreggState.Cleaning, "gregg-paused" to GreggState.Paused, "gregg-returning" to GreggState.Returning, "gregg-docked" to GreggState.Charged, "gregg-error" to GreggState.Error)
+    private val ownBases = setOf("octopus", "todo-logo", "todo-clock-logo") + greggStates.keys
     private val ownBadges = setOf("clive")
 
     /** Whether every part of the spec is something we can draw. */
@@ -138,7 +144,23 @@ object NoticeIcons {
             "octopus" -> pathOf(NoticeMarks.OCTOPUS_24)?.let { canvas.save(); canvas.translate(10f, 10f); canvas.scale(7.08f, 7.08f); canvas.drawPath(it, paint); canvas.restore() }
             "todo-logo" -> pathOf(NoticeMarks.TODO_LOGO)?.let { canvas.drawPath(it, paint) }
             "todo-clock-logo" -> pathOf(NoticeMarks.TODO_CLOCK_LOGO)?.let { canvas.drawPath(it, paint) }
-            else -> drawNamed(canvas, base, paint)
+            else -> greggStates[base]?.let { drawGregg(canvas, it, paint) } ?: drawNamed(canvas, base, paint)
+        }
+    }
+
+    /** Gregg's status icon held still: the disc with its glyph cut out and the ring round it (turned parts for cleaning, paused and returning). */
+    private fun drawGregg(canvas: Canvas, state: GreggState, paint: Paint) {
+        pathOf(glyphFor(state))?.let { canvas.save(); canvas.scale(DISC_SCALE, DISC_SCALE, 100f, 100f); canvas.drawPath(it, paint); canvas.restore() }
+        val stroke = Paint(paint).apply { style = Paint.Style.STROKE; strokeWidth = RING_THICKNESS; strokeCap = Paint.Cap.ROUND }
+        val oval = RectF(100f - RING_RADIUS, 100f - RING_RADIUS, 100f + RING_RADIUS, 100f + RING_RADIUS)
+        val cap = Math.toDegrees((RING_THICKNESS / 2f / RING_RADIUS).toDouble()).toFloat()
+        fun arcs(start: Float, sweep: Float) { val s = sweep - 2 * cap; if (s > 0f) canvas.drawArc(oval, start + cap, s, false, stroke) }
+        fun parts(count: Int, gap: Float, rotation: Float) { val span = 360f / count; for (i in 0 until count) arcs(rotation + i * span, span - gap) }
+        when (state) {
+            GreggState.Cleaning -> parts(3, 24f, 0f)
+            GreggState.Paused -> parts(3, 24f, 20f)
+            GreggState.Returning -> parts(2, 90f, 0f)
+            else -> canvas.drawCircle(100f, 100f, RING_RADIUS, stroke)
         }
     }
 

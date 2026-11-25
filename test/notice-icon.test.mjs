@@ -26,4 +26,6 @@ test('the To-Do logo base is the first seven pieces of the clock logo', () => {
   assert.doesNotMatch(svg, /M8,8Z/);
 });
 
+test('Gregg\'s status icons come from the set', () => { assert.match(noticeIconSvg('gregg-error', { icons: { 'GreggIcon Error': { p: '<path d="E"/>' } } }), /d="E"/); });
+
 test('something unknown draws an empty box', () => { assert.doesNotMatch(noticeIconSvg('', lib), /<path|<g/); });

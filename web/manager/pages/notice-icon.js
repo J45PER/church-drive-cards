@@ -2,10 +2,11 @@
 //   base                a house icon (the `cd:` name without the prefix)
 //   base+badge          the base with a solid circle badge bottom-right, the symbol knocked out (a rounded square for the EV plug)
 //   base/off            the base with the common off slash
-// Own marks as a base: octopus, todo-logo (room for a badge), todo-clock-logo. Clive's mark can be a badge: clive.
+// Own marks as a base: octopus, todo-logo (room for a badge), todo-clock-logo, gregg-idle/cleaning/paused/returning/docked/error (his status icon). Clive's mark can be a badge: clive.
 
 const CLIVE_104 = 'M32.7,25.3H48.7A30,30 0 0 1 78.7,55.3V71.3A30,30 0 0 1 48.7,101.3H32.7A30,30 0 0 1 2.7,71.3V55.3A30,30 0 0 1 32.7,25.3ZM55.3,2.7H71.3A30,30 0 0 1 101.3,32.7V48.7A30,30 0 0 1 71.3,78.7H55.3A30,30 0 0 1 25.3,48.7V32.7A30,30 0 0 1 55.3,2.7Z';
-export const OWN_BASES = ['octopus', 'todo-logo', 'todo-clock-logo'];
+const GREGG = { 'gregg-idle': 'Idle', 'gregg-cleaning': 'Cleaning', 'gregg-paused': 'Paused', 'gregg-returning': 'Returning', 'gregg-docked': 'Charged', 'gregg-error': 'Error' };
+export const OWN_BASES = ['octopus', 'todo-logo', 'todo-clock-logo', ...Object.keys(GREGG)];
 export const OWN_BADGES = ['clive'];
 
 /** A spec taken apart: {base, badge, off}, or null when it is not one. */
@@ -28,6 +29,7 @@ function baseMarkup(base, lib) {
   if (base === 'octopus') return lib.octopus ? `<g transform="translate(10 10) scale(7.08)">${pathOf(lib.octopus)}</g>` : '';
   if (base === 'todo-clock-logo') return lib.icons?.cd_logo_todo_clock?.p || '';
   if (base === 'todo-logo') return pathOf(dOf(lib.icons?.cd_logo_todo_clock?.p).split(/(?=M)/).slice(0, 7).join(''));
+  if (GREGG[base]) return lib.icons?.[`GreggIcon ${GREGG[base]}`]?.p || '';
   return inner(lib.icons, base);
 }
 
