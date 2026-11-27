@@ -618,6 +618,12 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         sendList("church_drive/shopping/dismiss", JSONObject().put("text", s.text))
     }
 
+    /** Answers Clive's offer of the weekly grocery shop: true makes the trip (the open items move onto it), false turns it down. */
+    fun answerOffer(accept: Boolean) {
+        shopping = shopping?.copy(offer = null)
+        sendList("church_drive/shopping/offer", JSONObject().put("accept", accept))
+    }
+
     /** Says this person has started (or finished) shopping, so the others see it. */
     fun setShoppingNow(on: Boolean) {
         sendList("church_drive/shopping/now", JSONObject().put("on", on))

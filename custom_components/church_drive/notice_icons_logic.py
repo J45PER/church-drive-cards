@@ -28,6 +28,7 @@ DEFAULT_ICONS: dict[str, str] = {
     "alarm_mode": "shield",  # follows the mode (MODE_ICONS)
     "night_motion": "cctv",
     "tamper": "shield-alert",
+    "shopping_offer": "cart+clive",
     "vacuum": "gregg",
     "vacuum_messages": "gregg",
     "damp": "humidity",

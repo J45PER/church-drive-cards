@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.197.0
+
+- **Clive offers the weekly grocery shop** as a trip, from the evening before, on the Shopping tab.
+
 ## 0.196.0
 
 - **A proper Shopping tab.** The main list by aisle with quantities and notes, Clive's suggestions, who is shopping now, and trips that open into the full-page list.

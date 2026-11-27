@@ -67,8 +67,18 @@ class ShoppingDataTest {
         assertEquals("Bread", s.suggestions.single().text)
         assertEquals("Hayley", s.now?.person)
         assertEquals(3, s.now?.left)
+        assertNull(s.offer)
         // The main list is not a trip, so the shopping card leaves it out.
         assertEquals(listOf("bbbbbb222222"), openLists(s).map { it.id })
+    }
+
+    @Test
+    fun readsCliveOfferOfTheWeeklyGroceryShop() {
+        val s = parseShopping(JSONObject(
+            """{"mine":"Jamie","missed":[],"people":["Jamie"],"lists":[],
+            "offer":{"name":"Weekly grocery shop","date":"2026-11-28","time":"10:00","place":"Tesco Extra","day":"Saturday"}}""",
+        ))!!
+        assertEquals(listOf("Weekly grocery shop", "10:00", "Tesco Extra", "Saturday"), s.offer.let { listOf(it!!.name, it.time, it.place, it.day) })
     }
 
     @Test

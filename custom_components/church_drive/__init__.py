@@ -88,6 +88,7 @@ from .const import (
     DOMAIN,
     SERVICE_ADD_TASKS,
     SERVICE_SHOPPING_ADD,
+    SERVICE_SHOPPING_READ,
     SERVICE_STEPS_CREATE,
     WS_SHOPPING,
     WS_SHOPPING_ADD,
@@ -100,6 +101,7 @@ from .const import (
     WS_SHOPPING_FIELDS,
     WS_SHOPPING_DISMISS,
     WS_SHOPPING_NOW,
+    WS_SHOPPING_OFFER,
     WS_SHOPPING_ITEM,
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
@@ -1148,7 +1150,7 @@ def ws_shopping(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
             "lists": shopping.lists(), "mine": _person_of(hass, connection), "missed": shopping.missed(),
             "zones": shopping.zones(), "people": shopping.firsts(),
             # The aisles items are sorted into (in shop order), what Clive suggests adding, and who is in a shop now.
-            "categories": CATEGORY_NAMES, "suggestions": shopping.suggestions(), "now": shopping.shopping_now(),
+            "categories": CATEGORY_NAMES, "suggestions": shopping.suggestions(), "now": shopping.shopping_now(), "offer": shopping.offer(),
         },
     )
 
@@ -1266,6 +1268,20 @@ async def ws_shopping_now(hass, shopping, connection, msg):
     if not first:
         raise ValueError("This login isn't linked to a person")
     return {"now": await shopping.async_set_now(first, msg["on"], msg["place"], connection.context(msg))}
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_SHOPPING_OFFER, vol.Required("accept"): cv.boolean})
+@websocket_api.async_response
+@_shopping_ws
+async def ws_shopping_offer(hass, shopping, connection, msg):
+    """Answer Clive's offer of the weekly grocery shop: make the trip for the signed-in person (the open items move onto it), or turn it down."""
+    if not msg["accept"]:
+        await shopping.async_dismiss_offer(connection.context(msg))
+        return {"offer": shopping.offer()}
+    first = _person_of(hass, connection)
+    if not first:
+        raise ValueError("This login isn't linked to a person")
+    return await shopping.async_accept_offer(first, connection.context(msg))
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_SHOPPING_DELETE, vol.Required("list"): cv.string})
@@ -2209,7 +2225,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_library, ws_saved_colours, ws_saved_colours_set, ws_layout, ws_layout_set, ws_hybrids, ws_hybrid_save, ws_hybrid_delete, ws_light_role_set, ws_presence, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_icon, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set, ws_task_alerts, ws_task_alert_set,
-            ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_rename, ws_shopping_import, ws_shopping_fields, ws_shopping_dismiss, ws_shopping_now,
+            ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_rename, ws_shopping_import, ws_shopping_fields, ws_shopping_dismiss, ws_shopping_now, ws_shopping_offer,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
             ws_purifier_schedule, ws_purifier_schedule_set, ws_purifier_display, ws_purifier_display_set, ws_blind_schedule, ws_blind_schedule_set, ws_routines, ws_routines_set, ws_routines_delete, ws_sensor_actions, ws_sensor_actions_set, ws_sensor_actions_delete, ws_schedules, ws_upcoming, ws_alarm_tests, ws_alarm_tests_set,
         ):
@@ -2517,6 +2533,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_register(
         DOMAIN, SERVICE_SHOPPING_ADD, shopping_add, schema=SHOPPING_ADD_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
+
+    async def shopping_read(call: ServiceCall) -> ServiceResponse:
+        """What is on the main list (by aisle), what was not available last time and what Clive suggests, for him to read out."""
+        shop = data.get("shopping")
+        if shop is None:
+            raise ServiceValidationError("Shopping lists aren't running")
+        main = shop.main()
+        items = [i for i in (shop._public(main)["items"] if main else []) if i["status"] == "open"]
+        return {
+            "open": [{"text": i["text"], "qty": i["qty"], "note": i["note"], "aisle": i["cat"]} for i in items],
+            "not_available_last_time": [m["text"] for m in shop.missed()],
+            "suggestions": [{"text": s["text"], "why": s["reason"]} for s in shop.suggestions()],
+        }
+
+    hass.services.async_register(DOMAIN, SERVICE_SHOPPING_READ, shopping_read, supports_response=SupportsResponse.ONLY)
 
     async def steps_create(call: ServiceCall) -> ServiceResponse:
         shop = data.get("shopping")
@@ -2893,6 +2924,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
     hass.services.async_remove(DOMAIN, SERVICE_ADD_TASKS)
     hass.services.async_remove(DOMAIN, SERVICE_SHOPPING_ADD)
+    hass.services.async_remove(DOMAIN, SERVICE_SHOPPING_READ)
     hass.services.async_remove(DOMAIN, SERVICE_STEPS_CREATE)
     url = hass.data.get(DOMAIN, {}).get("cards_url")
     if url:

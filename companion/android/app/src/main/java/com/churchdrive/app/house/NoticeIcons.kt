@@ -59,6 +59,7 @@ object NoticeIcons {
             k.startsWith("car_") -> "car-ev"
             k == "power_down" -> "octopus+power"
             k == "cheap_rate" || k == "energy_cost" -> "octopus+pound"
+            k == "shopping_offer" -> "cart+clive"
             k == "vacuum" || k == "vacuum_messages" -> "gregg"
             k == "damp" -> "humidity"
             k == "frost" -> "snowflake-alert"

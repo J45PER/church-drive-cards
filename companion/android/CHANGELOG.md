@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.197.0
+
+- **Clive offers the weekly grocery shop.** On the To-Do app's Shopping tab a Clive card offers the usual shopping day, time and shop as a trip (Make a trip, or Not now), and the notification for it has Clive's badge on the cart.
+
 ## 0.196.0
 
 - **A proper Shopping tab (To-Do app).** The main shopping list (items by aisle, quantities and notes, Bought or Not available, "not available last time" with Add back, "In the basket"), Clive's suggestions above it, a "Going shopping?" button so the others see who is in the shop, and trips below it that open into the full-page list. The full-page list groups items by aisle and shows quantities and notes.

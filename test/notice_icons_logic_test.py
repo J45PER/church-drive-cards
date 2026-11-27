@@ -26,6 +26,9 @@ class NoticeIconsLogic(unittest.TestCase):
         self.assertEqual(ni.default_icon("vacuum", title="Gregg", message="Paused"), "gregg-paused")
         self.assertEqual(ni.default_icon("vacuum", title="Gregg", message="Something else"), "gregg")
 
+    def test_the_weekly_grocery_shop_offer_is_the_cart_with_clive(self):
+        self.assertEqual(ni.default_icon("shopping_offer"), "cart+clive")
+
     def test_arrivals_use_the_house(self):
         self.assertEqual(ni.default_icon("arrivals:person.hayley"), "home")
 

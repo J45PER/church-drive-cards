@@ -1,0 +1,15 @@
+alias: Shopping suggestions
+description: 'Use this when someone asks what we usually need, what we are probably running out of, or for ideas for the shopping list. It returns what is usually bought and due again but not on the list yet. Your whole reply must be exactly the text in "say"; if there are suggestions, the person may then ask you to add some, which you do with Shopping add.'
+icon: mdi:cart-heart
+mode: parallel
+max: 5
+sequence:
+- action: church_drive.shopping_read
+  response_variable: r
+- variables:
+    say: '{%- if r.suggestions | count == 0 -%}I have no suggestions yet. I learn what you buy over a few weeks.{%- else -%}You usually have {% for s in r.suggestions[:6] %}{{ s.text }} ({{ s.why }}){{ '', '' if not loop.last else '''' }}{% endfor %}. Shall I add them?{%- endif -%}'
+- variables:
+    result:
+      say: '{{ say }}'
+- stop: Done
+  response_variable: result
