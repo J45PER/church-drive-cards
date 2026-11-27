@@ -139,7 +139,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val enabled = fan?.available == true
     val speeds = fanSpeeds(fan)
     val percentage = fan?.num("percentage") ?: 0.0
-    val current = if (on) speeds.firstOrNull { sp -> if (sp.preset != null) sp.preset == preset else Math.abs(percentage - (sp.percentage ?: 0)) < 5 } else null
+    val current = currentFanSpeed(fan, speeds)
     val others = presets.filter { speedNumber(it) == null }
     val canOscillate = fan?.str("oscillating") != null || ((fan?.num("supported_features")?.toInt() ?: 0) and 2) == 2
     // Icons first: the fan with its speed number, and the fan crossed out for Off, no words.

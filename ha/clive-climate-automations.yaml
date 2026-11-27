@@ -77,7 +77,7 @@
     - action: church_drive.notify
       data:
         kind: clive_actions
-        title: 🌡️ Welcome home
-        message: Clive took the heating off Eco and is looking after it again.
+        title: 'Heating: Auto'
+        message: Welcome home, Eco is off
         tag: church-drive-clive-home
         link: /dashboard-mobile/climate
