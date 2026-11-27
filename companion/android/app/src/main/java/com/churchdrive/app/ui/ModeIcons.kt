@@ -113,6 +113,28 @@ fun currentFanSpeed(fan: com.churchdrive.app.ha.EntityState?, speeds: List<FanSp
     return speeds.firstOrNull { it.n == byStep } ?: speeds.firstOrNull { Math.abs(percentage - (it.percentage ?: 0)) < 5 }
 }
 
+/** How long a fan that stops reporting its speed or mode keeps showing the last one it reported. */
+const val FAN_SPEED_HOLD_MS = 10 * 60 * 1000L
+
+/** What a fan last reported being on, as "speed:2" or "mode:sleep", or null when it reports neither (off, or silent). */
+fun fanChoiceKey(fan: com.churchdrive.app.ha.EntityState?, speeds: List<FanSpeed>): String? {
+    if (fan == null || fan.state != "on") return null
+    currentFanSpeed(fan, speeds)?.let { return "speed:${it.n}" }
+    val preset = fan.str("preset_mode")
+    return if (preset != null && speeds.none { it.preset == preset }) "mode:$preset" else null
+}
+
+/**
+ * The choice to show lit: the fan's own, else, while it is on and reports neither a mode nor a percentage (the Philips fan does this a moment
+ * after something changes it, and sometimes stays so), the last one it reported ([last], its key and when) for up to [FAN_SPEED_HOLD_MS].
+ * A fan that is off never holds one.
+ */
+fun heldFanChoice(fan: com.churchdrive.app.ha.EntityState?, speeds: List<FanSpeed>, last: Pair<String, Long>?, now: Long): String? {
+    fanChoiceKey(fan, speeds)?.let { return it }
+    if (fan == null || fan.state != "on" || fan.str("preset_mode") != null || fan.num("percentage") != null) return null
+    return last?.takeIf { now - it.second <= FAN_SPEED_HOLD_MS }?.first
+}
+
 /** The speedometer for the [i]th of [count] speeds: slow, medium or fast. */
 fun fanSpeedIcon(i: Int, count: Int): String {
     val gauges = listOf("mdi:speedometer-slow", "mdi:speedometer-medium", "mdi:speedometer")

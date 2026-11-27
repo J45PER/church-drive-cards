@@ -240,6 +240,22 @@ class ModeIconsTest {
     }
 
     @Test
+    fun aFanThatStopsReportingKeepsItsLastSpeedOrModeForTenMinutes() {
+        val attrs = """"preset_modes":["speed_1","speed_2","speed_3","sleep"],"percentage_step":33.333333333333336"""
+        val silent = fan("{$attrs,\"preset_mode\":null,\"percentage\":null}")
+        val speeds = com.churchdrive.app.ui.fanSpeeds(silent)
+        fun held(f: EntityState, last: Pair<String, Long>?, now: Long) = com.churchdrive.app.ui.heldFanChoice(f, speeds, last, now)
+        assertEquals("speed:2", held(silent, "speed:2" to 1_000L, 2_000L))
+        assertEquals("mode:sleep", held(silent, "mode:sleep" to 1_000L, 2_000L))
+        assertEquals(null, held(silent, "mode:sleep" to 1_000L, 1_000L + com.churchdrive.app.ui.FAN_SPEED_HOLD_MS + 1))
+        assertEquals(null, held(silent, null, 2_000L))
+        assertEquals(null, held(EntityState("fan.x", "off", JSONObject("{$attrs}")), "speed:2" to 1_000L, 2_000L))
+        // What the fan reports wins over the held one.
+        assertEquals("mode:sleep", held(fan("{$attrs,\"preset_mode\":\"sleep\",\"percentage\":33}"), "speed:2" to 1_000L, 2_000L))
+        assertEquals("speed:3", held(fan("{$attrs,\"percentage\":100}"), "mode:sleep" to 1_000L, 2_000L))
+    }
+
+    @Test
     fun speedsAreSpeedometersAndOtherModesHaveTheirOwnIcons() {
         assertEquals("mdi:speedometer-slow", com.churchdrive.app.ui.fanSpeedIcon(0, 3))
         assertEquals("mdi:speedometer-medium", com.churchdrive.app.ui.fanSpeedIcon(1, 3))
