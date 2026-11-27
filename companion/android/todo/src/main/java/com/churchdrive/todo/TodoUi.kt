@@ -186,7 +186,7 @@ fun TodoApp(vm: TodoModel) {
                     StepsSection(vm)
                     Section(vm, TodoSection.House)
                 }
-                TodoTab.Shopping -> Section(vm, TodoSection.Shopping)
+                TodoTab.Shopping -> ShoppingPage(vm)
                 TodoTab.Cleaning -> Section(vm, TodoSection.Cleaning)
                 TodoTab.Projects -> ProjectsPage(vm)
             }
@@ -216,7 +216,7 @@ private fun TodoSummary(vm: TodoModel, onOpen: () -> Unit) {
 
 /** A heading that sits outside its cards, so a section can hold several cards later. */
 @Composable
-private fun SectionHeader(title: String, count: String?, tone: ToneColors, icon: @Composable () -> Unit) {
+internal fun SectionHeader(title: String, count: String?, tone: ToneColors, icon: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = 6.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         icon()
         Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
@@ -312,7 +312,7 @@ private fun TaskCard(vm: TodoModel, section: TodoSection) {
 
 /** The text box and round plus button at the foot of a card. */
 @Composable
-private fun AddRow(hint: String, text: String, onText: (String) -> Unit, tone: ToneColors, onAdd: () -> Unit) {
+internal fun AddRow(hint: String, text: String, onText: (String) -> Unit, tone: ToneColors, onAdd: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         androidx.compose.material3.TextField(
             value = text, onValueChange = onText, placeholder = { Text(hint) }, singleLine = true,
@@ -525,7 +525,7 @@ private fun NewProjectDialog(tone: ToneColors, onCreate: (String, Boolean, Strin
 }
 
 @Composable
-private fun checks(tone: ToneColors) = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.onContainer.copy(alpha = 0.7f))
+internal fun checks(tone: ToneColors) = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.onContainer.copy(alpha = 0.7f))
 
 @Composable
 private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick: () -> Unit) {

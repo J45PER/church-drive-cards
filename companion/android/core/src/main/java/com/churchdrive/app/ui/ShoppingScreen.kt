@@ -186,9 +186,15 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
     val setStatus = { item: ShoppingItem, status: String ->
         send("church_drive/shopping/item", JSONObject().put("list", list.id).put("item", item.id).put("status", status)) { }
     }
-    list.items.filter { it.status == "open" }.forEach { item ->
+    // A shopping list's items are grouped by aisle, in the order a usual shop walks them.
+    val openItems = list.items.filter { it.status == "open" }
+    val aisles = if (steps) listOf("") else (state.categories + openItems.map { it.cat.ifBlank { "Other" } }).distinct().filter { c -> openItems.any { it.cat.ifBlank { "Other" } == c } }
+    (if (steps) listOf("" to openItems) else aisles.map { c -> c to openItems.filter { it.cat.ifBlank { "Other" } == c } }).forEach { (aisle, group) ->
+      if (aisle.isNotEmpty()) Text(aisle.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      group.forEach { item ->
         EntityCard(neutral.container, neutral.onContainer) {
-            Text(item.text, style = MaterialTheme.typography.bodyLarge)
+            Text(item.text + if (item.qtyLabel.isNotEmpty()) " ${item.qtyLabel}" else "", style = MaterialTheme.typography.bodyLarge)
+            if (item.note.isNotBlank()) Text(item.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TileRow(
                 if (steps) listOf(TileItem("mdi:check", "Done", true) { setStatus(item, "bought") })
                 else listOf(
@@ -198,6 +204,7 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
                 tone, neutral.onContainer,
             )
         }
+      }
     }
     val finished = list.items.filter { it.status != "open" }
     if (finished.isNotEmpty()) {

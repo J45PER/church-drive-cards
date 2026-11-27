@@ -79,6 +79,8 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     )
     fun onBackground() = freshness.onBackground()
     private val api = client.asApi()
+    /** The house line, for the full-page shopping list the trips open into. */
+    val haApi get() = api
 
     var signedIn by mutableStateOf(session.signedIn)
         private set
@@ -572,6 +574,53 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         if (clean.isEmpty() || clean == item.text) return
         shopping = shopping?.let { st -> st.copy(lists = st.lists.map { l -> if (l.id == list.id) l.copy(items = l.items.map { if (it.id == item.id) it.copy(text = clean) else it }) else l }) }
         sendList("church_drive/shopping/rename", JSONObject().put("list", list.id).put("item", item.id).put("text", clean))
+    }
+
+    // ---- Shopping: the main list and its trips ----
+
+    /** Adds what was typed to the main shopping list: one item per line or comma, each with an optional quantity ("milk 2") and note. */
+    fun addShopping(text: String) {
+        val main = shopping?.main ?: return
+        val items = com.churchdrive.app.ui.splitItems(text)
+        if (items.isEmpty()) return
+        sendList("church_drive/shopping/add", JSONObject().put("list", main.id).put("items", JSONArray(items)))
+    }
+
+    /** Marks a main-list item bought, not available or open again (shown at once; the house is then asked again). */
+    fun setShoppingItem(list: ShoppingList, item: ShoppingItem, status: String) {
+        shopping = shopping?.let { st ->
+            st.copy(lists = st.lists.map { l ->
+                if (l.id != list.id) l else if (status == "unavailable") l.copy(items = l.items.filter { it.id != item.id })
+                else l.copy(items = l.items.map { if (it.id == item.id) it.copy(status = status) else it })
+            })
+        }
+        sendList("church_drive/shopping/item", JSONObject().put("list", list.id).put("item", item.id).put("status", status))
+    }
+
+    /** Puts what wasn't available last time back on the main list. */
+    fun addBackMissed() {
+        val st = shopping ?: return
+        val main = st.main ?: return
+        if (st.missed.isEmpty()) return
+        sendList("church_drive/shopping/add", JSONObject().put("list", main.id).put("items", JSONArray(st.missed)))
+    }
+
+    /** Adds one of Clive's suggestions to the main list. */
+    fun addSuggestion(s: com.churchdrive.app.ui.ShoppingSuggestion) {
+        val main = shopping?.main ?: return
+        shopping = shopping?.copy(suggestions = shopping!!.suggestions.filter { it.text != s.text })
+        sendList("church_drive/shopping/add", JSONObject().put("list", main.id).put("items", JSONArray().put(JSONObject().put("text", s.text).put("cat", s.cat))))
+    }
+
+    /** Turns a suggestion down: Clive leaves it out for a few weeks. */
+    fun dismissSuggestion(s: com.churchdrive.app.ui.ShoppingSuggestion) {
+        shopping = shopping?.copy(suggestions = shopping!!.suggestions.filter { it.text != s.text })
+        sendList("church_drive/shopping/dismiss", JSONObject().put("text", s.text))
+    }
+
+    /** Says this person has started (or finished) shopping, so the others see it. */
+    fun setShoppingNow(on: Boolean) {
+        sendList("church_drive/shopping/now", JSONObject().put("on", on))
     }
 
     fun removeStep(list: ShoppingList, item: ShoppingItem) {

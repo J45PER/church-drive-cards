@@ -48,6 +48,30 @@ class ShoppingDataTest {
     }
 
     @Test
+    fun readsTheMainListItemsSuggestionsAndWhoIsShopping() {
+        val s = parseShopping(JSONObject(
+            """{"mine":"Jamie","missed":[],"people":["Jamie"],"categories":["Fruit and veg","Dairy","Other"],
+            "suggestions":[{"text":"Bread","cat":"Bakery","reason":"most weeks"}],
+            "now":{"person":"Hayley","place":"Tesco Extra","left":3},
+            "lists":[{"id":"aaaaaa111111","name":"Shopping","main":true,"people":["Jamie"],"date":"","places":[],"done":false,
+              "items":[{"id":"i1","text":"Milk","status":"open","qty":2,"note":"semi-skimmed","cat":"Dairy"},{"id":"i2","text":"Eggs","status":"open"}]},
+              {"id":"bbbbbb222222","name":"Costco run","people":["Jamie"],"date":"2026-11-29","places":[],"done":false,"items":[]}]}""",
+        ))!!
+        assertEquals("aaaaaa111111", s.main?.id)
+        assertEquals(listOf("bbbbbb222222"), s.trips.map { it.id })
+        assertEquals(listOf("Fruit and veg", "Dairy", "Other"), s.categories)
+        val milk = s.main!!.items[0]
+        assertEquals(Triple(2, "semi-skimmed", "Dairy"), Triple(milk.qty, milk.note, milk.cat))
+        assertEquals("x2", milk.qtyLabel)
+        assertEquals("", s.main!!.items[1].qtyLabel)
+        assertEquals("Bread", s.suggestions.single().text)
+        assertEquals("Hayley", s.now?.person)
+        assertEquals(3, s.now?.left)
+        // The main list is not a trip, so the shopping card leaves it out.
+        assertEquals(listOf("bbbbbb222222"), openLists(s).map { it.id })
+    }
+
+    @Test
     fun openListsAreSoonestFirstAndOnlyThePersons() {
         val s = parseShopping(reply)!!
         assertEquals(listOf("aaaaaa111111", "bbbbbb222222"), openLists(s).map { it.id })
