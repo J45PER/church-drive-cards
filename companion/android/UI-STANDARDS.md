@@ -60,12 +60,24 @@ so it takes the whole width above the columns. Look at a change on a phone uprig
   `TonePill`, `ToneTile`, `PersonButton`) and `SignInForm.kt`; use those, don't make private copies. (The phone app keeps its richer
   `EntityCard` and tile rows in `ui/Cards.kt` and `ui/UiKit.kt`.)
 
+## Forms and pickers (decided 2026-11-27)
+
+The reference is the To-Do edit-task page (`todo/.../TodoEditUi.kt`) and the "Common elements" board. Every form in every app is built from these, nothing else:
+
+- **Page**: `FullPage`; a form is never a bare column of controls.
+- **Text box**: `WashField` (10% wash, 18 dp corners, name above the text, no outline). Never `OutlinedTextField` (existing ones are being converted; the count may only go down).
+- **A day**: `OptionRow(DUE_CHOICES)` plus a "Pick a date" `TileItem("mdi:calendar-edit")` opening `DatePickDialog`. Never a typed date.
+- **A time**: `TimeTile`, which opens `TimePickDialog` (the clock). Never a typed time.
+- **Pickers** (date, time, single choice, length) all use `AppDialog`: grey acrylic card, tone accent, text Cancel / OK from `DialogButtons`. Never a Material `DatePickerDialog` or a bare `AlertDialog` for a picker.
+- **People**: a `TileRow` of `mdi:account-outline` tiles. **Choices** that scroll: `OptionRow`. **Buttons at the foot**: a `TileRow` of Cancel and Save (Save selected), and a red Delete tile that asks twice.
+
 ## What `UiStandardsTest` checks
 
 - `tileRowSizes` never leaves a gap and never makes the last row the longest.
 - No file but `UiKit.kt` types a 48, 56 or 64 dp height.
 - Tile labels use `CentredText` (tile rows, alarm modes, scene tiles).
 - The only raw Material buttons are the few allowed (login, the add-task button, the step buttons); a new one fails.
+- No new `OutlinedTextField` (a per-file ceiling that only goes down), and the date picker is the shared `AppDialog`, not Material's `DatePickerDialog`.
 - Every `"mdi:..."` named in the code is a real icon, and every built-in icon is in the full set.
 
 ## Where things are

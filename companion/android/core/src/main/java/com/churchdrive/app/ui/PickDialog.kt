@@ -40,26 +40,27 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 /** The frame every picker dialog shares: the app's grey acrylic card in the middle of the screen, with the tone's colours handed to [content]. */
 @Composable
-internal fun AppDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.(ToneColors) -> Unit) {
+internal fun AppDialog(onDismiss: () -> Unit, maxWidth: Dp = 360.dp, inset: Dp = 24.dp, content: @Composable ColumnScope.(ToneColors) -> Unit) {
     val tone = toneColors(Tone.Grey)
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
-            Modifier.padding(horizontal = 16.dp).widthIn(max = 360.dp).fillMaxWidth().clip(RoundedCornerShape(28.dp))
+            Modifier.padding(horizontal = 16.dp).widthIn(max = maxWidth).fillMaxWidth().clip(RoundedCornerShape(28.dp))
                 .background(Brush.linearGradient(listOf(tone.container, lerp(tone.container, tone.accent, 0.14f))))
-                .padding(24.dp),
+                .padding(inset),
         ) { content(tone) }
     }
 }
 
 /** Cancel, and OK when [onOk] is given, in the tone's accent colour. */
 @Composable
-private fun DialogButtons(tone: ToneColors, onCancel: () -> Unit, onOk: (() -> Unit)?) {
+internal fun DialogButtons(tone: ToneColors, onCancel: () -> Unit, onOk: (() -> Unit)?) {
     val colours = ButtonDefaults.textButtonColors(contentColor = tone.accent)
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
         TextButton(onClick = onCancel, colors = colours) { Text("Cancel") }

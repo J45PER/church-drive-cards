@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.198.0
+
+- **Forms and pickers are consistent.** The new shopping list form uses the same wash boxes, day tiles, "Pick a date" tile and clock time tile as the edit-task page, and the calendar picker looks like the clock picker.
+
 ## 0.197.0
 
 - No change; the version moves with the house.
