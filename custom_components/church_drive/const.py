@@ -129,6 +129,9 @@ WS_SHOPPING_RENAME = "church_drive/shopping/rename"
 WS_TASK_ALERTS = "church_drive/task_alerts"
 WS_TASK_ALERT_SET = "church_drive/task_alerts/set"
 WS_SHOPPING_IMPORT = "church_drive/shopping/import"
+WS_SHOPPING_FIELDS = "church_drive/shopping/fields"
+WS_SHOPPING_DISMISS = "church_drive/shopping/dismiss"
+WS_SHOPPING_NOW = "church_drive/shopping/now"
 
 # What the lights do when an alarm goes off (alarm_lights.py).
 WS_ALARM_LIGHTS = "church_drive/alarm_lights"

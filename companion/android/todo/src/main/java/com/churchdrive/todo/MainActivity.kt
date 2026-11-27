@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
                             onLogin = vm::login, onCode = vm::submitCode,
                         )
                     } else {
-                        TodoApp(vm)
+                        androidx.compose.runtime.CompositionLocalProvider(com.churchdrive.app.ui.LocalHaApi provides vm.haApi) { TodoApp(vm) }
                     }
                 }
             }

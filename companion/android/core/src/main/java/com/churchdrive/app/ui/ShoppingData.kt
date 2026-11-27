@@ -4,7 +4,18 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** One thing to buy. [status] is "open", "bought" or "unavailable". */
-data class ShoppingItem(val id: String, val text: String, val status: String)
+data class ShoppingItem(
+    val id: String,
+    val text: String,
+    val status: String,
+    /** How many (1 unless said), a short note ("semi-skimmed") and the aisle it is sorted into; empty for a step. */
+    val qty: Int = 1,
+    val note: String = "",
+    val cat: String = "",
+) {
+    /** "Milk x2" style label of the quantity, or "" for one. */
+    val qtyLabel: String get() = if (qty > 1) "x$qty" else ""
+}
 
 /** A shopping list: one task on each person's to-do list, with these items inside. */
 data class ShoppingList(
@@ -18,6 +29,8 @@ data class ShoppingList(
     val items: List<ShoppingItem>,
     /** "shopping" (the default), "steps" (a checklist that works the same way with different words) or "project" (a longer checklist with its own page). */
     val kind: String = "shopping",
+    /** The shopping list that is always there, shared by everyone and never finished (the others are trips). */
+    val main: Boolean = false,
 ) {
     val open: Int get() = items.count { it.status == "open" }
     val isSteps: Boolean get() = kind == "steps"
@@ -39,13 +52,27 @@ fun mapsWebUrl(p: ShoppingPlace): String = "https://www.google.com/maps/dir/?api
 /** The link the Google Maps app opens straight into turn-by-turn navigation. */
 fun navigationUri(p: ShoppingPlace): String = "google.navigation:q=${p.lat},${p.lon}"
 
+/** Something Clive suggests adding: an item usually bought that is due again, its aisle and why. */
+data class ShoppingSuggestion(val text: String, val cat: String, val reason: String)
+
+/** Someone in a shop right now, and how many items are left on the main list. */
+data class ShoppingNow(val person: String, val place: String, val left: Int)
+
 /** Everything `church_drive/shopping` returns. [mine] is the signed-in person's first name, [missed] what wasn't available last time. */
 data class ShoppingState(
     val lists: List<ShoppingList>,
     val mine: String,
     val missed: List<String>,
     val people: List<String>,
-)
+    /** The aisles in shop order, what Clive suggests and who is shopping now. */
+    val categories: List<String> = emptyList(),
+    val suggestions: List<ShoppingSuggestion> = emptyList(),
+    val now: ShoppingNow? = null,
+) {
+    val main: ShoppingList? get() = lists.firstOrNull { it.main }
+    /** The named trips (every shopping list but the main one), soonest first. */
+    val trips: List<ShoppingList> get() = lists.filter { it.kind == "shopping" && !it.main && !it.done }.sortedWith(compareBy<ShoppingList>({ it.date.isEmpty() }, { it.date }))
+}
 
 private fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else (0 until length()).map { optString(it) }.filter { it.isNotEmpty() }
 private fun JSONArray?.objects(): List<JSONObject> = if (this == null) emptyList() else (0 until length()).mapNotNull { optJSONObject(it) }
@@ -58,8 +85,11 @@ fun parseShoppingList(o: JSONObject): ShoppingList = ShoppingList(
     time = o.optString("time"),
     places = o.optJSONArray("places").objects().mapNotNull { parsePlace(it) },
     done = o.optBoolean("done"),
-    items = o.optJSONArray("items").objects().map { ShoppingItem(it.optString("id"), it.optString("text"), it.optString("status", "open")) },
+    items = o.optJSONArray("items").objects().map {
+        ShoppingItem(it.optString("id"), it.optString("text"), it.optString("status", "open"), it.optInt("qty", 1).coerceAtLeast(1), it.optString("note"), it.optString("cat"))
+    },
     kind = when (o.optString("kind")) { "steps" -> "steps"; "project" -> "project"; else -> "shopping" },
+    main = o.optBoolean("main"),
 )
 
 /** The reply of `church_drive/shopping`, or null if it isn't one. */
@@ -71,12 +101,15 @@ fun parseShopping(result: Any?): ShoppingState? {
         mine = o.optString("mine"),
         missed = o.optJSONArray("missed").objects().map { it.optString("text") }.filter { it.isNotEmpty() },
         people = o.optJSONArray("people").strings(),
+        categories = o.optJSONArray("categories").strings(),
+        suggestions = o.optJSONArray("suggestions").objects().map { ShoppingSuggestion(it.optString("text"), it.optString("cat"), it.optString("reason")) }.filter { it.text.isNotEmpty() },
+        now = o.optJSONObject("now")?.takeIf { it.optString("person").isNotEmpty() }?.let { ShoppingNow(it.optString("person"), it.optString("place"), it.optInt("left")) },
     )
 }
 
 /** The lists still to do, soonest date first and undated last, optionally only those [first] is on. */
 fun openLists(state: ShoppingState, first: String? = null): List<ShoppingList> =
-    state.lists.filter { it.kind == "shopping" && !it.done && (first.isNullOrBlank() || first in it.people) }
+    state.lists.filter { it.kind == "shopping" && !it.done && !it.main && (first.isNullOrBlank() || first in it.people) }
         .sortedWith(compareBy<ShoppingList>({ it.date.isEmpty() }, { it.date }))
 
 private val MARKER = Regex("church-drive-shopping:([0-9a-f]{6,32})")

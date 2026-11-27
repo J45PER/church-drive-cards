@@ -121,6 +121,77 @@ class Rename(unittest.TestCase):
             sl.rename_item(items, "nope", "Three", "project")
 
 
+class ShoppingMainList(unittest.TestCase):
+    def test_what_was_typed_gives_a_name_a_quantity_and_a_note(self):
+        self.assertEqual(sl.parse_item("milk 2"), ("Milk", 2, ""))
+        self.assertEqual(sl.parse_item("2x milk"), ("Milk", 2, ""))
+        self.assertEqual(sl.parse_item("milk x2"), ("Milk", 2, ""))
+        self.assertEqual(sl.parse_item("Milk (semi-skimmed)"), ("Milk", 1, "semi-skimmed"))
+        self.assertEqual(sl.parse_item("bread - seeded"), ("Bread", 1, "seeded"))
+        self.assertEqual(sl.parse_item("buy eggs"), ("Eggs", 1, ""))
+        # A step is left as written.
+        self.assertEqual(sl.parse_item("Call 2 plumbers", sl.STEPS), ("Call 2 plumbers", 1, ""))
+
+    def test_items_are_sorted_into_aisles(self):
+        for text, cat in [("Bananas", "Fruit and veg"), ("Cheddar", "Dairy"), ("Sourdough loaf", "Bakery"), ("Kitchen roll", "Household"),
+                          ("Tea bags", "Drinks"), ("Smoked salmon", "Meat and fish"), ("Lightbulbs", "Other")]:
+            self.assertEqual(sl.guess_category(text), cat, text)
+
+    def test_an_added_item_carries_its_quantity_note_and_aisle(self):
+        items, _ = sl.add_items([], ["milk 2", {"text": "Wine", "cat": "Drinks", "note": "red"}], nid)
+        self.assertEqual((items[0]["text"], items[0]["qty"], items[0]["cat"]), ("Milk", 2, "Dairy"))
+        self.assertEqual((items[1]["qty"], items[1]["note"], items[1]["cat"]), (1, "red", "Drinks"))
+        # Steps stay plain.
+        steps, _ = sl.add_items([], ["Call 2 plumbers"], nid, sl.STEPS)
+        self.assertNotIn("qty", steps[0])
+
+    def test_asking_again_changes_the_quantity_and_reopens(self):
+        items, _ = sl.add_items([], ["milk"], nid)
+        items = sl.set_status(items, items[0]["id"], sl.BOUGHT)
+        items, n = sl.add_items(items, ["milk 3"], nid)
+        self.assertEqual((n, items[0]["status"], items[0]["qty"]), (1, sl.OPEN, 3))
+
+    def test_quantity_note_and_aisle_can_be_changed(self):
+        items, _ = sl.add_items([], ["milk"], nid)
+        items = sl.set_fields(items, items[0]["id"], qty=4, note="oat", cat="Drinks")
+        self.assertEqual((items[0]["qty"], items[0]["note"], items[0]["cat"]), (4, "oat", "Drinks"))
+        with self.assertRaises(ValueError):
+            sl.set_fields(items, items[0]["id"], cat="Nonsense")
+        with self.assertRaises(KeyError):
+            sl.set_fields(items, "nope", qty=1)
+
+    def test_older_items_get_the_new_fields(self):
+        self.assertEqual(sl.with_defaults({"id": "a", "text": "Eggs", "status": "open"}), {"id": "a", "text": "Eggs", "status": "open", "qty": 1, "note": "", "cat": "Dairy"})
+
+    def test_what_is_bought_is_remembered_and_suggested_when_due(self):
+        h = {}
+        for day in ("2026-10-24", "2026-10-31", "2026-11-07", "2026-11-14"):
+            h = sl.record_bought(h, "Bread", "Bakery", day)
+        h = sl.record_bought(h, "Caviar", "Other", "2026-11-14")
+        # Bought weekly: not due 3 days after, due 7 days after; once is not a habit.
+        self.assertEqual(sl.suggestions(h, "2026-11-17", [], {}), [])
+        got = sl.suggestions(h, "2026-11-21", [], {})
+        self.assertEqual([(g["text"], g["cat"], g["reason"]) for g in got], [("Bread", "Bakery", "most weeks")])
+        # Not suggested when it is already on the list, or after it was dismissed.
+        self.assertEqual(sl.suggestions(h, "2026-11-21", ["bread"], {}), [])
+        self.assertEqual(sl.suggestions(h, "2026-11-21", [], {"bread": sl.dismissed_until("2026-11-21")}), [])
+        self.assertEqual(len(sl.suggestions(h, "2026-12-30", [], {"bread": "2026-12-01"})), 1)
+
+    def test_reasons_read_like_a_person_would_say_them(self):
+        self.assertEqual(sl.reason_for(7), "most weeks")
+        self.assertEqual(sl.reason_for(21), "every 3 weeks")
+        self.assertEqual(sl.reason_for(3), "every 3 days")
+
+    def test_bought_items_leave_the_main_list_after_a_day(self):
+        items = [
+            {"id": "a", "text": "Old", "status": "bought", "bought_at": "2026-11-20T09:00:00+00:00"},
+            {"id": "b", "text": "New", "status": "bought", "bought_at": "2026-11-21T09:00:00+00:00"},
+            {"id": "c", "text": "Open", "status": "open"},
+        ]
+        kept = sl.clear_old_bought(items, "2026-11-21T12:00:00+00:00")
+        self.assertEqual([i["id"] for i in kept], ["b", "c"])
+
+
 if __name__ == "__main__":
     unittest.main()
 

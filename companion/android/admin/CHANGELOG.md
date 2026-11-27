@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.196.0
+
+- No change; the version moves with the house.
+
 ## 0.195.3
 
 - No change; the version moves with the house.

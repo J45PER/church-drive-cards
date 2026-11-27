@@ -53,6 +53,9 @@ class Shopping:
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.shopping")
         self._lists: list[dict[str, Any]] = []
         self._missed: list[dict[str, Any]] = []
+        self._history: dict[str, Any] = {}  # what has been bought, and on which days (sl.record_bought)
+        self._dismissed: dict[str, str] = {}  # suggestions turned down, until a date
+        self._now: dict[str, Any] = {}  # who is in a shop at the moment: {person, place, since}
         self._unsub: list[Callable[[], None]] = []
         self._last: dict[tuple[str, str], Any] = {}
 
@@ -62,7 +65,14 @@ class Shopping:
         data = await self._store.async_load() or {}
         self._lists = list(data.get("lists", []))
         self._missed = list(data.get("missed", []))
+        self._history = dict(data.get("history", {}))
+        self._dismissed = dict(data.get("dismissed", {}))
         changed = False
+        if not any(l.get("main") for l in self._lists):
+            self._lists.insert(0, self._new_main())
+            changed = True
+        if self._sync_main_people():
+            changed = True
         for lst in self._lists:
             # Lists made when places were zones kept zone ids: turn them into places. Every list also gets a time.
             kept = self._places_valid(lst.get("places", []))
@@ -74,6 +84,7 @@ class Shopping:
         if changed:
             await self._async_save()
         self._unsub.append(self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_state))
+        self.hass.async_create_task(self._async_import_main())
         self._unsub.append(async_track_time_change(self.hass, self._on_morning, hour=8, minute=0, second=0))
         self._unsub.append(async_track_time_change(self.hass, self._on_minute, second=0))
         self._unsub.append(async_track_time_change(self.hass, self._on_housekeeping, minute=15, second=0))
@@ -86,13 +97,34 @@ class Shopping:
         self._unsub.clear()
 
     async def _async_save(self) -> None:
-        await self._store.async_save({"lists": self._lists, "missed": self._missed})
+        await self._store.async_save({"lists": self._lists, "missed": self._missed, "history": self._history, "dismissed": self._dismissed})
 
     def _changed(self, context: Context | None = None) -> None:
         async_dispatcher_send(self.hass, SIGNAL_SHOPPING)
         self.hass.bus.async_fire(EVENT_SHOPPING, {"open": len([l for l in self._lists if not l["done"]])}, context=context)
 
     # ---- reading ---------------------------------------------------------
+
+    def _new_main(self) -> dict[str, Any]:
+        """The shopping list that is always there: shared by everyone, never finished, with no task on anyone's to-do list."""
+        return {
+            "id": uuid.uuid4().hex[:12], "kind": sl.SHOPPING, "main": True, "name": "Shopping", "people": self._firsts(), "date": "", "time": "",
+            "places": [], "items": [], "created": dt_util.utcnow().isoformat(), "done": False, "done_at": "", "tasks": {},
+        }
+
+    def _sync_main_people(self) -> bool:
+        """The main list is for everyone, including people added later. True when that changed it."""
+        main = self.main()
+        if main is None:
+            return False
+        everyone = self._firsts()
+        if everyone and main["people"] != everyone:
+            main["people"] = everyone
+            return True
+        return False
+
+    def main(self) -> dict[str, Any] | None:
+        return next((l for l in self._lists if l.get("main")), None)
 
     def _firsts(self) -> list[str]:
         return [p["first"] for p in self._people.people()] if self._people else []
@@ -112,16 +144,17 @@ class Shopping:
 
     def lists(self, first: str | None = None, kind: str | None = None) -> list[dict[str, Any]]:
         """Every list (or those a person is on, or of one kind), unfinished first, soonest date first."""
+        self._sync_main_people()
         mine = [l for l in self._lists if (first is None or first in l["people"]) and (kind is None or sl.kind_of(l) == kind)]
-        out = sorted(mine, key=lambda l: (l["done"], l["date"] == "", l["date"], l["created"]))
-        return [{**l, "counts": sl.counts(l["items"])} for l in out]
+        out = sorted(mine, key=lambda l: (not l.get("main"), l["done"], l["date"] == "", l["date"], l["created"]))
+        return [self._public(l) for l in out]
 
     def missed(self) -> list[dict[str, Any]]:
         return [dict(m) for m in self._missed]
 
     def default_for(self, first: str | None) -> dict[str, Any] | None:
-        """Where a person's shared items go unless they say otherwise."""
-        return sl.pick_list(self._lists, first) if first else None
+        """Where shared and spoken items go unless a list is named: the main list, whoever is asking."""
+        return self.main()
 
     def zones(self) -> list[dict[str, str]]:
         out = [{"zone": s.entity_id, "name": "Home" if s.entity_id == "zone.home" else s.name} for s in self.hass.states.async_all("zone")]
@@ -230,7 +263,7 @@ class Shopping:
         await self._async_after(lst, context)
         return self._public(lst)
 
-    async def async_add_items(self, list_id: str, texts: list[str], context: Context | None = None) -> dict[str, Any]:
+    async def async_add_items(self, list_id: str, texts: list[Any], context: Context | None = None) -> dict[str, Any]:
         lst = self._find(list_id)
         lst["items"], added = sl.add_items(lst["items"], texts, lambda: uuid.uuid4().hex[:8], sl.kind_of(lst))
         if sl.kind_of(lst) == sl.SHOPPING:
@@ -240,7 +273,24 @@ class Shopping:
 
     async def async_set_item(self, list_id: str, item_id: str, status: str, context: Context | None = None) -> dict[str, Any]:
         lst = self._find(list_id)
-        lst["items"] = sl.set_status(lst["items"], item_id, status, sl.kind_of(lst))
+        kind = sl.kind_of(lst)
+        lst["items"] = sl.set_status(lst["items"], item_id, status, kind)
+        if kind == sl.SHOPPING:
+            item = next(i for i in lst["items"] if i["id"] == item_id)
+            if status == sl.BOUGHT:
+                item["bought_at"] = dt_util.utcnow().isoformat()
+                self._history = sl.record_bought(self._history, item["text"], item.get("cat") or sl.guess_category(item["text"]), dt_util.now().date().isoformat())
+            else:
+                item.pop("bought_at", None)
+        await self._async_after(lst, context)
+        return self._public(lst)
+
+    async def async_set_item_fields(
+        self, list_id: str, item_id: str, qty: Any = None, note: Any = None, cat: Any = None, context: Context | None = None
+    ) -> dict[str, Any]:
+        """Change an item's quantity, note or aisle."""
+        lst = self._find(list_id)
+        lst["items"] = sl.set_fields(lst["items"], item_id, qty, note, cat)
         await self._async_after(lst, context)
         return self._public(lst)
 
@@ -258,6 +308,8 @@ class Shopping:
 
     async def async_delete(self, list_id: str, context: Context | None = None) -> None:
         lst = self._find(list_id)
+        if lst.get("main"):
+            raise ValueError("The main shopping list is always there")
         for first in list(lst["tasks"]):
             await self._async_remove_task(lst, first, context)
         self._lists.remove(lst)
@@ -277,11 +329,22 @@ class Shopping:
 
     @staticmethod
     def _public(lst: dict[str, Any]) -> dict[str, Any]:
-        return {**lst, "counts": sl.counts(lst["items"])}
+        kind = sl.kind_of(lst)
+        return {**lst, "items": [sl.with_defaults(i, kind) for i in lst["items"]], "counts": sl.counts(lst["items"])}
 
     # ---- keeping the to-do tasks and the finished state in step -----------------
 
     async def _async_after(self, lst: dict[str, Any], context: Context | None) -> None:
+        if lst.get("main"):
+            # Never finished and not a task anywhere. What is not available goes straight to "not available last time".
+            gone = [i for i in lst["items"] if i["status"] == sl.UNAVAILABLE]
+            if gone:
+                self._missed = sl.merge_missed(self._missed, [i["text"] for i in gone], lst["name"] or "Shopping", dt_util.now().date().isoformat())
+                lst["items"] = [i for i in lst["items"] if i["status"] != sl.UNAVAILABLE]
+            lst["done"] = False
+            await self._async_save()
+            self._changed(context)
+            return
         was_done = lst["done"]
         lst["done"] = sl.is_done(lst["items"])
         if lst["done"] and not was_done:
@@ -361,7 +424,72 @@ class Shopping:
             self._changed()
 
     async def _on_housekeeping(self, _now: Any) -> None:
+        main = self.main()
+        changed = self._sync_main_people()
+        if main is not None:
+            kept = sl.clear_old_bought(main["items"], dt_util.utcnow().isoformat())
+            if len(kept) != len(main["items"]):
+                main["items"] = kept
+                changed = True
+        if changed:
+            await self._async_save()
+            self._changed()
         await self._async_purge()
+
+    # ---- what to suggest, and who is shopping ----------------------------------------
+
+    def suggestions(self) -> list[dict[str, Any]]:
+        """Things usually bought that are due again and not on the main list (Clive offers them)."""
+        main = self.main()
+        open_texts = [i["text"] for i in (main["items"] if main else []) if i["status"] == sl.OPEN]
+        return sl.suggestions(self._history, dt_util.now().date().isoformat(), open_texts, self._dismissed)
+
+    async def async_dismiss_suggestion(self, text: str, context: Context | None = None) -> None:
+        """Stop suggesting an item for a few weeks."""
+        key = sl.norm(text)
+        if key:
+            self._dismissed[key] = sl.dismissed_until(dt_util.now().date().isoformat())
+            await self._async_save()
+            self._changed(context)
+
+    def shopping_now(self) -> dict[str, Any] | None:
+        """Who is in a shop right now, and how many items are left on the main list (a stale entry, over three hours, is dropped)."""
+        if not self._now:
+            return None
+        since = dt_util.parse_datetime(self._now.get("since", ""))
+        if since is None or dt_util.utcnow() - since > timedelta(hours=3):
+            self._now = {}
+            return None
+        main = self.main()
+        left = len([i for i in (main["items"] if main else []) if i["status"] == sl.OPEN])
+        return {**self._now, "left": left}
+
+    async def async_set_now(self, first: str, on: bool, place: str = "", context: Context | None = None) -> dict[str, Any] | None:
+        """Say someone has started (or finished) shopping, so the others see it on the list."""
+        if on:
+            self._now = {"person": first, "place": _clean(place), "since": dt_util.utcnow().isoformat()}
+        elif self._now.get("person") == first:
+            self._now = {}
+        self._changed(context)
+        return self.shopping_now()
+
+    async def _async_import_main(self) -> None:
+        """Move anything on Home Assistant's own shopping list (a voice assistant added it, say) onto the main list."""
+        main = self.main()
+        if main is None or self.hass.states.get(HA_SHOPPING) is None:
+            return
+        try:
+            result = await self.hass.services.async_call(
+                "todo", "get_items", {"entity_id": HA_SHOPPING, "status": ["needs_action"]}, blocking=True, return_response=True
+            )
+            found = ((result or {}).get(HA_SHOPPING) or {}).get("items") or []
+            if not found:
+                return
+            await self.async_add_items(main["id"], [i["summary"] for i in found])
+            for i in found:
+                await self.hass.services.async_call("todo", "remove_item", {"entity_id": HA_SHOPPING, "item": i["uid"]}, blocking=True)
+        except Exception:  # noqa: BLE001 - tried again at the next change
+            _LOGGER.debug("Couldn't move Home Assistant's shopping list onto the main list", exc_info=True)
 
     # ---- reminding -------------------------------------------------------
 
@@ -428,6 +556,10 @@ class Shopping:
     def _on_state(self, event: Event) -> None:
         new = event.data.get("new_state")
         old = event.data.get("old_state")
+        if new is not None and new.entity_id == HA_SHOPPING:
+            if new.state not in ("0", "unknown", "unavailable"):
+                self.hass.async_create_task(self._async_import_main())
+            return
         if new is not None and new.entity_id.startswith("todo."):
             # A shopping task is only finished by finishing its list: if someone ticks it, put it back.
             if any(not l["done"] and self._todo_of(f) == new.entity_id for l in self._lists for f in l["tasks"]):
@@ -484,6 +616,11 @@ class Shopping:
             return
         self._last[(first, zone.entity_id)] = now
         mine = [l for l in sl.for_person(self._lists, first) if not l["places"] and sl.kind_of(l) == sl.SHOPPING]
+        self._sync_main_people()
+        main = self.main()
+        if main is not None and any(i["status"] == sl.OPEN for i in main["items"]):
+            self._now = {"person": first, "place": zone.name, "since": dt_util.utcnow().isoformat()}
+            self._changed()
         said = sl.arrival_message(zone.name, mine, self._missed)
         if said is None:
             return

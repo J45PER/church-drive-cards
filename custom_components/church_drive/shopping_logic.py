@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 import re
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 OPEN, BOUGHT, UNAVAILABLE = "open", "bought", "unavailable"
@@ -24,6 +24,20 @@ MARKER = "church-drive-shopping:"
 # A steps task's marker has this word after the id, so the cards and app say "to do" instead of "to get".
 STEPS_WORD = " steps"
 MAX_ITEMS = 200
+
+# The aisles a shopping item is sorted into, in the order a usual shop walks them. Each has words that say an item belongs there.
+CATEGORIES: list[tuple[str, tuple[str, ...]]] = [
+    ("Fruit and veg", ("banana", "apple", "orange", "lemon", "lime", "grape", "berries", "strawberr", "blueberr", "raspberr", "melon", "pear", "peach", "plum", "avocado", "tomato", "potato", "onion", "garlic", "carrot", "broccoli", "cauliflower", "cabbage", "lettuce", "salad", "spinach", "rocket", "cucumber", "pepper", "mushroom", "courgette", "aubergine", "celery", "leek", "sprout", "pea", "bean", "corn", "herb", "basil", "parsley", "coriander", "ginger", "fruit", "veg")),
+    ("Meat and fish", ("chicken", "beef", "pork", "lamb", "bacon", "sausage", "mince", "steak", "ham", "turkey", "salmon", "fish", "cod", "tuna", "prawn", "haddock", "burger", "gammon")),
+    ("Dairy", ("milk", "cheese", "cheddar", "butter", "yoghurt", "yogurt", "cream", "egg", "margarine", "mozzarella", "feta", "halloumi", "custard")),
+    ("Bakery", ("bread", "loaf", "roll", "bun", "bagel", "wrap", "pitta", "croissant", "crumpet", "muffin", "cake", "baguette", "sourdough", "tortilla")),
+    ("Cupboard", ("pasta", "rice", "noodle", "flour", "sugar", "oil", "sauce", "ketchup", "mayo", "beans", "soup", "tin", "tinned", "cereal", "oats", "porridge", "stock", "spice", "salt", "jam", "honey", "peanut butter", "curry", "lentil", "chickpea", "nuts")),
+    ("Snacks", ("crisps", "chocolate", "biscuit", "sweets", "snack", "popcorn", "cookie", "bar", "ice cream", "dessert")),
+    ("Drinks", ("tea", "coffee", "juice", "squash", "water", "cola", "lemonade", "beer", "wine", "cider", "gin", "vodka", "whisky", "drink", "fizzy", "cordial")),
+    ("Household", ("bin bag", "washing", "dishwasher", "tablet", "kitchen roll", "toilet", "tissue", "foil", "cling", "sponge", "bleach", "cleaner", "spray", "detergent", "softener", "nappies", "shampoo", "soap", "toothpaste", "deodorant", "batteries", "bulb", "candle", "wipes")),
+]
+OTHER = "Other"
+CATEGORY_NAMES = [c for c, _ in CATEGORIES] + [OTHER]
 
 # Words in a zone's name that mean a shop, so arriving there can bring up the list.
 SHOP_WORDS = (
@@ -51,24 +65,103 @@ def clean_item(text: Any, kind: str = SHOPPING) -> str:
     return (t[:1].upper() + t[1:])[:120]
 
 
-def add_items(items: list[dict[str, Any]], texts: list[str], new_id: Any, kind: str = SHOPPING) -> tuple[list[dict[str, Any]], int]:
+def guess_category(text: Any) -> str:
+    """The aisle an item most likely belongs in, from its words ("Other" when nothing fits)."""
+    n = f" {norm(text)} "
+    if any(w in n for w in (" kitchen roll", " toilet roll", " bin bag", " washing ", " dishwasher")):
+        return "Household"
+    for name, words in CATEGORIES:
+        if any(f" {w}" in n or n.strip().startswith(w) for w in words):
+            return name
+    return OTHER
+
+
+_QTY_WORD = re.compile(r"^\s*(\d{1,3})\s*(?:x|×)?\s+(?!\d)(.+)$", re.I)
+_QTY_TAIL = re.compile(r"^(.+?)\s+(?:x|×)?\s*(\d{1,3})\s*$", re.I)
+
+
+def parse_item(text: Any, kind: str = SHOPPING) -> tuple[str, int, str]:
+    """(name, quantity, note) from what was typed: "milk 2", "2 milk", "2x milk", "milk x2" and "milk (semi-skimmed)" or "milk - semi-skimmed".
+    A checklist step is left as written."""
+    raw = " ".join(str(text or "").split())
+    if checklist(kind):
+        return clean_item(raw, kind), 1, ""
+    note = ""
+    m = re.search(r"\s*[(\[](.{1,60})[)\]]\s*$", raw) or re.search(r"\s+-\s+(.{1,60})$", raw)
+    if m:
+        note = m.group(1).strip()
+        raw = raw[: m.start()].strip()
+    qty = 1
+    m = _QTY_TAIL.match(raw)
+    if m and not re.search(r"\d", m.group(1)):
+        raw, qty = m.group(1), int(m.group(2))
+    else:
+        m = _QTY_WORD.match(raw)
+        if m:
+            qty, raw = int(m.group(1)), m.group(2)
+    return clean_item(raw, kind), max(1, min(qty, 99)), note[:60]
+
+
+def with_defaults(item: dict[str, Any], kind: str = SHOPPING) -> dict[str, Any]:
+    """An item with the fields a shopping item always has (older lists were saved without them)."""
+    if checklist(kind):
+        return item
+    return {**item, "qty": int(item.get("qty") or 1), "note": str(item.get("note") or ""), "cat": item.get("cat") or guess_category(item.get("text"))}
+
+
+def add_items(items: list[dict[str, Any]], texts: list[Any], new_id: Any, kind: str = SHOPPING) -> tuple[list[dict[str, Any]], int]:
     """[items] with each of [texts] added unless an open item already says the same. Returns (items, how many were added).
+    A text may carry a quantity and a note ("milk 2", "bread (seeded)"); an entry may also be a dict with text, qty, note and cat.
     An item that was bought or unavailable and is asked for again is reopened."""
     out = [dict(i) for i in items]
     added = 0
     for raw in texts:
-        text = clean_item(raw, kind)
+        given = raw if isinstance(raw, dict) else {}
+        text, qty, note = parse_item(given.get("text") if given else raw, kind)
+        if given:
+            qty = max(1, min(int(given.get("qty") or qty), 99))
+            note = str(given.get("note") if given.get("note") is not None else note)[:60]
         if not text or len(out) >= MAX_ITEMS:
             continue
         same = next((i for i in out if norm(i["text"]) == norm(text)), None)
         if same is not None:
             if same["status"] != OPEN:
                 same["status"] = OPEN
+                same.pop("bought_at", None)
                 added += 1
+            if not checklist(kind) and (qty > 1 or note):
+                same["qty"] = qty if qty > 1 else same.get("qty", 1)
+                same["note"] = note or same.get("note", "")
             continue
-        out.append({"id": new_id(), "text": text, "status": OPEN})
+        entry: dict[str, Any] = {"id": new_id(), "text": text, "status": OPEN}
+        if not checklist(kind):
+            cat = given.get("cat") if given.get("cat") in CATEGORY_NAMES else guess_category(text)
+            entry.update({"qty": qty, "note": note, "cat": cat})
+        out.append(entry)
         added += 1
     return out, added
+
+
+def set_fields(items: list[dict[str, Any]], item_id: str, qty: Any = None, note: Any = None, cat: Any = None) -> list[dict[str, Any]]:
+    """[items] with one item's quantity, note or aisle changed."""
+    if not any(i["id"] == item_id for i in items):
+        raise KeyError(item_id)
+    if cat is not None and cat not in CATEGORY_NAMES:
+        raise ValueError(f"Unknown aisle: {cat}")
+    out = []
+    for i in items:
+        if i["id"] != item_id:
+            out.append(dict(i))
+            continue
+        j = dict(i)
+        if qty is not None:
+            j["qty"] = max(1, min(int(qty), 99))
+        if note is not None:
+            j["note"] = str(note)[:60]
+        if cat is not None:
+            j["cat"] = cat
+        out.append(j)
+    return out
 
 
 def set_status(items: list[dict[str, Any]], item_id: str, status: str, kind: str = SHOPPING) -> list[dict[str, Any]]:
@@ -257,3 +350,86 @@ def arrival_message(place: str, mine: list[dict[str, Any]], missed: list[dict[st
         texts = ", ".join(m["text"] for m in missed[:8]) + (" …" if len(missed) > 8 else "")
         return f"At {place}: not available last time", f"You couldn't get: {texts}."
     return None
+
+
+
+# ---- what people buy, and when ---------------------------------------------------
+
+MAX_HISTORY = 400
+MIN_BUYS = 3  # how many times an item must have been bought before it is suggested
+
+
+def record_bought(history: dict[str, Any], text: str, cat: str, today: str) -> dict[str, Any]:
+    """[history] with one purchase of [text] recorded on [today] (a date): the item's usual aisle and the last dozen days it was bought."""
+    key = norm(text)
+    if not key:
+        return history
+    out = {k: dict(v) for k, v in history.items()}
+    entry = out.get(key) or {"text": text, "cat": cat, "dates": []}
+    entry["text"], entry["cat"] = text, cat or entry.get("cat", OTHER)
+    if not entry["dates"] or entry["dates"][-1] != today:
+        entry["dates"] = [*entry["dates"], today][-12:]
+    out[key] = entry
+    if len(out) > MAX_HISTORY:
+        oldest = sorted(out, key=lambda k: out[k]["dates"][-1])[: len(out) - MAX_HISTORY]
+        for k in oldest:
+            out.pop(k, None)
+    return out
+
+
+def _gaps(dates: list[str]) -> list[int]:
+    days = [date.fromisoformat(d) for d in dates]
+    return [(b - a).days for a, b in zip(days, days[1:]) if (b - a).days > 0]
+
+
+def usual_gap(dates: list[str]) -> int | None:
+    """The usual number of days between purchases (the middle gap), or None when there is too little to say."""
+    gaps = sorted(_gaps(dates))
+    return gaps[len(gaps) // 2] if len(dates) >= MIN_BUYS and gaps else None
+
+
+def reason_for(gap: int) -> str:
+    if 5 <= gap <= 9:
+        return "most weeks"
+    if gap >= 10:
+        weeks = round(gap / 7)
+        return f"every {weeks} weeks"
+    return f"every {gap} days"
+
+
+def suggestions(history: dict[str, Any], today: str, open_texts: list[str], dismissed: dict[str, str], limit: int = 6) -> list[dict[str, Any]]:
+    """Things usually bought that are due again and not already on the list, most overdue first, each with its aisle and why.
+    Something dismissed stays out until the date kept for it."""
+    here = date.fromisoformat(today)
+    on_list = {norm(t) for t in open_texts}
+    out = []
+    for key, entry in history.items():
+        if key in on_list or dismissed.get(key, "") > today:
+            continue
+        gap = usual_gap(entry["dates"])
+        if gap is None:
+            continue
+        since = (here - date.fromisoformat(entry["dates"][-1])).days
+        if since < max(1, round(gap * 0.8)):
+            continue
+        out.append({"text": entry["text"], "cat": entry.get("cat", OTHER), "reason": reason_for(gap), "overdue": since - gap})
+    out.sort(key=lambda s: -s["overdue"])
+    return out[:limit]
+
+
+def dismissed_until(today: str, weeks: int = 4) -> str:
+    return (date.fromisoformat(today) + timedelta(weeks=weeks)).isoformat()
+
+
+def clear_old_bought(items: list[dict[str, Any]], now_iso: str, hours: int = 24) -> list[dict[str, Any]]:
+    """The main list's items without those bought more than [hours] ago (an item bought with no time kept is left)."""
+    from datetime import datetime
+
+    cutoff = datetime.fromisoformat(now_iso) - timedelta(hours=hours)
+    keep = []
+    for i in items:
+        stamp = i.get("bought_at")
+        if i["status"] == BOUGHT and stamp and datetime.fromisoformat(stamp) < cutoff:
+            continue
+        keep.append(i)
+    return keep
