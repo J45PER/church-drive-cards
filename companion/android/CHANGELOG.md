@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.198.1
+
+- **Shopping list form:** items are one box each (Enter adds the next box), and the Maps box says "Search Google Maps".
+
 ## 0.198.0
 
 - **Forms and pickers are consistent.** The new shopping list form uses the same wash boxes, day tiles, "Pick a date" tile and clock time tile as the edit-task page, and the calendar picker looks like the clock picker.

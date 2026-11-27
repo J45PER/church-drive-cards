@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
 // The parts of the edit-task page that the phone app and the To-Do app share, drawn like the rest of the app: a faint wash of the
@@ -29,13 +30,14 @@ import androidx.compose.ui.unit.dp
 
 /** A text box on a faint wash, no outline (as the add box on a task card), with its name above the text. */
 @Composable
-fun WashField(value: String, onChange: (String) -> Unit, label: String, tone: ToneColors, modifier: Modifier = Modifier, singleLine: Boolean = true, minLines: Int = 1, isError: Boolean = false) {
+fun WashField(value: String, onChange: (String) -> Unit, label: String, tone: ToneColors, modifier: Modifier = Modifier, singleLine: Boolean = true, minLines: Int = 1, isError: Boolean = false, imeAction: ImeAction = ImeAction.Default, onImeAction: (() -> Unit)? = null) {
     val ink = tone.onContainer
     TextField(
         value = value, onValueChange = onChange, label = { Text(label) }, singleLine = singleLine, minLines = minLines, isError = isError,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        keyboardOptions = KeyboardOptions.Default,
+        keyboardOptions = KeyboardOptions(imeAction = imeAction),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onAny = { onImeAction?.invoke() }),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = ink.copy(alpha = 0.14f), unfocusedContainerColor = ink.copy(alpha = 0.10f), errorContainerColor = ink.copy(alpha = 0.10f),
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, errorIndicatorColor = Color.Transparent,
