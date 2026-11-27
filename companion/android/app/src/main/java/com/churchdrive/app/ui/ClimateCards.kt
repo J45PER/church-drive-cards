@@ -139,7 +139,12 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val enabled = fan?.available == true
     val speeds = fanSpeeds(fan)
     val percentage = fan?.num("percentage") ?: 0.0
-    val current = currentFanSpeed(fan, speeds)
+    var lastChoice by remember(id) { mutableStateOf<Pair<String, Long>?>(null) }
+    val now = System.currentTimeMillis()
+    fanChoiceKey(fan, speeds)?.let { lastChoice = it to now }
+    val choice = heldFanChoice(fan, speeds, lastChoice, now)
+    val current = choice?.takeIf { it.startsWith("speed:") }?.let { k -> speeds.firstOrNull { it.n.toString() == k.removePrefix("speed:") } }
+    val heldMode = choice?.takeIf { it.startsWith("mode:") }?.removePrefix("mode:")
     val others = presets.filter { speedNumber(it) == null }
     val canOscillate = fan?.str("oscillating") != null || ((fan?.num("supported_features")?.toInt() ?: 0) and 2) == 2
     // Icons first: the fan with its speed number, and the fan crossed out for Off, no words.
@@ -154,7 +159,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     }
     val second = buildList {
         if (config.optBoolean("show_presets", true)) {
-            others.forEach { p -> add(TileItem(fanPresetIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
+            others.forEach { p -> add(TileItem(fanPresetIcon(p), presetLabel(p), on && (preset ?: heldMode) == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
         }
         if (config.optBoolean("show_oscillate", true) && canOscillate) {
             val oscillating = fan?.attributes?.optBoolean("oscillating", false) == true

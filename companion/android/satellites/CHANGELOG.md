@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.198.2
+
+- **Fan card:** when the fan stops reporting its speed or mode, the card keeps the last one it reported lit for up to ten minutes.
+
 ## 0.198.1
 
 - **Shopping list form:** items are one box each (Enter adds the next box), and the Maps box says "Search Google Maps".
