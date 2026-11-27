@@ -1,17 +1,31 @@
-alias: Shopping list
-description: 'Use this when someone asks what is on the shopping list or what we need to get. It returns the words to say: how many things there are and what they are, and anything that was not available last time. Your whole reply must be exactly the text in "say".'
+alias: Read the shopping list
+description: 'Use this for ANY question about what is on the shopping list, what needs buying or what is on a list. It shows the shopping card on the screen by itself and returns the words to say. Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. To ADD an item do not use this: use the normal list command. If they say yes to the offer, read the rest from "more". The list is the main shopping list in Church Drive (the house moves Home Assistant''s own list onto it).'
 icon: mdi:cart
-mode: parallel
 max: 5
+mode: parallel
 sequence:
 - action: church_drive.shopping_read
-  response_variable: r
+  response_variable: got
 - variables:
-    names: '{%- set ns = namespace(l=[]) -%}{%- for i in r.open -%}{%- set ns.l = ns.l + [i.text ~ ('' x'' ~ i.qty if i.qty > 1 else '''')] -%}{%- endfor -%}{{ ns.l }}'
+    items: '{{ got.open | map(attribute=''text'') | list }}'
+    n: '{{ got.open | length }}'
 - variables:
-    say: '{%- if names | count == 0 -%}There is nothing on the shopping list.{%- else -%}There {{ ''is 1 thing'' if names | count == 1 else ''are '' ~ (names | count) ~ '' things'' }} to get: {{ names[:10] | join('', '') }}{{ '' and '' ~ (names | count - 10) ~ '' more'' if names | count > 10 else '''' }}.{%- endif -%}{%- if r.not_available_last_time | count > 0 %} Last time {{ r.not_available_last_time | join('', '') }} {{ ''was'' if r.not_available_last_time | count == 1 else ''were'' }} not available.{%- endif -%}'
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for i in items[:6] -%}{%- set ns.l = ns.l + [{''name'': i, ''marker'': ''todo''}] -%}{%- endfor -%}{{- ns.l -}}'
+    say: '{% if n == 0 %}The shopping list is empty.{% elif n <= 3 %}On the shopping list there is {{ items | join('', '') }}.{% else %}There are {{ n }} things on the shopping list, starting with {{ items[:3] | join('', '') }}.{% endif %} {{ ''Shall I read the rest?'' if n > 3 else ''Shall I add anything?'' }}'
+- variables:
+    card:
+      foot: '{{ (''and '' ~ (n - 6) ~ '' more'') if n > 6 else '''' }}'
+      rows: '{{ rows }}'
+      title: '{{ n }} {{ ''item'' if n == 1 else ''items'' }}'
+      tone: indigo
+- action: script.clive_show_card
+  data:
+    data: '{{ card }}'
+    kind: shop
 - variables:
     result:
+      more: 'The whole list: {{ items | join('', '') if n > 0 else ''nothing'' }}.'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
       say: '{{ say }}'
-- stop: Done
-  response_variable: result
+- response_variable: result
+  stop: Shown
