@@ -104,6 +104,8 @@ def default_icon(kind: str | None, tag: str = "", title: str = "", message: str 
     if k == "safety_alarms":
         return "co-alert" if "carbon" in f"{title} {message}".lower() or " co " in f" {title.lower()} " else "smoke-detector-alert"
     if k == "clive_actions":
+        if "manual" in title.lower():
+            return "thermostat"  # set by a person, not by Clive: no badge
         return "leaf+clive" if "eco" in title.lower() else ("thermostat+clive" if "heating" in title.lower() else "home+clive")
     if k in ("vacuum", "vacuum_messages"):
         return gregg_icon(f"{title} {message}")

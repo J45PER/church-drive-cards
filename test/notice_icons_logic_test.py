@@ -43,6 +43,9 @@ class NoticeIconsLogic(unittest.TestCase):
         self.assertEqual(ni.default_icon("clive_actions", title="Heating: Auto"), "thermostat+clive")
         self.assertEqual(ni.default_icon("clive_actions", title="Heating: Eco"), "leaf+clive")
 
+    def test_heating_set_by_a_person_has_no_badge(self):
+        self.assertEqual(ni.default_icon("clive_actions", title="Heating: Manual", message="Upstairs changed by Jamie."), "thermostat")
+
     def test_reminders_and_lists_by_tag(self):
         self.assertEqual(ni.default_icon(None, tag="church-drive-task-bins"), "todo-logo+pin")
         self.assertEqual(ni.default_icon(None, tag="inbox-3"), "todo-logo+alert-circle-solid")
