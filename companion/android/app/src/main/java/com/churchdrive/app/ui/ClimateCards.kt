@@ -25,6 +25,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -145,6 +146,14 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val choice = heldFanChoice(fan, speeds, lastChoice, now)
     val current = choice?.takeIf { it.startsWith("speed:") }?.let { k -> speeds.firstOrNull { it.n.toString() == k.removePrefix("speed:") } }
     val heldMode = choice?.takeIf { it.startsWith("mode:") }?.removePrefix("mode:")
+    // A fan that is on but reports neither a mode nor a speed is asked to report again, every 30 seconds, until it does.
+    val silent = on && enabled && fan?.str("preset_mode") == null && fan?.num("percentage") == null
+    LaunchedEffect(id, silent) {
+        while (silent) {
+            call("homeassistant", "update_entity", id, data())
+            kotlinx.coroutines.delay(30_000)
+        }
+    }
     val others = presets.filter { speedNumber(it) == null }
     val canOscillate = fan?.str("oscillating") != null || ((fan?.num("supported_features")?.toInt() ?: 0) and 2) == 2
     // Icons first: the fan with its speed number, and the fan crossed out for Off, no words.

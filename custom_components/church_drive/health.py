@@ -46,6 +46,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, SIGNAL_HEALTH
+from .health_logic import fan_choice, keep_fan_choice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -153,6 +154,8 @@ class DeviceHealth:
     def _remember_real(self, entity_id: str, state) -> None:
         attrs = {k: v for k, v in state.attributes.items() if k not in SKIP_ATTRS and not isinstance(v, (list, dict))}
         saved = self.saved.setdefault(entity_id, {})
+        # A fan that is on but reports neither a mode nor a speed keeps the last one, so a re-sync never loses it.
+        attrs = keep_fan_choice(state.state, attrs, (saved.get("real") or {}).get("attrs"))
         saved["real"] = {"state": state.state, "attrs": attrs, "at": time.time()}
         counter = self._counter(state.attributes)
         if counter:
@@ -355,6 +358,8 @@ class DeviceHealth:
         if not real or not state or domain != "fan" or real["state"] == "off":
             self._note(entity_id, "Nudge not possible for this device")
             return False
+        # What the fan is on right now, to put back exactly after the nudge (the saved reading is the fallback).
+        before = fan_choice(dict(state.attributes)) if state.state != "off" else None
         target = real.get("attrs", {}).get("preset_mode")
         presets = [p for p in state.attributes.get("preset_modes") or [] if p != target]
         quiet = [p for p in QUIET_PRESETS if p in presets]
@@ -375,6 +380,16 @@ class DeviceHealth:
             return False
         self._note(entity_id, "Nudged it to wake the connection")
         await asyncio.sleep(NUDGE_HOLD)
+        if before:
+            service, data = before
+            try:
+                async with asyncio.timeout(CALL_TIMEOUT):
+                    await self.hass.services.async_call("fan", service, {"entity_id": entity_id, **data}, blocking=True)
+            except Exception as err:  # noqa: BLE001
+                self._note(entity_id, f"Putting it back failed: {err}")
+                return False
+            self._note(entity_id, "Put it back as it was")
+            return True
         return await self.async_resync(entity_id)
 
     def _entry_id(self, entity_id: str) -> str | None:

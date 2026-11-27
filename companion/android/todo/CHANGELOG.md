@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.198.2
 
-- **Fan card:** when the fan stops reporting its speed or mode, the card keeps the last one it reported lit for up to ten minutes.
+- **Fan card:** asks a silent fan to report again every 30 seconds, and keeps the last speed or mode it reported lit for up to ten minutes.
 
 ## 0.198.1
 
