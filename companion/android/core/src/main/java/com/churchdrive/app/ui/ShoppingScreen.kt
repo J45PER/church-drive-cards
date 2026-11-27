@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -167,10 +166,7 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
         }
     }
     var text by remember(list.id) { mutableStateOf("") }
-    OutlinedTextField(
-        value = text, onValueChange = { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(if (steps) "Add a step" else "Add an item (or several, with commas)") },
-    )
+    WashField(text, { text = it }, if (steps) "Add a step" else "Add an item (or several, with commas)", tone)
     TileRow(
         listOf(
             TileItem("mdi:plus", "Add", text.isNotBlank()) {
@@ -260,26 +256,20 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
     }
     var error by remember { mutableStateOf("") }
     if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error)
-    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-    Text("Who is it for?", style = MaterialTheme.typography.titleSmall)
+    WashField(name, { name = it }, "Name", tone)
+    Text("Who is it for?", style = MaterialTheme.typography.labelLarge)
     TileRow(state.people.map { p -> TileItem("mdi:account-outline", p, p in who) { who = if (p in who) who - p else who + p } }, tone, neutral.onContainer)
-    Text(if (steps) "Date and time (optional)" else "Date to go shopping", style = MaterialTheme.typography.titleSmall)
+    Text(if (steps) "Day (optional)" else "Day to go shopping", style = MaterialTheme.typography.labelLarge)
     val today = LocalDate.now()
-    val weekend = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY)).toString()
-    TileRow(
-        listOf(
-            TileItem("mdi:calendar-remove-outline", "None", date.isEmpty()) { date = "" },
-            TileItem("mdi:calendar-today", "Today", date == today.toString()) { date = today.toString() },
-            TileItem("mdi:calendar-arrow-right", "Tomorrow", date == today.plusDays(1).toString()) { date = today.plusDays(1).toString() },
-            TileItem("mdi:calendar-weekend", "Saturday", date == weekend) { date = weekend },
-        ),
-        tone, neutral.onContainer,
-    )
-    OutlinedTextField(value = date, onValueChange = { date = it.trim() }, label = { Text("Date (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-    if (date.isNotEmpty()) {
-        OutlinedTextField(value = time, onValueChange = { time = it.trim() }, label = { Text("Time (HH:MM, optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-    }
-    Text(if (steps) "Remind me at a place (optional)" else "Where will you buy it? Search Google Maps", style = MaterialTheme.typography.titleSmall)
+    var pickingDate by remember { mutableStateOf(false) }
+    val picked = date.takeIf { it.isNotEmpty() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    val dayChoice = if (picked == null) "No date" else DUE_CHOICES.drop(1).firstOrNull { dueDateOf(it, today) == picked }
+    OptionRow(DUE_CHOICES, dayChoice, tone) { c -> date = dueDateOf(c, today)?.toString().orEmpty() }
+    if (picked != null) Text(dateWords(picked, today), style = MaterialTheme.typography.bodySmall)
+    TileRow(listOf(TileItem("mdi:calendar-edit", "Pick a date", picked != null && dayChoice == null) { pickingDate = true }), tone, neutral.onContainer, perRow = 1)
+    if (pickingDate) DatePickDialog(picked ?: today, { date = it.toString(); pickingDate = false }, { pickingDate = false })
+    if (date.isNotEmpty()) TimeTile("Time", time.ifEmpty { "09:00" }, tone) { time = it }
+    Text(if (steps) "Remind me at a place (optional)" else "Where will you buy it?", style = MaterialTheme.typography.labelLarge)
     home?.let { h ->
         val chosen = places.any { it.name == "Home" && it.lat == h.lat && it.lon == h.lon }
         TileRow(
@@ -290,9 +280,7 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
     if (places.isNotEmpty()) {
         TileRow(places.map { p -> TileItem("mdi:map-marker-remove-outline", p.name, true) { places = places - p } }, tone, neutral.onContainer)
     }
-    OutlinedTextField(
-        value = query, onValueChange = { query = it }, label = { Text("e.g. Lidl Protaras Cyprus") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-    )
+    WashField(query, { query = it }, "Search Google Maps, e.g. Lidl Protaras Cyprus", tone)
     TileRow(
         listOf(
             TileItem("mdi:magnify", "Search", query.trim().length >= 2) {
@@ -330,10 +318,7 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
         }
     }
     if (existing == null) {
-        OutlinedTextField(
-            value = items, onValueChange = { items = it }, label = { Text(if (steps) "Steps (one per line)" else "Items (one per line)") },
-            minLines = 3, modifier = Modifier.fillMaxWidth(),
-        )
+        WashField(items, { items = it }, if (steps) "Steps (one per line)" else "Items (one per line)", tone, singleLine = false, minLines = 3)
         if (!steps && state.missed.isNotEmpty()) {
             val n = state.missed.size
             TileRow(
@@ -350,12 +335,12 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
                 if (who.isEmpty()) {
                     error = "Choose who the list is for."
                 } else if (existing == null) {
-                    val body = JSONObject().put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", time).put("places", JSONArray(places.map { it.toJson() }))
+                    val body = JSONObject().put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", if (date.isEmpty()) "" else time.ifEmpty { "09:00" }).put("places", JSONArray(places.map { it.toJson() }))
                         .put("items", JSONArray(splitItems(items))).put("include_missed", withMissed)
                     if (steps) body.put("kind", "steps")
                     send("church_drive/shopping/create", body) { r -> onSaved(((r as? JSONObject)?.optJSONObject("list"))?.optString("id")) }
                 } else {
-                    val body = JSONObject().put("list", existing.id).put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", time).put("places", JSONArray(places.map { it.toJson() }))
+                    val body = JSONObject().put("list", existing.id).put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", if (date.isEmpty()) "" else time.ifEmpty { "09:00" }).put("places", JSONArray(places.map { it.toJson() }))
                     send("church_drive/shopping/update", body) { onSaved(null) }
                 }
             },

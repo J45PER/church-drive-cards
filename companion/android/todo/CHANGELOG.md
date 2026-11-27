@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.198.0
+
+- **Forms and pickers are consistent.** The new shopping list form uses the same wash boxes, day tiles, "Pick a date" tile and clock time tile as the edit-task page, and the calendar picker looks like the clock picker.
+
 ## 0.197.0
 
 - **Clive offers the weekly grocery shop** as a trip, from the evening before, on the Shopping tab.

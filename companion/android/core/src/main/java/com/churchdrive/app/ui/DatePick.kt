@@ -1,14 +1,12 @@
 package com.churchdrive.app.ui
 
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -20,21 +18,17 @@ fun DatePickDialog(initial: LocalDate?, onPick: (LocalDate) -> Unit, onDismiss: 
     // The picker works in UTC milliseconds; a day is its midnight there.
     val state = rememberDatePickerState(initialSelectedDateMillis = (initial ?: LocalDate.now()).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
     val tone = toneColors(Tone.Grey)
-    val buttons = ButtonDefaults.textButtonColors(contentColor = tone.accent)
     val colours = DatePickerDefaults.colors(
-        containerColor = tone.container, titleContentColor = tone.onContainer.copy(alpha = 0.7f), headlineContentColor = tone.onContainer,
+        containerColor = Color.Transparent, titleContentColor = tone.onContainer.copy(alpha = 0.7f), headlineContentColor = tone.onContainer,
         weekdayContentColor = tone.onContainer.copy(alpha = 0.7f), subheadContentColor = tone.onContainer.copy(alpha = 0.7f),
         navigationContentColor = tone.onContainer, yearContentColor = tone.onContainer, currentYearContentColor = tone.accent,
         selectedYearContainerColor = tone.accent, selectedYearContentColor = tone.onAccent,
         dayContentColor = tone.onContainer, selectedDayContainerColor = tone.accent, selectedDayContentColor = tone.onAccent,
         todayContentColor = tone.accent, todayDateBorderColor = tone.accent,
     )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = { state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) } ?: onDismiss() }, colors = buttons) { Text("OK") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, colors = buttons) { Text("Cancel") } },
-        colors = colours,
-    ) { DatePicker(state, colors = colours) }
+    // The same acrylic frame, title and Cancel/OK as the time picker, so the two read as one family.
+    AppDialog(onDismiss, maxWidth = 384.dp, inset = 12.dp) { _ ->
+        DatePicker(state, colors = colours)
+        DialogButtons(tone, onDismiss) { state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) } ?: onDismiss() }
+    }
 }
