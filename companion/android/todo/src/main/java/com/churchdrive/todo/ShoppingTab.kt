@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -65,6 +66,7 @@ fun ShoppingPage(vm: TodoModel) {
         return
     }
     NowBanner(vm, state, tone)
+    state.offer?.let { OfferCard(vm, it) }
     val main = state.main
     val open = main?.items?.count { it.status == "open" } ?: 0
     SectionHeader("Shopping list", if (open == 0) null else "$open to get", tone) { Icon(CdVectors.Cart, contentDescription = null, tint = tone.accent) }
@@ -257,6 +259,36 @@ private fun TripCard(vm: TodoModel, trip: ShoppingList, tone: ToneColors, onOpen
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 trip.people.forEach { p -> Text(p, style = MaterialTheme.typography.labelMedium, color = tone.accent, modifier = Modifier.background(tone.accent.copy(alpha = 0.18f), RoundedCornerShape(50)).padding(horizontal = 9.dp, vertical = 3.dp)) }
+            }
+        }
+    }
+}
+
+
+/** Clive's offer: the weekly grocery shop he has learned (day, time, shop) as a trip, with what is open on the list moved onto it. */
+@Composable
+private fun OfferCard(vm: TodoModel, offer: com.churchdrive.app.ui.ShoppingOffer) {
+    Surface(shape = RoundedCornerShape(22.dp), color = CliveGround.copy(alpha = 0.3f), contentColor = Color(0xFFE8EAED), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(44.dp).background(Color.White, RoundedCornerShape(50)), contentAlignment = Alignment.Center) { AssistantLogo(Color(0xFF4A4AA0), 24.dp) }
+                Column(Modifier.weight(1f)) {
+                    Text("${offer.name}?", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        listOf("You usually shop ${offer.day}", offer.time.takeIf { it.isNotBlank() }, offer.place.takeIf { it.isNotBlank() }?.let { "at $it" }).filterNotNull().joinToString(" "),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Make a trip", style = MaterialTheme.typography.labelLarge, color = Color(0xFF1E2345), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.weight(1f).background(CliveInk, RoundedCornerShape(18.dp)).clickable { vm.answerOffer(true) }.padding(vertical = 13.dp),
+                )
+                Text(
+                    "Not now", style = MaterialTheme.typography.labelLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.weight(1f).background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(18.dp)).clickable { vm.answerOffer(false) }.padding(vertical = 13.dp),
+                )
             }
         }
     }

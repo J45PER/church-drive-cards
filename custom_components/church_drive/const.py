@@ -118,6 +118,7 @@ WS_REMINDER_SET = "church_drive/reminders/set"
 
 # Shopping lists (shopping.py): one task per list, items bought or unavailable.
 SERVICE_SHOPPING_ADD = "shopping_add"
+SERVICE_SHOPPING_READ = "shopping_read"
 SERVICE_STEPS_CREATE = "steps_create"
 WS_SHOPPING = "church_drive/shopping"
 WS_SHOPPING_CREATE = "church_drive/shopping/create"
@@ -132,6 +133,7 @@ WS_SHOPPING_IMPORT = "church_drive/shopping/import"
 WS_SHOPPING_FIELDS = "church_drive/shopping/fields"
 WS_SHOPPING_DISMISS = "church_drive/shopping/dismiss"
 WS_SHOPPING_NOW = "church_drive/shopping/now"
+WS_SHOPPING_OFFER = "church_drive/shopping/offer"
 
 # What the lights do when an alarm goes off (alarm_lights.py).
 WS_ALARM_LIGHTS = "church_drive/alarm_lights"

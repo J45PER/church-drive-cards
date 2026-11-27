@@ -2,6 +2,7 @@ import importlib.util
 import itertools
 import pathlib
 import unittest
+from datetime import datetime
 
 spec = importlib.util.spec_from_file_location(
     "shopping_logic", pathlib.Path(__file__).parent.parent / "custom_components" / "church_drive" / "shopping_logic.py"
@@ -190,6 +191,45 @@ class ShoppingMainList(unittest.TestCase):
         ]
         kept = sl.clear_old_bought(items, "2026-11-21T12:00:00+00:00")
         self.assertEqual([i["id"] for i in kept], ["b", "c"])
+
+
+class ShoppingUsualShop(unittest.TestCase):
+    def shops(self, *days, place="Tesco Extra", time="10:07"):
+        h = []
+        for d in days:
+            h = sl.record_shop(h, d, time, place, 53.0, -1.2)
+        return h
+
+    def test_times_round_to_the_half_hour(self):
+        self.assertEqual([sl.round_time(t) for t in ("10:07", "10:20", "23:50", "09:45")], ["10:00", "10:30", "00:00", "10:00"])
+
+    def test_one_visit_a_day_and_a_dozen_kept(self):
+        h = self.shops("2026-11-07", "2026-11-07")
+        self.assertEqual(len(h), 1)
+        many = self.shops(*[f"2026-{m:02d}-{d:02d}" for m, d in [(1, 3), (1, 10), (1, 17), (1, 24), (1, 31), (2, 7), (2, 14), (2, 21), (2, 28), (3, 7), (3, 14), (3, 21), (3, 28), (4, 4)]])
+        self.assertEqual(len(many), sl.MAX_HABITS)
+
+    def test_the_usual_shop_needs_three_visits_on_the_same_day_at_the_same_place(self):
+        # 7, 14 and 21 Nov 2026 are Saturdays.
+        self.assertIsNone(sl.usual_shop(self.shops("2026-11-07", "2026-11-14")))
+        usual = sl.usual_shop(self.shops("2026-11-07", "2026-11-14", "2026-11-21"))
+        self.assertEqual((usual["dow"], usual["time"], usual["place"]), (5, "10:00", "Tesco Extra"))
+        mixed = self.shops("2026-11-07", "2026-11-14") + sl.record_shop([], "2026-11-21", "10:00", "Aldi")
+        self.assertIsNone(sl.usual_shop(mixed))
+
+    def test_the_offer_comes_the_evening_before_and_goes_with_a_trip_or_a_no(self):
+        usual = sl.usual_shop(self.shops("2026-11-07", "2026-11-14", "2026-11-21"))
+        # Next Saturday is 28 Nov 2026.
+        self.assertIsNone(sl.offer_for(usual, datetime(2026, 11, 27, 17, 59), set(), 5))
+        o = sl.offer_for(usual, datetime(2026, 11, 27, 18, 0), set(), 5)
+        self.assertEqual((o["name"], o["date"], o["time"], o["place"], o["day"]), ("Weekly grocery shop", "2026-11-28", "10:00", "Tesco Extra", "Saturday"))
+        self.assertIsNotNone(sl.offer_for(usual, datetime(2026, 11, 28, 9, 0), set(), 5))
+        # Once the time has passed the next one is a week away, so nothing yet.
+        self.assertIsNone(sl.offer_for(usual, datetime(2026, 11, 28, 10, 30), set(), 5))
+        self.assertIsNone(sl.offer_for(usual, datetime(2026, 11, 27, 19, 0), {"2026-11-28"}, 5))
+        self.assertIsNone(sl.offer_for(usual, datetime(2026, 11, 27, 19, 0), set(), 5, "2026-11-28"))
+        self.assertIsNone(sl.offer_for(usual, datetime(2026, 11, 27, 19, 0), set(), 0))
+        self.assertIsNone(sl.offer_for(None, datetime(2026, 11, 27, 19, 0), set(), 5))
 
 
 if __name__ == "__main__":

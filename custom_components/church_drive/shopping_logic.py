@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, time as dtime, timedelta
 from typing import Any
 
 OPEN, BOUGHT, UNAVAILABLE = "open", "bought", "unavailable"
@@ -433,3 +433,66 @@ def clear_old_bought(items: list[dict[str, Any]], now_iso: str, hours: int = 24)
             continue
         keep.append(i)
     return keep
+
+
+
+# ---- the usual shop, and Clive offering it ------------------------------------------------
+
+MAX_HABITS = 12
+MIN_SHOPS = 3  # visits to the same shop on the same weekday before it counts as a habit
+OFFER_FROM = dtime(18, 0)  # the evening before, from this time
+OFFER_NAME = "Weekly grocery shop"
+DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+def round_time(hhmm: str) -> str:
+    """A time of day to the nearest half hour ("10:07" is "10:00", "10:20" is "10:30")."""
+    h, m = int(hhmm[:2]), int(hhmm[3:5])
+    total = round((h * 60 + m) / 30) * 30
+    return f"{(total // 60) % 24:02d}:{total % 60:02d}"
+
+
+def record_shop(habits: list[dict[str, Any]], day: str, hhmm: str, place: str, lat: Any = None, lon: Any = None) -> list[dict[str, Any]]:
+    """[habits] with a visit to a shop on [day] (a date) at [hhmm] noted; one a day, the last dozen kept."""
+    if any(h["date"] == day for h in habits):
+        return [dict(h) for h in habits]
+    entry: dict[str, Any] = {"date": day, "dow": date.fromisoformat(day).weekday(), "time": round_time(hhmm), "place": place}
+    if lat is not None and lon is not None:
+        entry.update({"lat": lat, "lon": lon})
+    return [*[dict(h) for h in habits], entry][-MAX_HABITS:]
+
+
+def usual_shop(habits: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The weekday, time and shop that come up most (at least MIN_SHOPS times together), or None."""
+    groups: dict[tuple[int, str], list[dict[str, Any]]] = {}
+    for h in habits:
+        groups.setdefault((h["dow"], h.get("place", "")), []).append(h)
+    if not groups:
+        return None
+    (dow, place), found = max(groups.items(), key=lambda kv: (len(kv[1]), kv[1][-1]["date"]))
+    if len(found) < MIN_SHOPS:
+        return None
+    times = sorted(h["time"] for h in found)
+    last = found[-1]
+    out = {"dow": dow, "time": times[len(times) // 2], "place": place}
+    if last.get("lat") is not None and last.get("lon") is not None:
+        out.update({"lat": last["lat"], "lon": last["lon"]})
+    return out
+
+
+def offer_for(usual: dict[str, Any] | None, now: datetime, trip_dates: set[str], open_items: int, dismissed_for: str = "") -> dict[str, Any] | None:
+    """The weekly shop Clive offers to make a trip for: the next time the usual weekday and time come round, offered from 18:00 the day
+    before. Nothing when there is no habit yet, nothing to buy, a trip already on that date, or it was turned down for that date."""
+    if usual is None or open_items <= 0:
+        return None
+    hh, mm = int(usual["time"][:2]), int(usual["time"][3:5])
+    target = now.date() + timedelta(days=(usual["dow"] - now.weekday()) % 7)
+    if datetime.combine(target, dtime(hh, mm)) < now:
+        target += timedelta(days=7)
+    iso = target.isoformat()
+    if now < datetime.combine(target - timedelta(days=1), OFFER_FROM) or iso in trip_dates or dismissed_for == iso:
+        return None
+    out = {"name": OFFER_NAME, "date": iso, "time": usual["time"], "place": usual.get("place", ""), "day": DAYS[usual["dow"]]}
+    if usual.get("lat") is not None and usual.get("lon") is not None:
+        out.update({"lat": usual["lat"], "lon": usual["lon"]})
+    return out

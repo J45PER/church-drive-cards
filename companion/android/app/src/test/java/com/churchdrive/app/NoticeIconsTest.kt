@@ -21,6 +21,7 @@ class NoticeIconsTest {
         assertEquals("home", NoticeIcons.iconNameFor("arrivals:person.jamie", null))
         assertEquals("network-off", NoticeIcons.iconNameFor("internet", null))
         assertEquals("todo-clock-logo", NoticeIcons.iconNameFor("todo_overdue", null))
+        assertEquals("cart+clive", NoticeIcons.iconNameFor("shopping_offer", null))
     }
 
     @Test

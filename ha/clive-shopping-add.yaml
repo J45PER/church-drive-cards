@@ -1,0 +1,27 @@
+alias: Shopping add
+description: 'Use this when someone says to add something to the shopping list, that we need or are out of something ("add milk and eggs", "we are out of tea bags", "put bread on the list"). Give "items" as the things, separated by commas, each with an optional number ("milk 2"). They go onto the main shopping list. Your whole reply must be exactly the text in "say".'
+icon: mdi:cart-plus
+mode: parallel
+max: 5
+fields:
+  items:
+    name: Items
+    description: The things to add, separated by commas. A number after a name is how many ("milk 2").
+    required: true
+    example: milk 2, eggs, bread
+    selector:
+      text:
+sequence:
+- variables:
+    wanted: '{{ items.split('','') | map(''trim'') | reject(''eq'', '''') | list }}'
+- action: church_drive.shopping_add
+  data:
+    items: '{{ wanted }}'
+  response_variable: r
+- variables:
+    said: '{%- set n = r.added | default(0) | int -%}{%- if n == 0 -%}That is already on the shopping list.{%- else -%}Added {{ wanted | join('', '') }} to the shopping list.{%- endif -%}'
+- variables:
+    result:
+      say: '{{ said }}'
+- stop: Done
+  response_variable: result

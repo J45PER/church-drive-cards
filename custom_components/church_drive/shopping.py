@@ -56,6 +56,9 @@ class Shopping:
         self._history: dict[str, Any] = {}  # what has been bought, and on which days (sl.record_bought)
         self._dismissed: dict[str, str] = {}  # suggestions turned down, until a date
         self._now: dict[str, Any] = {}  # who is in a shop at the moment: {person, place, since}
+        self._habits: list[dict[str, Any]] = []  # when and where the house shops (sl.record_shop)
+        self._offer_dismissed = ""  # the date of the shop whose offer was turned down
+        self._offer_told = ""  # the date of the shop the evening offer was sent for
         self._unsub: list[Callable[[], None]] = []
         self._last: dict[tuple[str, str], Any] = {}
 
@@ -67,6 +70,9 @@ class Shopping:
         self._missed = list(data.get("missed", []))
         self._history = dict(data.get("history", {}))
         self._dismissed = dict(data.get("dismissed", {}))
+        self._habits = list(data.get("habits", []))
+        self._offer_dismissed = data.get("offer_dismissed", "")
+        self._offer_told = data.get("offer_told", "")
         changed = False
         if not any(l.get("main") for l in self._lists):
             self._lists.insert(0, self._new_main())
@@ -88,6 +94,7 @@ class Shopping:
         self._unsub.append(async_track_time_change(self.hass, self._on_morning, hour=8, minute=0, second=0))
         self._unsub.append(async_track_time_change(self.hass, self._on_minute, second=0))
         self._unsub.append(async_track_time_change(self.hass, self._on_housekeeping, minute=15, second=0))
+        self._unsub.append(async_track_time_change(self.hass, self._on_evening, hour=18, minute=5, second=0))
         await self._async_purge()
 
     @callback
@@ -97,7 +104,10 @@ class Shopping:
         self._unsub.clear()
 
     async def _async_save(self) -> None:
-        await self._store.async_save({"lists": self._lists, "missed": self._missed, "history": self._history, "dismissed": self._dismissed})
+        await self._store.async_save(
+            {"lists": self._lists, "missed": self._missed, "history": self._history, "dismissed": self._dismissed,
+             "habits": self._habits, "offer_dismissed": self._offer_dismissed, "offer_told": self._offer_told}
+        )
 
     def _changed(self, context: Context | None = None) -> None:
         async_dispatcher_send(self.hass, SIGNAL_SHOPPING)
@@ -468,10 +478,66 @@ class Shopping:
         """Say someone has started (or finished) shopping, so the others see it on the list."""
         if on:
             self._now = {"person": first, "place": _clean(place), "since": dt_util.utcnow().isoformat()}
+            self._note_shop(_clean(place))
         elif self._now.get("person") == first:
             self._now = {}
         self._changed(context)
         return self.shopping_now()
+
+    def _note_shop(self, place: str, lat: Any = None, lon: Any = None) -> None:
+        """Note a visit to a shop (today, now), so the usual day, time and shop can be learned."""
+        now = dt_util.now()
+        self._habits = sl.record_shop(self._habits, now.date().isoformat(), now.strftime("%H:%M"), place, lat, lon)
+        self.hass.async_create_task(self._async_save())
+
+    def offer(self) -> dict[str, Any] | None:
+        """The weekly grocery shop Clive offers to make a trip for, or None (see sl.offer_for)."""
+        main = self.main()
+        open_items = len([i for i in (main["items"] if main else []) if i["status"] == sl.OPEN])
+        trips = {l["date"] for l in self._lists if not l.get("main") and sl.kind_of(l) == sl.SHOPPING and not l["done"] and l["date"]}
+        now = dt_util.now().replace(tzinfo=None)
+        return sl.offer_for(sl.usual_shop(self._habits), now, trips, open_items, self._offer_dismissed)
+
+    async def async_accept_offer(self, first: str, context: Context | None = None) -> dict[str, Any]:
+        """Make the offered trip for [first]: the usual date, time and shop, with what is open on the main list moved onto it."""
+        offer = self.offer()
+        main = self.main()
+        if offer is None or main is None:
+            raise ValueError("There is nothing to offer right now")
+        moving = [i for i in main["items"] if i["status"] == sl.OPEN]
+        places = [{"name": offer["place"], "address": "", "lat": offer["lat"], "lon": offer["lon"]}] if offer["place"] and "lat" in offer else []
+        made = await self.async_create(
+            offer["name"], [first], offer["date"], places, [{"text": i["text"], "qty": i.get("qty", 1), "note": i.get("note", ""), "cat": i.get("cat")} for i in moving],
+            include_missed=False, context=context, time=offer["time"],
+        )
+        main["items"] = [i for i in main["items"] if i not in moving]
+        await self._async_after(main, context)
+        return made
+
+    async def async_dismiss_offer(self, context: Context | None = None) -> None:
+        offer = self.offer()
+        if offer is not None:
+            self._offer_dismissed = offer["date"]
+            await self._async_save()
+            self._changed(context)
+
+    async def _on_evening(self, _now: Any) -> None:
+        """The evening before the usual shop: tell people the weekly grocery shop can be made a trip (once for each shop)."""
+        offer = self.offer()
+        if offer is None or offer["date"] != (dt_util.now().date() + timedelta(days=1)).isoformat() or self._offer_told == offer["date"]:
+            return
+        self._offer_told = offer["date"]
+        await self._async_save()
+        if self._people is None:
+            return
+        where = f" at {offer['place']}" if offer["place"] else ""
+        try:
+            await self._people.async_notify(
+                "shopping_offer", None, "Weekly Grocery Shop", f"{offer['day']} {offer['time']}{where}: tap to make it a trip",
+                tag="shopping-offer", link="/dashboard-mobile/todo",
+            )
+        except Exception:  # noqa: BLE001 - a courtesy
+            _LOGGER.debug("Couldn't send the weekly grocery shop offer", exc_info=True)
 
     async def _async_import_main(self) -> None:
         """Move anything on Home Assistant's own shopping list (a voice assistant added it, say) onto the main list."""
@@ -620,6 +686,7 @@ class Shopping:
         main = self.main()
         if main is not None and any(i["status"] == sl.OPEN for i in main["items"]):
             self._now = {"person": first, "place": zone.name, "since": dt_util.utcnow().isoformat()}
+            self._note_shop(zone.name, zone.attributes.get("latitude"), zone.attributes.get("longitude"))
             self._changed()
         said = sl.arrival_message(zone.name, mine, self._missed)
         if said is None:

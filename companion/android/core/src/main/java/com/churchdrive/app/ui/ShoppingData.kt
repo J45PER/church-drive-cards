@@ -55,6 +55,9 @@ fun navigationUri(p: ShoppingPlace): String = "google.navigation:q=${p.lat},${p.
 /** Something Clive suggests adding: an item usually bought that is due again, its aisle and why. */
 data class ShoppingSuggestion(val text: String, val cat: String, val reason: String)
 
+/** Clive's offer to make a trip of the usual weekly shop: the day, time and shop he has learned. */
+data class ShoppingOffer(val name: String, val date: String, val time: String, val place: String, val day: String)
+
 /** Someone in a shop right now, and how many items are left on the main list. */
 data class ShoppingNow(val person: String, val place: String, val left: Int)
 
@@ -68,6 +71,7 @@ data class ShoppingState(
     val categories: List<String> = emptyList(),
     val suggestions: List<ShoppingSuggestion> = emptyList(),
     val now: ShoppingNow? = null,
+    val offer: ShoppingOffer? = null,
 ) {
     val main: ShoppingList? get() = lists.firstOrNull { it.main }
     /** The named trips (every shopping list but the main one), soonest first. */
@@ -103,6 +107,7 @@ fun parseShopping(result: Any?): ShoppingState? {
         people = o.optJSONArray("people").strings(),
         categories = o.optJSONArray("categories").strings(),
         suggestions = o.optJSONArray("suggestions").objects().map { ShoppingSuggestion(it.optString("text"), it.optString("cat"), it.optString("reason")) }.filter { it.text.isNotEmpty() },
+        offer = o.optJSONObject("offer")?.takeIf { it.optString("date").isNotEmpty() }?.let { ShoppingOffer(it.optString("name"), it.optString("date"), it.optString("time"), it.optString("place"), it.optString("day")) },
         now = o.optJSONObject("now")?.takeIf { it.optString("person").isNotEmpty() }?.let { ShoppingNow(it.optString("person"), it.optString("place"), it.optInt("left")) },
     )
 }

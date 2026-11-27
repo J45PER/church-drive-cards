@@ -19,6 +19,7 @@ SAMPLES: dict[str, tuple[str, str, str]] = {
     "alarm_mode": ("Alarm set: Away", "Set to away by Jamie at 14:32.", ""),
     "night_motion": ("Movement: Garden", "The garden camera saw movement at 14:32.", "garden"),
     "tamper": ("Back Door tampered with", "The Ring alarm reports Back Door was tampered with at 14:32.", ""),
+    "shopping_offer": ("Weekly Grocery Shop", "Saturday 10:00 at Tesco Extra: tap to make it a trip", ""),
     "vacuum": ("Gregg needs help", "Gregg is stuck in the Living Room.", ""),
     "damp": ("Damp risk: Bathroom", "Humidity has been over 65% for an hour.", ""),
     "frost": ("Frost tonight", "It is forecast to drop to -2°C tonight.", ""),

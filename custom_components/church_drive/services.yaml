@@ -244,6 +244,9 @@ add_tasks:
       selector:
         entity:
           domain: ai_task
+shopping_read:
+  description: What is on the main shopping list and what Clive suggests adding (the answer is returned; used by Clive's shopping scripts).
+
 shopping_add:
   fields:
     items:

@@ -44,6 +44,7 @@ KINDS: list[dict[str, Any]] = [
     {"key": "tamper", "group": "Security", "name": "Sensor tampered with", "default": "admins",
      "needs": [("class", "binary_sensor", "tamper")]},
     # House.
+    {"key": "shopping_offer", "group": "House", "name": "Weekly grocery shop offer", "note": "Clive, the evening before", "default": "all", "needs": []},
     {"key": "vacuum", "group": "House", "name": "Vacuum finished or stuck", "default": "admins",
      "needs": [("domain", "vacuum")]},
     {"key": "damp", "group": "House", "name": "Damp risk", "note": "Humidity over 65% for an hour", "default": "admins",
