@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -239,7 +240,11 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<ShoppingPlace>>(emptyList()) }
     var searchNote by remember { mutableStateOf("") }
-    var items by remember { mutableStateOf("") }
+    // One box per item: Enter makes the next box and moves to it.
+    var itemRows by remember { mutableStateOf(listOf("")) }
+    val itemFocus = remember { mutableMapOf<Int, androidx.compose.ui.focus.FocusRequester>() }
+    var focusRow by remember { mutableStateOf(-1) }
+    LaunchedEffect(focusRow) { if (focusRow >= 0) { runCatching { itemFocus[focusRow]?.requestFocus() }; focusRow = -1 } }
     var withMissed by remember { mutableStateOf(!steps && existing == null && state.missed.isNotEmpty()) }
     // The house, for a one-tap "Home" place on a steps list (Home Assistant's zone.home).
     val api = LocalHaApi.current
@@ -280,7 +285,7 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
     if (places.isNotEmpty()) {
         TileRow(places.map { p -> TileItem("mdi:map-marker-remove-outline", p.name, true) { places = places - p } }, tone, neutral.onContainer)
     }
-    WashField(query, { query = it }, "Search Google Maps, e.g. Lidl Protaras Cyprus", tone)
+    WashField(query, { query = it }, "Search Google Maps", tone)
     TileRow(
         listOf(
             TileItem("mdi:magnify", "Search", query.trim().length >= 2) {
@@ -318,7 +323,18 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
         }
     }
     if (existing == null) {
-        WashField(items, { items = it }, if (steps) "Steps (one per line)" else "Items (one per line)", tone, singleLine = false, minLines = 3)
+        itemRows.forEachIndexed { i, row ->
+            val requester = itemFocus.getOrPut(i) { androidx.compose.ui.focus.FocusRequester() }
+            WashField(
+                row, { v -> itemRows = itemRows.toMutableList().also { it[i] = v } }, if (steps) "Step" else "Item", tone,
+                modifier = Modifier.focusRequester(requester), imeAction = androidx.compose.ui.text.input.ImeAction.Next,
+            ) {
+                if (row.isNotBlank()) {
+                    if (i == itemRows.lastIndex) itemRows = itemRows + ""
+                    focusRow = i + 1
+                }
+            }
+        }
         if (!steps && state.missed.isNotEmpty()) {
             val n = state.missed.size
             TileRow(
@@ -336,7 +352,7 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
                     error = "Choose who the list is for."
                 } else if (existing == null) {
                     val body = JSONObject().put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", if (date.isEmpty()) "" else time.ifEmpty { "09:00" }).put("places", JSONArray(places.map { it.toJson() }))
-                        .put("items", JSONArray(splitItems(items))).put("include_missed", withMissed)
+                        .put("items", JSONArray(splitItems(itemRows.joinToString("\n")))).put("include_missed", withMissed)
                     if (steps) body.put("kind", "steps")
                     send("church_drive/shopping/create", body) { r -> onSaved(((r as? JSONObject)?.optJSONObject("list"))?.optString("id")) }
                 } else {
