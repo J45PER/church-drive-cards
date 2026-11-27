@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.195.3
+
+- **Fan speed shows as chosen.** On a fan that reports its speed as a percentage (or only after a preset was used), the speed tile you picked now stays highlighted; before, none looked selected. Also in the widget and on the watch.
+
 ## 0.195.2
 
 - No change to the app; "Heating: Manual" now arrives with the plain thermostat icon from the house.

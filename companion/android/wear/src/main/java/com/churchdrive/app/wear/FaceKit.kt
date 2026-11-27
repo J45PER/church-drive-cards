@@ -100,8 +100,12 @@ fun fanSpeeds(fan: EntityState?): List<FanSpeed> {
 fun currentSpeed(fan: EntityState, speeds: List<FanSpeed>): Int {
     if (fan.state != "on") return -1
     val preset = fan.str("preset_mode")
-    val percentage = fan.num("percentage") ?: 0.0
-    return speeds.indexOfFirst { sp -> if (sp.preset != null) sp.preset == preset else abs(percentage - (sp.percentage ?: 0)) < 5 }
+    speeds.indexOfFirst { sp -> sp.preset != null && sp.preset == preset }.let { if (it >= 0) return it }
+    if (preset != null) return -1
+    val percentage = fan.num("percentage") ?: return -1
+    val step = fan.num("percentage_step")?.takeIf { it > 0 } ?: (100.0 / maxOf(1, speeds.size))
+    val byStep = Math.round(percentage / step).toInt()
+    return speeds.indexOfFirst { it.n == byStep }.takeIf { it >= 0 } ?: speeds.indexOfFirst { abs(percentage - (it.percentage ?: 0)) < 5 }
 }
 
 fun speedIcon(i: Int, count: Int): String {

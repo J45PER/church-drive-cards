@@ -229,6 +229,17 @@ class ModeIconsTest {
     }
 
     @Test
+    fun theSpeedChosenShowsWhetherTheFanReportsAPresetOrOnlyAPercentage() {
+        val attrs = """"preset_modes":["speed_1","speed_2","speed_3","natural","sleep"],"percentage_step":33.333333333333336"""
+        fun cur(extra: String): Int? { val f = fan("{$attrs,$extra}"); return com.churchdrive.app.ui.currentFanSpeed(f, com.churchdrive.app.ui.fanSpeeds(f))?.n }
+        assertEquals(2, cur(""""preset_mode":"speed_2","percentage":67"""))
+        assertEquals(2, cur(""""preset_mode":null,"percentage":67"""))
+        assertEquals(3, cur(""""percentage":100"""))
+        assertEquals(null, cur(""""preset_mode":"sleep","percentage":33"""))
+        assertEquals(null, com.churchdrive.app.ui.currentFanSpeed(EntityState("fan.x", "off", JSONObject("{$attrs}")), com.churchdrive.app.ui.fanSpeeds(fan("{$attrs}"))))
+    }
+
+    @Test
     fun speedsAreSpeedometersAndOtherModesHaveTheirOwnIcons() {
         assertEquals("mdi:speedometer-slow", com.churchdrive.app.ui.fanSpeedIcon(0, 3))
         assertEquals("mdi:speedometer-medium", com.churchdrive.app.ui.fanSpeedIcon(1, 3))

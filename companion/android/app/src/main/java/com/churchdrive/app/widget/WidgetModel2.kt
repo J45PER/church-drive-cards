@@ -5,6 +5,7 @@ import com.churchdrive.app.ui.ALARM_ENTITY
 import com.churchdrive.app.ui.CLIMATE_ENTITY
 import com.churchdrive.app.ui.HomeTime
 import com.churchdrive.app.ui.alarmIconName
+import com.churchdrive.app.ui.currentFanSpeed
 import com.churchdrive.app.ui.alarmTone
 import com.churchdrive.app.ui.CLIMATE_QUALITY_ENTITY
 import com.churchdrive.app.ui.LightLayout
@@ -255,10 +256,11 @@ fun chargerCard(entities: Map<String, EntityState>): Card {
 fun fanCard(fan: EntityState?, entity: String): Card {
     val on = fan?.state == "on"
     val speeds = fanSpeeds(fan)
+    val current = currentFanSpeed(fan, speeds)
     val tiles = buildList {
         add(WidgetTile("mdi:power", "Off", !on, "fan", "turn_off", entity))
         speeds.forEachIndexed { i, s ->
-            val selected = on && (if (s.preset != null) fan?.str("preset_mode") == s.preset else fan?.num("percentage")?.toInt() == s.percentage)
+            val selected = on && current === s
             if (s.preset != null) add(WidgetTile(fanSpeedIcon(i, speeds.size), "${s.n}", selected, "fan", "set_preset_mode", entity, JSONObject().put("preset_mode", s.preset).toString()))
             else add(WidgetTile(fanSpeedIcon(i, speeds.size), "${s.n}", selected, "fan", "set_percentage", entity, JSONObject().put("percentage", s.percentage).toString()))
         }

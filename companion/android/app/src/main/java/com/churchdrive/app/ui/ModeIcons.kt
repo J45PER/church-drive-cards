@@ -97,6 +97,22 @@ fun fanSpeeds(fan: com.churchdrive.app.ha.EntityState?): List<FanSpeed> {
     return (0 until count).map { FanSpeed(it + 1, null, Math.round(step * (it + 1)).toInt()) }
 }
 
+/**
+ * The speed a fan is on, for the speed tile to show as chosen. A fan set to a speed preset says so; one set by percentage (or one that
+ * reports the speed only as a percentage after a preset was used) is matched by the nearest step. Sleep, natural and the other modes
+ * are not speeds, so no speed is shown for them.
+ */
+fun currentFanSpeed(fan: com.churchdrive.app.ha.EntityState?, speeds: List<FanSpeed>): FanSpeed? {
+    if (fan == null || fan.state != "on" || speeds.isEmpty()) return null
+    val preset = fan.str("preset_mode")
+    speeds.firstOrNull { it.preset != null && it.preset == preset }?.let { return it }
+    if (preset != null) return null
+    val percentage = fan.num("percentage") ?: return null
+    val step = fan.num("percentage_step")?.takeIf { it > 0 } ?: (100.0 / speeds.size)
+    val byStep = Math.round(percentage / step).toInt()
+    return speeds.firstOrNull { it.n == byStep } ?: speeds.firstOrNull { Math.abs(percentage - (it.percentage ?: 0)) < 5 }
+}
+
 /** The speedometer for the [i]th of [count] speeds: slow, medium or fast. */
 fun fanSpeedIcon(i: Int, count: Int): String {
     val gauges = listOf("mdi:speedometer-slow", "mdi:speedometer-medium", "mdi:speedometer")
