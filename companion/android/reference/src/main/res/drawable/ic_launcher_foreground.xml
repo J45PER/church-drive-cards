@@ -1,10 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:scaleX="2.5" android:scaleY="2.5" android:translateX="24" android:translateY="24">
+    <group android:scaleX="0.30617" android:scaleY="0.30617" android:translateX="28.367" android:translateY="22.431">
+        <path android:fillType="evenOdd" android:pathData="M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z" android:fillColor="#6A5BC2" />
+        <path android:fillType="evenOdd" android:pathData="M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="144.48" android:centerY="81.40" android:gradientRadius="79.20">
+                    <item android:offset="0" android:color="#FFAB47BC" />
+                    <item android:offset="1" android:color="#00AB47BC" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:fillType="evenOdd" android:pathData="M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="62.40" android:centerY="168.20" android:gradientRadius="100.80">
+                    <item android:offset="0" android:color="#FF4FD08A" />
+                    <item android:offset="1" android:color="#004FD08A" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:fillType="evenOdd" android:pathData="M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="26.40" android:centerY="60.32" android:gradientRadius="115.20">
+                    <item android:offset="0" android:color="#FF5C6BC0" />
+                    <item android:offset="1" android:color="#005C6BC0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:fillType="evenOdd" android:pathData="M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="91.20" android:centerY="93.80" android:gradientRadius="40.32">
+                    <item android:offset="0" android:color="#59FFFFFF" />
+                    <item android:offset="1" android:color="#00FFFFFF" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+    <!-- Review badge, as on the notification icons: a swatch fan in a dark circle at the mark's lower right, with a ring of the background colour round it. -->
+    <path android:fillColor="#FFFFFF" android:pathData="M61,72a14,14 0 1,0 28,0a14,14 0 1,0 -28,0" />
+    <path android:fillColor="#0F3A40" android:pathData="M63.5,72a11.5,11.5 0 1,0 23.0,0a11.5,11.5 0 1,0 -23.0,0" />
+    <group android:scaleX="0.58" android:scaleY="0.58" android:translateX="68" android:translateY="65">
         <path android:fillColor="#4DD0E1" android:pathData="M2.53,19.65L3.87,20.21V11.18L1.44,17.04C1.03,18.06 1.5,19.23 2.53,19.65M22.03,15.95L17.07,4C16.76,3.23 16.03,2.77 15.26,2.75C15,2.75 14.73,2.79 14.47,2.9L7.1,5.95C6.35,6.26 5.89,7 5.87,7.75C5.86,8 5.91,8.29 6,8.55L11,20.5C11.29,21.28 12.03,21.74 12.81,21.75C13.07,21.75 13.33,21.7 13.58,21.6L20.94,18.55C21.96,18.13 22.45,16.96 22.03,15.95M7.88,8.75A1,1 0 0,1 6.88,7.75A1,1 0 0,1 7.88,6.75C8.43,6.75 8.88,7.2 8.88,7.75C8.88,8.3 8.43,8.75 7.88,8.75M5.88,19.75A2,2 0 0,0 7.88,21.75H9.33L5.88,13.41V19.75Z" />
     </group>
 </vector>

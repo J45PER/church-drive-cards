@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.198.6
 
-- No change in this app (the review-only Reference app got an icon).
+- No change in this app (the review-only Reference app got a Clive-themed icon).
 
 ## 0.198.5
 
