@@ -117,13 +117,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                placeholder = { Text("Add a task") },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
+            WashField(text, { text = it }, "", tone, modifier = Modifier.weight(1f), placeholder = "Add a task")
             FilledIconButton(
                 onClick = {
                     if (text.isNotBlank()) {

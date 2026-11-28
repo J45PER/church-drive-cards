@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -115,13 +114,13 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
     when (val s = state) {
         // A small pill at the top, not a box in the middle of the page; a tap on it cancels.
         InboxState.Reading -> if (waited && text != null) LoadingPill(visible = true, connecting = false, label = if (autoAdd) "Adding" else "Reading", onTap = onClose)
-        InboxState.Refused -> AlertDialog(
+        InboxState.Refused -> AppAlert(
             onDismissRequest = onClose,
             title = { Text("The house can't do that yet") },
             text = { Text("Church Drive in Home Assistant needs updating to 0.39.0 or later for tasks from text and voice. Nothing was added.") },
             confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
         )
-        InboxState.Empty -> AlertDialog(
+        InboxState.Empty -> AppAlert(
             onDismissRequest = onClose,
             title = { Text("No tasks found") },
             text = { Text("There was nothing in that text to do.") },
@@ -133,14 +132,14 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
                 kotlinx.coroutines.delay(4_000)
                 onClose()
             }
-            AlertDialog(
+            AppAlert(
                 onDismissRequest = onClose,
                 title = { Text(if (s.lines.size == 1) "Task added" else "${s.lines.size} tasks added") },
                 text = { Text(s.lines.joinToString("\n")) },
                 confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
             )
         }
-        is InboxState.Failed -> AlertDialog(
+        is InboxState.Failed -> AppAlert(
             onDismissRequest = onClose,
             title = { Text(if (s.code != null) "The house couldn't do that" else "Couldn't reach the house") },
             text = { Text(if (s.code != null) "Nothing was added. Home Assistant said: ${s.code}. Try again, and tell Jamie if it keeps happening." else "Nothing was added. Check the connection and try again.") },
@@ -174,10 +173,7 @@ private fun CheckTasks(batch: InboxBatch, lists: List<InboxList>, onClose: () ->
                     target = choice.lists.firstOrNull { optionLabel(it) == label }?.id ?: "new"
                 }
                 if (target == "new") {
-                    OutlinedTextField(
-                        newName, { newName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                        placeholder = { Text("Name for the new list (optional)") },
-                    )
+                    WashField(newName, { newName = it }, "", toneColors(Tone.Grey), placeholder = "Name for the new list (optional)")
                 }
                 if (choice.missed.isNotEmpty() && target == "new") {
                     Text("Not available last time, added too: ${choice.missed.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
@@ -188,10 +184,7 @@ private fun CheckTasks(batch: InboxBatch, lists: List<InboxList>, onClose: () ->
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(t.keep, { tasks[i] = t.copy(keep = it) })
-                    OutlinedTextField(
-                        t.summary, { tasks[i] = t.copy(summary = it) },
-                        modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = t.keep,
-                    )
+                    WashField(t.summary, { tasks[i] = t.copy(summary = it) }, "", toneColors(Tone.Grey), enabled = t.keep)
                 }
                 if (t.due.isNotEmpty()) Text("Due ${t.due.replace('T', ' ')}", style = MaterialTheme.typography.labelMedium)
                 if (t.keep && lists.isNotEmpty()) {

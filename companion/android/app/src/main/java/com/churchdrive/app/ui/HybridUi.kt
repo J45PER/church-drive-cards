@@ -273,10 +273,7 @@ private fun HybridEditor(start: HybridDraft, head: String, members: List<EntityS
     val saved = LocalSavedColours.current.colours
     val all = LocalHybrids.current
 
-    OutlinedTextField(
-        value = draft.name, onValueChange = { draft = draft.copy(name = it.take(20)); message = null }, singleLine = true,
-        label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
-    )
+    WashField(draft.name, { draft = draft.copy(name = it.take(20)); message = null }, "Name", tone)
     Text("Icon", style = MaterialTheme.typography.labelMedium, color = muted)
     TileRow(HYBRID_ICONS.map { icon -> TileItem(icon, icon.removePrefix("cd:"), draft.icon == icon, showLabel = false) { draft = draft.copy(icon = icon) } }, tone, ink, perRow = 6)
     Text("Each kind of light", style = MaterialTheme.typography.labelMedium, color = muted)

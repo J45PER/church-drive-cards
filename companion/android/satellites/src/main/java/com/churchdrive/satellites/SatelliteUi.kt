@@ -1,6 +1,8 @@
 package com.churchdrive.satellites
 
 import androidx.activity.compose.BackHandler
+import com.churchdrive.app.ui.AppAlert
+import com.churchdrive.app.ui.WashField
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,9 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
@@ -265,8 +265,8 @@ private fun AddPage(vm: SatelliteModel) {
             ToneCard(null) { ink, soft ->
                 Text("Can't scan?", color = ink, style = MaterialTheme.typography.titleMedium)
                 Text("Type the name (or the ID on its sticker) and the six digits shown under the QR code.", style = MaterialTheme.typography.bodySmall, color = soft)
-                OutlinedTextField(typedName, { typedName = it.trim() }, singleLine = true, label = { Text("Name or ID, for example clive-round or RND1-000123-4") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(typedCode, { typedCode = it.filter(Char::isDigit).take(6) }, singleLine = true, label = { Text("Code") }, modifier = Modifier.fillMaxWidth())
+                WashField(typedName, { typedName = it.trim() }, "Name or ID, for example clive-round or RND1-000123-4", toneColors(Tone.Grey))
+                WashField(typedCode, { typedCode = it.filter(Char::isDigit).take(6) }, "Code", toneColors(Tone.Grey), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
                 ToneTile("Continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) {
                     val typedId = DeviceId.parse(typedName)
                     if (typedName.isNotBlank() && typedCode.length == 6) vm.pairScanned(PairCode(typedId?.deviceName ?: typedName, typedCode, typedId))
@@ -284,14 +284,14 @@ private fun PairForm(vm: SatelliteModel, code: PairCode) {
     ToneCard(Tone.Teal) { ink, soft ->
         Text("Found ${code.id?.text ?: code.device}", color = ink, style = MaterialTheme.typography.titleMedium)
         Text(if (code.code.isNotEmpty()) "Check the code on its screen says ${code.spaced}." else "Check the sticker says ${code.shown}.", style = MaterialTheme.typography.bodyMedium, color = soft)
-        OutlinedTextField(ssid, { ssid = it }, singleLine = true, label = { Text("Home Wi-Fi name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(
-            password, { password = it }, singleLine = true, label = { Text("Wi-Fi password") }, modifier = Modifier.fillMaxWidth(),
+        WashField(ssid, { ssid = it }, "Home Wi-Fi name", toneColors(Tone.Grey))
+        WashField(
+            password, { password = it }, "Wi-Fi password", toneColors(Tone.Grey),
             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
         )
         if (code.key == null) {
-            OutlinedTextField(
-                key, { key = it }, singleLine = true, label = { Text("Satellite API key") }, modifier = Modifier.fillMaxWidth(),
+            WashField(
+                key, { key = it }, "Satellite API key", toneColors(Tone.Grey),
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
             )
             Text("The API key is the clive_round_api_key in satellite/secrets.yaml that the satellites were built with. It is kept on this phone so the next one is quicker. The Wi-Fi password is not kept.", style = MaterialTheme.typography.bodySmall, color = soft)
@@ -554,10 +554,10 @@ private fun NameRoomSection(vm: SatelliteModel, sat: Satellite) {
     }
     if (renaming) {
         var text by remember { mutableStateOf(sat.name) }
-        AlertDialog(
+        AppAlert(
             onDismissRequest = { renaming = false },
             title = { Text("Rename satellite") },
-            text = { OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("Name") }) },
+            text = { WashField(text, { text = it }, "Name", toneColors(Tone.Grey)) },
             confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { renaming = false; vm.rename(sat, text) }) { Text("Rename") } },
             dismissButton = { TextButton(onClick = { renaming = false }) { Text("Cancel") } },
         )
@@ -589,7 +589,7 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
         }
     }
     if (confirmRemove) {
-        AlertDialog(
+        AppAlert(
             onDismissRequest = { confirmRemove = false },
             title = { Text("Remove ${sat.name}?") },
             text = { Text("It disappears from Home Assistant and this list. The satellite itself isn't wiped: to use it again, reset its pairing and add it again.") },
@@ -598,7 +598,7 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
         )
     }
     if (confirmReset) {
-        AlertDialog(
+        AppAlert(
             onDismissRequest = { confirmReset = false },
             title = { Text("Reset ${sat.name}'s pairing?") },
             text = { Text("It forgets the Wi-Fi and its own settings, then restarts showing a pairing code. Add it again with the Add tab.") },
@@ -607,7 +607,7 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
         )
     }
     if (confirmRestart) {
-        AlertDialog(
+        AppAlert(
             onDismissRequest = { confirmRestart = false },
             title = { Text("Restart ${sat.name}?") },
             text = { Text("It stops listening for about a minute while it starts again.") },
@@ -646,7 +646,7 @@ private fun VoiceSection(vm: SatelliteModel, sat: Satellite) {
 @Composable
 private fun PickSatellites(title: String, confirm: String, choices: List<Satellite>, onDone: (List<Satellite>) -> Unit, onDismiss: () -> Unit) {
     var picked by remember { mutableStateOf(choices.map { it.slug }.toSet()) }
-    AlertDialog(
+    AppAlert(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -687,10 +687,10 @@ private fun PresetsSection(vm: SatelliteModel, sat: Satellite) {
     }
     if (naming) {
         var text by remember { mutableStateOf("") }
-        AlertDialog(
+        AppAlert(
             onDismissRequest = { naming = false },
             title = { Text("Name the preset") },
-            text = { OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("For example: Bedroom, dim") }) },
+            text = { WashField(text, { text = it }, "For example: Bedroom, dim", toneColors(Tone.Grey)) },
             confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { naming = false; vm.savePreset(text, sat) }) { Text("Save") } },
             dismissButton = { TextButton(onClick = { naming = false }) { Text("Cancel") } },
         )

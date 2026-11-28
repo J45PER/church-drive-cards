@@ -1,6 +1,7 @@
 package com.churchdrive.app
 
 import android.os.Bundle
+import com.churchdrive.app.ui.AppAlert
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -161,7 +161,7 @@ class MainActivity : ComponentActivity() {
             val admin by vm.isAdmin.collectAsStateWithLifecycle()
             crash?.takeIf { admin }?.let { text ->
                 val clipboard = LocalClipboardManager.current
-                AlertDialog(
+                AppAlert(
                     onDismissRequest = { crash = null },
                     title = { Text("The app crashed last time") },
                     text = { Text(text, fontSize = 11.sp, modifier = Modifier.verticalScroll(rememberScrollState())) },

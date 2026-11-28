@@ -56,13 +56,11 @@ fun SignInForm(
             )
             Text(blurb)
             if (!needCode) {
-                if (changeAddress && showAddress) OutlinedTextField(
-                    url, { url = it }, label = { Text("Home Assistant address") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                )
-                OutlinedTextField(user, { user = it }, label = { Text("Username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(
-                    password, { password = it }, label = { Text("Password") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                val grey = toneColors(Tone.Grey)
+                if (changeAddress && showAddress) WashField(url, { url = it }, "Home Assistant address", grey, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+                WashField(user, { user = it }, "Username", grey)
+                WashField(
+                    password, { password = it }, "Password", grey,
                     visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 )
                 Button(
@@ -70,8 +68,8 @@ fun SignInForm(
                     enabled = !busy && url.isNotBlank() && user.isNotBlank() && password.isNotEmpty(),
                 ) { Text(if (busy) "Signing in…" else "Sign in") }
             } else {
-                OutlinedTextField(
-                    code, { code = it }, label = { Text("Two-step code") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                WashField(
+                    code, { code = it }, "Two-step code", toneColors(Tone.Grey),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                 )
                 Button(onClick = { onCode(code) }, enabled = !busy && code.isNotBlank()) { Text(if (busy) "Checking…" else "Continue") }

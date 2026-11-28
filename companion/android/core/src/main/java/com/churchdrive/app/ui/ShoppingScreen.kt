@@ -328,12 +328,13 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
             WashField(
                 row, { v -> itemRows = itemRows.toMutableList().also { it[i] = v } }, if (steps) "Step" else "Item", tone,
                 modifier = Modifier.focusRequester(requester), imeAction = androidx.compose.ui.text.input.ImeAction.Next,
-            ) {
-                if (row.isNotBlank()) {
-                    if (i == itemRows.lastIndex) itemRows = itemRows + ""
-                    focusRow = i + 1
-                }
-            }
+                onImeAction = {
+                    if (row.isNotBlank()) {
+                        if (i == itemRows.lastIndex) itemRows = itemRows + ""
+                        focusRow = i + 1
+                    }
+                },
+            )
         }
         if (!steps && state.missed.isNotEmpty()) {
             val n = state.missed.size

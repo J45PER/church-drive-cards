@@ -77,7 +77,7 @@ fun PeoplePage(entities: Map<String, EntityState>, registry: Registry) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Column(Modifier.weight(1f)) {
                                 Text(entities[zone]?.friendlyName ?: zone, style = MaterialTheme.typography.bodyMedium)
-                                OutlinedTextField(name, { v -> editing = draft.toMutableList().also { it[i] = zone to v } }, singleLine = true, label = { Text("Called") }, modifier = Modifier.fillMaxWidth())
+                                WashField(name, { v -> editing = draft.toMutableList().also { it[i] = zone to v } }, "Called", toneColors(Tone.Grey))
                             }
                             IconButton(onClick = { editing = draft.toMutableList().also { it.removeAt(i) } }) { Icon(CdVectors.Minus, contentDescription = "Take this place out") }
                         }

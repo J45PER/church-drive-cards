@@ -473,16 +473,11 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                 if (!chatting && !ui.typing) Box(Modifier.padding(end = 74.dp)) { SuggestionRow(model) }
                 if (chatting || ui.typing) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = ui.typed, onValueChange = { ui.typed = it }, singleLine = true, modifier = Modifier.weight(1f).focusRequester(ui.focus),
-                            placeholder = { Text("Ask or tell the house") },
+                        WashField(
+                            ui.typed, { ui.typed = it }, "", toneColors(Tone.Grey), modifier = Modifier.weight(1f).focusRequester(ui.focus),
+                            placeholder = "Ask or tell the house",
                             keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { model.send(ui.typed, typed = true); ui.typed = ""; keyboard?.hide(); focusManager.clearFocus(force = true) }),
-                            shape = RoundedCornerShape(28.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = scheme.surfaceContainer, unfocusedContainerColor = scheme.surfaceContainer,
-                                focusedBorderColor = scheme.outline, unfocusedBorderColor = scheme.outlineVariant,
-                            ),
                         )
                         Spacer(Modifier.size(58.dp))
                     }
