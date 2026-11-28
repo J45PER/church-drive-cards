@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.198.6
+
+- No change in this app (the review-only Reference app got a card-fan icon in the Clive gradient).
+
 ## 0.198.5
 
 - **Switches, sliders and menus are the same everywhere.** One switch, one slider (the bar the lights use, now also on the blind, the camera scrub, the speaker volume and Satellites), and one pop-up menu; choosing a value from a list is a picker.

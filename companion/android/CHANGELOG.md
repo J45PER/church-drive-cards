@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.198.6
+
+- No change in this app (the review-only Reference app got a card-fan icon in the Clive gradient).
+
 ## 0.198.5
 
 - **Switches, sliders and menus are the same everywhere.** One switch, one slider (the bar the lights use, now also on the blind, the camera scrub, the speaker volume and Satellites), and one pop-up menu; choosing a value from a list is a picker.
