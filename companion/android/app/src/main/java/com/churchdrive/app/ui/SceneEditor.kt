@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
@@ -84,7 +83,7 @@ fun SceneEditorPage(initial: SceneDraft, onClose: () -> Unit) {
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Animated on Hue lights", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            Switch(draft.animated, { draft = draft.copy(animated = it) })
+            AppSwitch(draft.animated, { draft = draft.copy(animated = it) })
         }
         (message ?: sceneProblem(draft))?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = muted) }
         TileRow(

@@ -46,7 +46,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -252,7 +251,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 if (openApp) "To-do, and the tasks on Home, open the To-Do app. Turn off to use the To-do page in this app instead."
                 else "To-do and the tasks on Home open the To-do page in this app. Turn on to open the To-Do app.",
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
-                trailing = { Switch(checked = openApp, onCheckedChange = { on -> openApp = on; com.churchdrive.app.TodoLink.setPreferApp(context, on) }) },
+                trailing = { AppSwitch(checked = openApp, onCheckedChange = { on -> openApp = on; com.churchdrive.app.TodoLink.setPreferApp(context, on) }) },
             )
         }
         else PanelCard {
@@ -269,7 +268,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 "Messages from the house, such as the doorbell or an alarm, come to this phone.",
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_clive_chat), contentDescription = null) },
                 trailing = {
-                    Switch(checked = settings.notifyOn, onCheckedChange = { on ->
+                    AppSwitch(checked = settings.notifyOn, onCheckedChange = { on ->
                         message = null
                         if (!on) settings.onNotify(false)
                         else if (Permissions.canNotify(context)) settings.onNotify(true)
@@ -289,7 +288,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 CdVectors.Mic, "Use phone theme colours for ${AssistantBrand.shown}",
                 "${AssistantBrand.shown} normally keeps his original indigo, purple and green. Turn this on to give him your phone's theme colours instead.",
                 leading = CliveMic,
-                trailing = { Switch(checked = AssistColourSetting.phoneTheme, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
+                trailing = { AppSwitch(checked = AssistColourSetting.phoneTheme, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
             )
             val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 if (granted) AssistWakeSetting.set(context, true) else message = "The microphone is off for this app. Allow it in Android's settings to use the wake word."
@@ -304,7 +303,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 },
                 leading = CliveMic,
                 trailing = {
-                    Switch(checked = AssistWakeSetting.enabled, onCheckedChange = { on ->
+                    AppSwitch(checked = AssistWakeSetting.enabled, onCheckedChange = { on ->
                         message = null
                         if (!on) AssistWakeSetting.set(context, false)
                         else if (hasMicrophone(context)) AssistWakeSetting.set(context, true)
@@ -322,13 +321,13 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 if (AssistStartSetting.typing) "${AssistantBrand.shown} opens quietly, not listening, with the typing box ready. Tap the microphone to talk."
                 else "${AssistantBrand.shown} starts listening as soon as he opens. Turn this on and he waits for you to type or tap the microphone.",
                 leading = CliveMic,
-                trailing = { Switch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
+                trailing = { AppSwitch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
             )
             PanelRow(
                 CdVectors.Pin, "Share my location",
                 "So the house knows when you're home, at work or out. Reported when you move, with no notice on your screen.",
                 trailing = {
-                    Switch(checked = settings.locationOn, onCheckedChange = { on ->
+                    AppSwitch(checked = settings.locationOn, onCheckedChange = { on ->
                         message = null
                         when {
                             !on -> settings.onLocation(false)

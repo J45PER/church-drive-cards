@@ -348,14 +348,16 @@ private fun ClipPlayer(url: String) {
             }) {
                 HaIcon(if (playing) "cd:pause" else "cd:play", if (playing) CdVectors.Pause else CdVectors.Play, Color.White, 24.dp)
             }
-            Slider(
-                value = progress,
-                onValueChange = {
-                    progress = it
-                    if (player.duration > 0) player.seekTo((player.duration * it).toLong())
-                },
-                modifier = Modifier.weight(1f),
-            )
+            Box(Modifier.weight(1f)) {
+                BarSlider(
+                    "", "", progress, androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.6f))),
+                    thumbOnly = false, height = 40.dp, header = false,
+                    onSet = {
+                        progress = it
+                        if (player.duration > 0) player.seekTo((player.duration * it).toLong())
+                    },
+                )
+            }
         }
     }
 }

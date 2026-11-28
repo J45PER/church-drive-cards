@@ -1,7 +1,9 @@
 package com.churchdrive.satellites
 
 import androidx.activity.compose.BackHandler
+import com.churchdrive.app.ui.AppSwitch
 import com.churchdrive.app.ui.AppAlert
+import com.churchdrive.app.ui.PickDialog
 import com.churchdrive.app.ui.WashField
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,7 +43,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -407,9 +408,7 @@ private fun GlanceSection(vm: SatelliteModel, sat: Satellite) {
                     Text("Glance ${slot + 1}", color = ink, style = MaterialTheme.typography.bodyLarge)
                     Box {
                         TonePill(sat.glances.getOrNull(slot)?.ifBlank { null } ?: "Choose", Tone.Teal) { menu = true }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            GLANCE_OPTIONS.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { menu = false; vm.chooseGlance(sat, slot, option) }) }
-                        }
+                        if (menu) PickDialog("Glance ${slot + 1}", GLANCE_OPTIONS, sat.glances.getOrNull(slot), { it }, { menu = false }) { option -> vm.chooseGlance(sat, slot, option) }
                     }
                 }
             }
@@ -420,14 +419,16 @@ private fun GlanceSection(vm: SatelliteModel, sat: Satellite) {
 
 @Composable
 private fun SliderRow(label: String, value: Float?, range: ClosedFloatingPointRange<Float>, unit: String, ink: Color, soft: Color, onDone: (Float) -> Unit) {
-    var v by remember(value) { mutableFloatStateOf(value ?: range.start) }
-    Column {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, color = ink, style = MaterialTheme.typography.bodyLarge)
-            Text(if (value == null) "–" else "${v.toInt()}$unit", color = soft, style = MaterialTheme.typography.bodyMedium)
-        }
-        Slider(value = v, onValueChange = { v = it }, valueRange = range, onValueChangeFinished = { onDone(v) }, enabled = value != null)
-    }
+    val span = (range.endInclusive - range.start).coerceAtLeast(1e-6f)
+    val shown = value ?: range.start
+    val accent = Color(0xFF8AB4F8)
+    com.churchdrive.app.ui.BarSlider(
+        label, if (value == null) "–" else "${shown.toInt()}$unit", (shown - range.start) / span,
+        androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(accent.copy(alpha = 0.35f), accent.copy(alpha = 0.8f))),
+        thumbOnly = false, enabled = value != null,
+        valueOf = { f -> "${(range.start + f * span).toInt()}$unit" },
+        onSet = { f -> onDone(range.start + f * span) },
+    )
 }
 
 @Composable
@@ -454,7 +455,7 @@ private fun SwitchSection(vm: SatelliteModel, sat: Satellite) {
             ).forEach { (label, on, suffix) ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(label, color = ink, style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = on == true, enabled = on != null, onCheckedChange = { vm.setSwitch(sat, suffix, it) })
+                    AppSwitch(checked = on == true, enabled = on != null, onCheckedChange = { vm.setSwitch(sat, suffix, it) })
                 }
             }
         }
@@ -543,10 +544,7 @@ private fun NameRoomSection(vm: SatelliteModel, sat: Satellite) {
                 Text("Room", color = ink, style = MaterialTheme.typography.bodyLarge)
                 Box {
                     TonePill(vm.areas.firstOrNull { it.first == room }?.second ?: "No room", Tone.Teal) { menu = true }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(text = { Text("No room") }, onClick = { menu = false; vm.setRoom(sat, null) })
-                        vm.areas.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { menu = false; vm.setRoom(sat, id) }) }
-                    }
+                    if (menu) PickDialog("Room", listOf<String?>(null) + vm.areas.map { it.first }, room, { id -> if (id == null) "No room" else vm.areas.firstOrNull { it.first == id }?.second ?: id }, { menu = false }) { id -> vm.setRoom(sat, id) }
                 }
             }
             Text("The room is how Clive will know which TV or lights \"here\" means. Both need a Home Assistant administrator.", style = MaterialTheme.typography.bodySmall, color = soft)
@@ -631,9 +629,7 @@ private fun VoiceSection(vm: SatelliteModel, sat: Satellite) {
                     Text(v.label, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Box {
                         TonePill(v.state.ifBlank { "Choose" }, Tone.Indigo) { menu = true }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            v.options.forEach { o -> DropdownMenuItem(text = { Text(o) }, onClick = { menu = false; vm.chooseVoice(v, o) }) }
-                        }
+                        if (menu) PickDialog(v.label, v.options, v.state, { it }, { menu = false }) { o -> vm.chooseVoice(v, o) }
                     }
                 }
             }

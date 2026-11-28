@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.198.5
+
+- **Switches, sliders and menus are the same everywhere.** One switch, one slider (the bar the lights use, now also on the blind, the camera scrub, the speaker volume and Satellites), and one pop-up menu; choosing a value from a list is a picker.
+
 ## 0.198.4
 
 - **Same boxes and dialogs everywhere.** Text boxes are the tinted ones with no outline, and questions and notices use the same grey card as the pickers. (Satellites: its Wi-Fi and pairing boxes and its rename and preset dialogs.)

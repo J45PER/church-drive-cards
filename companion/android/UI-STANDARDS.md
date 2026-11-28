@@ -71,12 +71,21 @@ The reference is the To-Do edit-task page (`todo/.../TodoEditUi.kt`) and the "Co
 - **Pickers** (date, time, single choice, length) all use `AppDialog`: grey acrylic card, tone accent, text Cancel / OK from `DialogButtons`. Questions and notices are `AppAlert` (same card, same buttons). Never a Material `DatePickerDialog` or `AlertDialog`.
 - **People**: a `TileRow` of `mdi:account-outline` tiles. **Choices** that scroll: `OptionRow`. **Buttons at the foot**: a `TileRow` of Cancel and Save (Save selected), and a red Delete tile that asks twice.
 
+## Switches, sliders and menus (decided 2026-11-28)
+
+The reference is the "Switches, sliders and menus" board.
+
+- **Switch**: `AppSwitch` (core `SwitchKit.kt`), for a setting that stays as set. Off is a faint track and a light thumb, on is the strong colour with the dark ink as the thumb. Never Material's `Switch`. A choice you apply (a mode, a scene) is a tile, not a switch.
+- **Slider**: `BarSlider` (core `BarSlider.kt`), the 60 dp bar with the fill as the level and a white handle; the label on the left and the value on the right (`header = false` and a shorter `height` where the row already says it). Never Material's `Slider`, and never a thin track.
+- **Menu**: `AppMenu` with `AppMenuItem` rows (core `MenuKit.kt`), for more actions than there is room for. Choosing a value is a picker dialog (`PickDialog`) or a row of tiles, never a menu.
+
 ## What `UiStandardsTest` checks
 
 - `tileRowSizes` never leaves a gap and never makes the last row the longest.
 - No file but `UiKit.kt` types a 48, 56 or 64 dp height.
 - Tile labels use `CentredText` (tile rows, alarm modes, scene tiles).
 - The only raw Material buttons are the few allowed (login, the add-task button, the step buttons); a new one fails.
+- No Material `Switch`, `Slider` or `DropdownMenu` outside their kit files.
 - No `OutlinedTextField` (but the duration picker's two), no Material `AlertDialog` (use `AppAlert`) and no Material `DatePickerDialog`.
 - Every `"mdi:..."` named in the code is a real icon, and every built-in icon is in the full set.
 

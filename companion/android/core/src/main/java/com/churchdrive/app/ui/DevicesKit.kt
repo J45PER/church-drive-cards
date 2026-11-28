@@ -134,7 +134,13 @@ fun MediaRemote(player: EntityState, registry: Registry, tone: ToneColors, call:
                     var volume by remember(id, player.num("volume_level")) { mutableStateOf((player.num("volume_level") ?: 0.0).toFloat()) }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         HaIcon("mdi:volume-high", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 22.dp)
-                        Slider(volume, { volume = it }, Modifier.weight(1f), onValueChangeFinished = { call("media_player", "volume_set", id, data("volume_level" to volume.toDouble())) })
+                        Box(Modifier.weight(1f)) {
+                            BarSlider(
+                                "", "", volume, androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(tone.accent.copy(alpha = 0.35f), tone.accent.copy(alpha = 0.8f))),
+                                thumbOnly = false, height = 48.dp, header = false,
+                                onSet = { volume = it; call("media_player", "volume_set", id, data("volume_level" to it.toDouble())) },
+                            )
+                        }
                     }
                 }
                 val sources = player.attributes.optJSONArray("source_list")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty()

@@ -19,8 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -373,12 +371,8 @@ private fun SwitchLine(label: String, checked: Boolean, ink: androidx.compose.ui
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         val tone = toneColors(Tone.Grey)
         Text(label, style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
-        Switch(
-            checked = checked, onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = tone.onAccent, checkedTrackColor = tone.accent,
-                uncheckedThumbColor = ink.copy(alpha = 0.7f), uncheckedTrackColor = ink.copy(alpha = 0.10f), uncheckedBorderColor = ink.copy(alpha = 0.5f),
-            ),
+        AppSwitch(
+            checked = checked, onCheckedChange = onChange, tone = tone,
         )
     }
 }
@@ -464,7 +458,7 @@ private fun SensorActionsPage(all: SensorActionsData, entities: Map<String, Enti
                     EntityCard(tone.container, ink) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(if (group.size > 1) group.joinToString(" + ") { it.name } else s.name, style = MaterialTheme.typography.titleLarge, color = ink.copy(alpha = if (a?.enabled == false) 0.55f else 1f), modifier = Modifier.weight(1f))
-                            if (a != null) Switch(checked = a.enabled, onCheckedChange = { on -> scope.launch { api?.ask("church_drive/sensor_actions/set", JSONObject().put("action_id", a.id).put("enabled", on)); onChanged() } })
+                            if (a != null) AppSwitch(checked = a.enabled, onCheckedChange = { on -> scope.launch { api?.ask("church_drive/sensor_actions/set", JSONObject().put("action_id", a.id).put("enabled", on)); onChanged() } })
                         }
                         StatusPill(sensorBadge(s, a), tone)
                         Text(sensorSubtitle(s, a), style = MaterialTheme.typography.bodyLarge, color = ink.copy(alpha = 0.9f))

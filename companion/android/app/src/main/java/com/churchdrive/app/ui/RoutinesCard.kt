@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.material3.Switch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -215,7 +214,7 @@ private fun LightRoutinesPage(list: List<RoutineInfo>, entities: Map<String, Ent
                                     style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.7f),
                                 )
                             }
-                            Switch(checked = r.enabled, onCheckedChange = { on -> scope.launch { api?.ask("church_drive/routines/set", JSONObject().put("routine_id", r.id).put("enabled", on)); onChanged() } })
+                            AppSwitch(checked = r.enabled, onCheckedChange = { on -> scope.launch { api?.ask("church_drive/routines/set", JSONObject().put("routine_id", r.id).put("enabled", on)); onChanged() } })
                         }
                     }
                 }

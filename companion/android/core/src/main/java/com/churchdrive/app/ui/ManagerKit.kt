@@ -19,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -461,7 +460,7 @@ fun SettingsEntitiesCard(config: JSONObject, entities: Map<String, EntityState>,
                     "input_datetime" -> if (entity != null) TimeInput(entity, call)
                     "input_boolean" -> if (entity != null) {
                         val on = entity.state == "on"
-                        Switch(checked = on, enabled = entity.available, onCheckedChange = { call("input_boolean", if (on) "turn_off" else "turn_on", entity.entityId, data()) })
+                        AppSwitch(checked = on, enabled = entity.available, onCheckedChange = { call("input_boolean", if (on) "turn_off" else "turn_on", entity.entityId, data()) })
                     }
                     else -> Text(entity?.let { presetLabel(it.state) + (it.str("unit_of_measurement")?.let { u -> " $u" } ?: "") } ?: "–", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

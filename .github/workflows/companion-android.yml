@@ -67,6 +67,11 @@ jobs:
         with:
           name: church-drive-admin-debug-apk
           path: companion/android/admin/build/outputs/apk/debug/*.apk
+      # The review-only Reference app (every shared element of the apps): a build artifact to download and look at, never published.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-reference-debug-apk
+          path: companion/android/reference/build/outputs/apk/debug/*.apk
       # Google Play app bundles (signed with the upload key): phone app, watch app (same listing, Wear OS form factor), To Do and Satellites.
       # Gradle's own names are all alike (app-release.aab...), so they are renamed here to what the releases use: church-drive-<app>-<version>-b<build>.aab.
       - name: Name the app bundles
@@ -121,6 +126,7 @@ jobs:
               companion/android/todo/*) todo=true ;;
               companion/android/satellites/*) sat=true ;;
               companion/android/admin/*) adm=true ;;
+              companion/android/reference/*) ;; # review-only: nothing is published for it
               companion/android/*) main=true; case "$f" in companion/android/core/*|companion/android/*.kts|companion/android/gradle*|companion/android/gradle/*) todo=true; sat=true; adm=true ;; esac ;;
               .github/workflows/companion-android.yml) main=true; todo=true; sat=true; adm=true ;;
             esac

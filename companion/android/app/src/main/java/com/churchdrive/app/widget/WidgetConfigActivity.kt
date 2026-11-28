@@ -1,6 +1,7 @@
 package com.churchdrive.app.widget
 
 import android.appwidget.AppWidgetManager
+import com.churchdrive.app.ui.AppSwitch
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -22,7 +23,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -173,7 +173,7 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
                     }
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Show scenes (for one room)", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Switch(scenes, onCheckedChange = { scenes = it })
+                        AppSwitch(scenes, onCheckedChange = { scenes = it })
                     }
                 }
                 "ScenesWidgetReceiver" -> {
