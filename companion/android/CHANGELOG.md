@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.198.3
+
+- **Activity log:** easier to read. A plain line is just its time (the name pill says who; Clive's pill says it was him; an "External" pill marks a change made outside Home Assistant), and rows wrap to two lines instead of cutting off.
+
 ## 0.198.2
 
 - **Fan card:** asks a silent fan to report again every 30 seconds, and keeps the last speed or mode it reported lit for up to ten minutes.

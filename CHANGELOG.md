@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.198.3 + apps 0.198.3** (2026-11-28): The Activity log is easier to read. A plain line is just its time (the name pill says who, Clive's pill says it was him, and a new "External" pill marks something changed outside Home Assistant), rows can use two lines instead of cutting off, and the wording is shorter. Same on the Manager website.
 - **v0.198.2 + apps 0.198.2** (2026-11-27): Fix: Device health no longer leaves the Bedroom Fan in Sleep. Its "nudge" now puts the fan back on exactly the speed or mode it was on, and a fan that reports neither keeps its last one in the saved reading, so a re-sync never loses it. The fan card also asks a silent fan to report again every 30 seconds and keeps the last speed or mode lit (up to ten minutes) meanwhile.
 - **v0.198.1 + apps 0.198.1** (2026-11-27): The new shopping list form: the Maps box just says "Search Google Maps", and items are one box each; pressing Enter adds the next box and moves to it.
 - **v0.198.0 + apps 0.198.0** (2026-11-27): Forms and pickers follow one reference. The new shopping list form now uses the same boxes, day choices, "Pick a date" tile and clock time tile as the edit-task page (no more typed dates or times), and the calendar picker now looks like the clock picker (same card, Cancel and OK). The rules are written in UI-STANDARDS.md and the build fails on a new outlined text box.
