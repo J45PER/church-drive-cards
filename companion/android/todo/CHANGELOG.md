@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.198.6
+
+- No change in this app (the review-only Reference app got an icon).
+
 ## 0.198.5
 
 - **Switches, sliders and menus are the same everywhere.** One switch, one slider (the bar the lights use, now also on the blind, the camera scrub, the speaker volume and Satellites), and one pop-up menu; choosing a value from a list is a picker.
