@@ -128,6 +128,7 @@ fun activityIsAssistant(kind: String): Boolean = kind == "clive" || kind == "cli
 fun activityWho(line: ActivityLine, assistant: String): String = when {
     activityIsAssistant(line.kind) -> assistant
     line.kind == "device" -> "House"
+    line.kind == "overruled" -> "External"
     else -> line.who.ifBlank { "Someone" }
 }
 
@@ -136,7 +137,7 @@ fun activityNote(line: ActivityLine, assistant: String = "the assistant"): Strin
     "clive" -> line.by?.let { "asked by $it" } ?: "asked"
     "clive_auto" -> line.rule?.let { "automatic: $it" } ?: "automatic"
     "sensor" -> "automatic: sensor action"
-    "overruled" -> "overruled $assistant from outside the app" + (line.clive?.let { " (set at ${eventClock(it)})" } ?: "")
+    "overruled" -> "overruled $assistant" + (line.clive?.let { ", his was ${eventClock(it)}" } ?: "")
     else -> null
 }
 
@@ -207,8 +208,9 @@ fun activityPersonTone(name: String): Tone? = when (name.trim().lowercase()) {
 
 /** The second line of a row: the time, then who asked, which rule ran, or that it was done by hand (the house cannot tell a dial from the app). */
 fun activityDetail(line: ActivityLine, assistant: String): String {
-    if (line.kind == "device") return eventClock(line.ts) + " · " + if (line.state == "online") "Answering again" else "Not answering for ten minutes or more"
-    val note = activityNote(line, assistant) ?: if (line.kind == "presence") "Home Assistant noticed their phone" else "Done by hand or in the app"
+    if (line.kind == "device") return eventClock(line.ts) + " · " + if (line.state == "online") "Answering again" else "Not answering"
+    // A person's own pill says who; Clive's says it was him; "External" says it was not Home Assistant. So a plain line is just its time.
+    val note = activityNote(line, assistant) ?: return eventClock(line.ts)
     return eventClock(line.ts) + " · " + note.replaceFirstChar { it.uppercase() }
 }
 

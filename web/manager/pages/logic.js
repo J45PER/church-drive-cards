@@ -183,10 +183,10 @@ export function activityNote(line, assistant = 'the assistant') {
   if (line.kind === 'clive') return line.by ? `asked by ${line.by}` : 'asked';
   if (line.kind === 'clive_auto') return line.rule ? `automatic: ${line.rule}` : 'automatic';
   if (line.kind === 'sensor') return 'automatic: sensor action';
-  if (line.kind === 'overruled') return `overruled ${assistant} from outside the app${line.clive ? ` (set at ${clock(line.clive)})` : ''}`;
+  if (line.kind === 'overruled') return `overruled ${assistant}${line.clive ? `, his was ${clock(line.clive)}` : ''}`;
   return null;
 }
-export const activityWho = (line, assistant) => (line.kind === 'clive' || line.kind === 'clive_auto' ? assistant : line.who || 'Someone');
+export const activityWho = (line, assistant) => (line.kind === 'clive' || line.kind === 'clive_auto' ? assistant : line.kind === 'overruled' ? 'External' : line.who || 'Someone');
 export function activityProblem(code) {
   return code === 'unknown_command' ? "Home Assistant is running an older Church Drive that doesn't have the activity log yet. Update Church Drive in HACS, then restart Home Assistant."
     : code === 'unauthorized' ? 'Only administrators can see the activity log.' : "The activity log couldn't be read from the house. Check the connection, or that Church Drive is running in Home Assistant.";
@@ -250,7 +250,8 @@ export function lookColours(look) {
 export const activityHeadline = (line) => line.headline || `${line.text.charAt(0).toUpperCase()}${line.text.slice(1)}`;
 /** The second line: the time, then who asked or which rule ran (the house cannot tell a dial from the app). */
 export function activityDetail(line, assistant = 'the assistant') {
-  if (line.kind === 'device') return `${clock(line.ts)} · ${line.state === 'online' ? 'Answering again' : 'Not answering for ten minutes or more'}`;
-  const note = activityNote(line, assistant) || (line.kind === 'presence' ? 'Home Assistant noticed their phone' : 'Done by hand or in the app');
-  return `${clock(line.ts)} · ${note.charAt(0).toUpperCase()}${note.slice(1)}`;
+  if (line.kind === 'device') return `${clock(line.ts)} · ${line.state === 'online' ? 'Answering again' : 'Not answering'}`;
+  // A person's pill says who, Clive's says it was him, "External" says it was not Home Assistant: a plain line is just its time.
+  const note = activityNote(line, assistant);
+  return note ? `${clock(line.ts)} · ${note.charAt(0).toUpperCase()}${note.slice(1)}` : clock(line.ts);
 }

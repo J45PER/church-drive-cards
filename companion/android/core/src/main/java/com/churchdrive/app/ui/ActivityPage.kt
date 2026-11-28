@@ -214,8 +214,8 @@ private fun ActivityRow(line: ActivityLine, assistant: String) {
             Spacer(Modifier.width(20.dp))
             HaIcon(activityIcon(line), CdVectors.History, iconColour, 24.dp)
             Column(Modifier.weight(1f).padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
-                Text(headline, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(activityDetail(line, assistant), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(headline, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(activityDetail(line, assistant), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.75f), maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Row(
                 Modifier.width(pillWidth).fillMaxHeight().clip(RoundedCornerShape(32.dp)).background(pillBrush).glowBehind(pillColour),

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.198.3
+
+- **Activity log:** easier to read. A plain line is just its time (the name pill says who; Clive's pill says it was him; an "External" pill marks a change made outside Home Assistant), and rows wrap to two lines instead of cutting off.
+
 ## 0.198.2
 
 - **Fan card:** asks a silent fan to report again every 30 seconds, and keeps the last speed or mode it reported lit for up to ten minutes.

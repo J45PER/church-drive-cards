@@ -181,11 +181,11 @@ class ActivityDataTest {
         assertNull(activityNote(line(1)))
         assertNull(activityNote(line(1, "presence")))
         // An override is named by the device that was changed, and says who it overruled and when he had set it.
-        assertEquals("Downstairs", activityWho(line(1, "overruled", who = "Downstairs"), "Gregg"))
-        assertEquals("overruled Gregg from outside the app", activityNote(line(1, "overruled", who = "Downstairs"), "Gregg"))
+        assertEquals("External", activityWho(line(1, "overruled", who = "Downstairs"), "Gregg"))
+        assertEquals("overruled Gregg", activityNote(line(1, "overruled", who = "Downstairs"), "Gregg"))
         val set = ms(at(2026, 10, 26, 18, 2))
         val withTime = line(1, "overruled", who = "Downstairs").copy(clive = set)
-        assertEquals("overruled Gregg from outside the app (set at ${com.churchdrive.app.ui.eventClock(set)})", activityNote(withTime, "Gregg"))
+        assertEquals("overruled Gregg, his was ${com.churchdrive.app.ui.eventClock(set)}", activityNote(withTime, "Gregg"))
     }
 
     @Test
