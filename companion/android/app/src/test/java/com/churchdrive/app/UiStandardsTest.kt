@@ -45,19 +45,16 @@ class UiStandardsTest {
     // ---- Forms and pickers
 
     @Test
-    fun noNewOutlinedTextBoxesAndTheDatePickerIsTheSharedOne() {
+    fun noOutlinedTextBoxesOrMaterialDialogsAndThePickersAreTheSharedOnes() {
         // The ceiling per file only goes down as forms are converted to WashField (see "Forms and pickers" in UI-STANDARDS.md).
-        val ceiling = mapOf(
-            "AssistScreen.kt" to 1, "InboxDialog.kt" to 2, "SceneEditor.kt" to 1, "LayoutUi.kt" to 2, "LoginScreen.kt" to 5, "HybridUi.kt" to 1,
-            "ManagerKit.kt" to 1, "ManagerPages.kt" to 1, "TodoCards.kt" to 1, "SignInForm.kt" to 4, "PickDialog.kt" to 2,
-            "SatelliteUi.kt" to 7, "AssistantSheet.kt" to 1,
-        )
+        val ceiling = mapOf("PickDialog.kt" to 2) // the duration picker's two number boxes (already on the wash)
         val root = File("..")
         for (module in listOf("app", "core", "todo", "satellites", "admin", "wear")) {
             File(root, "$module/src/main").walkTopDown().filter { it.extension == "kt" }.forEach { f ->
                 val text = f.readText()
                 val n = Regex("""(?<![A-Za-z])OutlinedTextField\(""").findAll(text).count()
                 assertTrue("${f.name} has $n OutlinedTextField (allowed ${ceiling[f.name] ?: 0}); use WashField", n <= (ceiling[f.name] ?: 0))
+                assertEquals("${f.name} uses Material's AlertDialog; use AppAlert", 0, Regex("""(?<![A-Za-z])AlertDialog\(""").findAll(text).count())
                 assertEquals("${f.name} uses Material's DatePickerDialog; use DatePickDialog", 0, Regex("""(?<![A-Za-z])DatePickerDialog\(""").findAll(text).count())
             }
         }

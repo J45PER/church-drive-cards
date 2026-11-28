@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.198.4
+
+- **Same boxes and dialogs everywhere.** Text boxes are the tinted ones with no outline, and questions and notices use the same grey card as the pickers. (Satellites: its Wi-Fi and pairing boxes and its rename and preset dialogs.)
+
 ## 0.198.3
 
 - **Activity log:** easier to read. A plain line is just its time (the name pill says who; Clive's pill says it was him; an "External" pill marks a change made outside Home Assistant), and rows wrap to two lines instead of cutting off.

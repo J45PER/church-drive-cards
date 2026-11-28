@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -88,7 +87,7 @@ fun UpdateNotice(play: Boolean, githubAvailable: Boolean, apkUrl: String, appNam
             }
         }
         if (showing) {
-            AlertDialog(
+            AppAlert(
                 onDismissRequest = { showing = false },
                 title = { Text("A new version is ready") },
                 text = { Text("Updating keeps $appName working properly with the house. It takes a minute.") },

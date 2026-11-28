@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -96,7 +95,7 @@ data class ChargeAsk(val nowPence: Double, val cheapPence: Double, val startMs: 
 @Composable
 fun ChargeAskDialog(ask: ChargeAsk, onLater: () -> Unit, onNow: () -> Unit, onCancel: () -> Unit) {
     val now = remember { System.currentTimeMillis() }
-    AlertDialog(
+    AppAlert(
         onDismissRequest = onCancel,
         title = { Text("Wait for the cheap rate?") },
         text = { Text(chargeAskText(ask, now)) },

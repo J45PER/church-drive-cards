@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -145,7 +144,7 @@ fun NoticeStylesPage(isAdmin: Boolean, onBack: () -> Unit) {
         }
     }
     confirmOff?.let { kind ->
-        AlertDialog(
+        AppAlert(
             onDismissRequest = { confirmOff = null },
             title = { Text("Stop ${kind.optString("name").lowercase()}?") },
             text = { Text("This is a safety alarm. You will not be told about it on any of your phones.") },

@@ -152,7 +152,7 @@ fun IconStylesPage() {
                             }
                         }
                         if (isOpen) {
-                            OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("Icon, like mdi:fan") }, isError = text.isNotBlank() && !validIconName(text), modifier = Modifier.fillMaxWidth())
+                            WashField(text, { text = it }, "Icon, like mdi:fan", toneColors(Tone.Grey), isError = text.isNotBlank() && !validIconName(text))
                             Choices(listOf(
                                 TileItem("mdi:check", "Save", validIconName(text)) {
                                     if (validIconName(text)) {

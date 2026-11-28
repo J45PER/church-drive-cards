@@ -57,7 +57,7 @@ fun SceneEditorPage(initial: SceneDraft, onClose: () -> Unit) {
     val at = sel.coerceIn(0, draft.colours.lastIndex)
     FullPage(if (initial.key == null) "New scene" else "Change scene", onClose) {
         Text("One look for the whole room. For different colours on different lights, make a hybrid scene instead.", style = MaterialTheme.typography.bodySmall, color = muted)
-        OutlinedTextField(draft.name, { draft = draft.copy(name = it.take(32)) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        WashField(draft.name, { draft = draft.copy(name = it.take(32)) }, "Name", tone)
         Text("Colours", style = MaterialTheme.typography.labelMedium, color = muted)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             draft.colours.forEachIndexed { i, hex ->

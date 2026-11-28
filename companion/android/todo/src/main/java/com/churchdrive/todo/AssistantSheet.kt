@@ -122,12 +122,12 @@ fun AssistantSheet(vm: TodoModel, onClose: () -> Unit) {
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    text, { text = it }, modifier = Modifier.weight(1f), singleLine = true,
-                    placeholder = { Text("Add milk, tick off bins…") },
+                com.churchdrive.app.ui.WashField(
+                    text, { text = it }, "", com.churchdrive.app.ui.toneColors(com.churchdrive.app.ui.Tone.Grey), modifier = Modifier.weight(1f),
+                    placeholder = "Add milk, tick off bins…",
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send(text) }),
-                    trailingIcon = { IconButton(onClick = { listen() }) { Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_clive_mic), contentDescription = "Speak") } },
+                    trailing = { IconButton(onClick = { listen() }) { Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_clive_mic), contentDescription = "Speak") } },
                 )
                 FilledIconButton(onClick = { send(text) }, enabled = text.isNotBlank()) { Icon(CdVectors.Send, contentDescription = "Send") }
             }

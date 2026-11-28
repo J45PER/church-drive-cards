@@ -67,50 +67,15 @@ fun LoginScreen(
             "Church Drive", style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.combinedClickable(onClick = {}, onLongClick = { showAddress = !showAddress }),
         )
-        if (showAddress) OutlinedTextField(
-            value = url,
-            onValueChange = { url = it },
-            label = { Text("Home Assistant address") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            singleLine = true,
-            enabled = !askCode,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        val grey = toneColors(Tone.Grey)
+        if (showAddress) WashField(url, { url = it }, "Home Assistant address", grey, enabled = !askCode, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
         if (useToken) {
-            OutlinedTextField(
-                value = token,
-                onValueChange = { token = it },
-                label = { Text("Access token") },
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            WashField(token, { token = it }, "Access token", grey, visualTransformation = PasswordVisualTransformation())
         } else if (askCode) {
-            OutlinedTextField(
-                value = code,
-                onValueChange = { code = it },
-                label = { Text("Two-step code") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            WashField(code, { code = it }, "Two-step code", grey, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         } else {
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Username") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            WashField(username, { username = it }, "Username", grey)
+            WashField(password, { password = it }, "Password", grey, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
         }
         message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(

@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
@@ -65,6 +66,32 @@ internal fun DialogButtons(tone: ToneColors, onCancel: () -> Unit, onOk: (() -> 
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
         TextButton(onClick = onCancel, colors = colours) { Text("Cancel") }
         if (onOk != null) TextButton(onClick = onOk, colors = colours) { Text("OK") }
+    }
+}
+
+/**
+ * A question or notice in the app's acrylic card, in place of Material's AlertDialog (same parts: [title], [text], [confirmButton], [dismissButton]).
+ * The buttons are plain text in the tone's accent, as on every picker.
+ */
+@Composable
+fun AppAlert(
+    onDismissRequest: () -> Unit, confirmButton: @Composable () -> Unit, title: (@Composable () -> Unit)? = null,
+    text: (@Composable () -> Unit)? = null, dismissButton: (@Composable () -> Unit)? = null,
+) {
+    AppDialog(onDismissRequest) { tone ->
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides tone.onContainer) {
+            if (title != null) ProvideTextStyle(MaterialTheme.typography.headlineSmall) { title() }
+            if (text != null) {
+                Spacer(Modifier.padding(top = 12.dp))
+                ProvideTextStyle(MaterialTheme.typography.bodyMedium) { text() }
+            }
+            MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = tone.accent)) {
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
+                    dismissButton?.invoke()
+                    confirmButton()
+                }
+            }
+        }
     }
 }
 

@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -73,7 +72,7 @@ fun UpdatePrompt(githubAvailable: Boolean) {
     Box {
         UpdateBanner(update)
         if (showing) {
-            AlertDialog(
+            AppAlert(
                 onDismissRequest = { showing = false },
                 title = { Text("A new version is ready") },
                 text = { Text("Updating keeps your location and notifications working properly, so the house knows who is home. It takes a minute.") },

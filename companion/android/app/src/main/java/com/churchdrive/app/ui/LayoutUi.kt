@@ -220,10 +220,7 @@ private fun OwnSectionEditor(start: OwnSection, isNew: Boolean, entities: Map<St
     val ink = MaterialTheme.colorScheme.onSurface
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     FullPage(if (isNew) "New section" else "Edit section", onClose) {
-        androidx.compose.material3.OutlinedTextField(
-            value = draft.title, onValueChange = { draft = draft.copy(title = it.take(24)); message = null }, singleLine = true, label = { Text("Name") },
-            modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
-        )
+        WashField(draft.title, { draft = draft.copy(title = it.take(24)); message = null }, "Name", tone)
         Text("Icon", style = MaterialTheme.typography.labelMedium, color = muted)
         TileRow(OWN_ICONS.map { icon -> TileItem(icon, icon.removePrefix("cd:"), draft.icon == icon, showLabel = false) { draft = draft.copy(icon = icon) } }, tone, ink, perRow = 7)
         Text("Colour", style = MaterialTheme.typography.labelMedium, color = muted)
@@ -312,10 +309,7 @@ private fun AddToSectionPage(kind: String, entities: Map<String, EntityState>, a
                 AddRow(cardLabel(a.card) { entities[it]?.friendlyName }, a.ref.section, item in added) { onAdd(item) }
             }
         } else {
-            androidx.compose.material3.OutlinedTextField(
-                value = query, onValueChange = { query = it }, singleLine = true, label = { Text("Search by name") },
-                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
-            )
+            WashField(query, { query = it }, "Search by name", toneColors(Tone.Grey))
             if (things.isEmpty()) Text("Nothing found.", style = MaterialTheme.typography.bodyMedium, color = muted)
             things.forEach { e ->
                 val item = AddedItem(entity = e.entityId)

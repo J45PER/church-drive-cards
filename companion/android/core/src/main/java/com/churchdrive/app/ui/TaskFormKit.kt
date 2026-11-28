@@ -28,21 +28,35 @@ import androidx.compose.ui.unit.dp
 // The parts of the edit-task page that the phone app and the To-Do app share, drawn like the rest of the app: a faint wash of the
 // text colour, 18 dp corners, no outline, and the clock for a time.
 
-/** A text box on a faint wash, no outline (as the add box on a task card), with its name above the text. */
+/**
+ * A text box on a faint wash, no outline (as the add box on a task card), with its name above the text ([label] blank: only the [placeholder]).
+ * [trailing] is an icon button at the end (a microphone), [keyboardOptions] and [keyboardActions] set the Enter key; the shape is the app's 18 dp.
+ */
 @Composable
-fun WashField(value: String, onChange: (String) -> Unit, label: String, tone: ToneColors, modifier: Modifier = Modifier, singleLine: Boolean = true, minLines: Int = 1, isError: Boolean = false, imeAction: ImeAction = ImeAction.Default, onImeAction: (() -> Unit)? = null) {
+fun WashField(
+    value: String, onChange: (String) -> Unit, label: String, tone: ToneColors, modifier: Modifier = Modifier, singleLine: Boolean = true, minLines: Int = 1,
+    isError: Boolean = false, imeAction: ImeAction = ImeAction.Default, onImeAction: (() -> Unit)? = null, placeholder: String? = null,
+    trailing: (@Composable () -> Unit)? = null, enabled: Boolean = true, keyboardOptions: KeyboardOptions? = null,
+    keyboardActions: androidx.compose.foundation.text.KeyboardActions? = null,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+) {
     val ink = tone.onContainer
     TextField(
-        value = value, onValueChange = onChange, label = { Text(label) }, singleLine = singleLine, minLines = minLines, isError = isError,
+        value = value, onValueChange = onChange, enabled = enabled, singleLine = singleLine, minLines = minLines, isError = isError,
+        label = label.takeIf { it.isNotBlank() }?.let { l -> { Text(l) } },
+        placeholder = placeholder?.let { p -> { Text(p) } },
+        trailingIcon = trailing, visualTransformation = visualTransformation,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        keyboardOptions = KeyboardOptions(imeAction = imeAction),
-        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onAny = { onImeAction?.invoke() }),
+        keyboardOptions = keyboardOptions ?: KeyboardOptions(imeAction = imeAction),
+        keyboardActions = keyboardActions ?: androidx.compose.foundation.text.KeyboardActions(onAny = { onImeAction?.invoke() }),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = ink.copy(alpha = 0.14f), unfocusedContainerColor = ink.copy(alpha = 0.10f), errorContainerColor = ink.copy(alpha = 0.10f),
-            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, errorIndicatorColor = Color.Transparent,
-            focusedTextColor = ink, unfocusedTextColor = ink, errorTextColor = ink,
+            disabledContainerColor = ink.copy(alpha = 0.05f),
+            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, errorIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent,
+            focusedTextColor = ink, unfocusedTextColor = ink, errorTextColor = ink, disabledTextColor = ink.copy(alpha = 0.5f),
             focusedLabelColor = tone.accent, unfocusedLabelColor = ink.copy(alpha = 0.7f), errorLabelColor = MaterialTheme.colorScheme.error,
+            focusedPlaceholderColor = ink.copy(alpha = 0.55f), unfocusedPlaceholderColor = ink.copy(alpha = 0.55f),
             cursorColor = tone.accent,
         ),
     )
