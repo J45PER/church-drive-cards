@@ -49,12 +49,15 @@ class UiStandardsTest {
         // The ceiling per file only goes down as forms are converted to WashField (see "Forms and pickers" in UI-STANDARDS.md).
         val ceiling = mapOf("PickDialog.kt" to 2) // the duration picker's two number boxes (already on the wash)
         val root = File("..")
-        for (module in listOf("app", "core", "todo", "satellites", "admin", "wear")) {
+        for (module in listOf("app", "core", "todo", "satellites", "admin", "wear", "reference")) {
             File(root, "$module/src/main").walkTopDown().filter { it.extension == "kt" }.forEach { f ->
                 val text = f.readText()
                 val n = Regex("""(?<![A-Za-z])OutlinedTextField\(""").findAll(text).count()
                 assertTrue("${f.name} has $n OutlinedTextField (allowed ${ceiling[f.name] ?: 0}); use WashField", n <= (ceiling[f.name] ?: 0))
                 assertEquals("${f.name} uses Material's AlertDialog; use AppAlert", 0, Regex("""(?<![A-Za-z])AlertDialog\(""").findAll(text).count())
+                if (f.name != "SwitchKit.kt") assertEquals("${f.name} uses Material's Switch; use AppSwitch", 0, Regex("""(?<![A-Za-z.])Switch\(""").findAll(text).count())
+                assertEquals("${f.name} uses Material's Slider; use BarSlider", 0, Regex("""(?<![A-Za-z])Slider\(""").findAll(text).count())
+                if (f.name != "MenuKit.kt") assertEquals("${f.name} uses Material's DropdownMenu; use AppMenu (or a picker dialog to choose a value)", 0, Regex("""(?<![A-Za-z])DropdownMenu\(""").findAll(text).count())
                 assertEquals("${f.name} uses Material's DatePickerDialog; use DatePickDialog", 0, Regex("""(?<![A-Za-z])DatePickerDialog\(""").findAll(text).count())
             }
         }

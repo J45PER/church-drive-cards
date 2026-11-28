@@ -315,14 +315,8 @@ internal fun CameraViewerC(
                         Fade(visible = shown, modifier = Modifier.align(Alignment.BottomEnd)) {
                             Box(modifier = Modifier.navigationBarsPadding().padding(10.dp)) {
                                 CircleButton("mdi:plus", Color.White, Color(0xFF3C4248), 44) { menuOpen = true; touched++ }
-                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                    actions.forEach { (icon, label, run) ->
-                                        DropdownMenuItem(
-                                            text = { Text(label) },
-                                            leadingIcon = { HaIcon(icon, CdVectors.Info, MaterialTheme.colorScheme.onSurface, 20.dp) },
-                                            onClick = { menuOpen = false; run() },
-                                        )
-                                    }
+                                AppMenu(expanded = menuOpen, onDismiss = { menuOpen = false }) {
+                                    actions.forEach { (icon, label, run) -> AppMenuItem(icon, label, { menuOpen = false; run() }) }
                                 }
                             }
                         }

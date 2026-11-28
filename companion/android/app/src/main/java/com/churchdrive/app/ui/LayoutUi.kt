@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -147,7 +146,7 @@ fun CustomisePage(page: String, title: String, houseSections: List<PanelSpec>, e
                     IconBox("cd:arrow-up", "Move up", enabled = index > 0) { change { movedSection(it, order, id, -1) } }
                     IconBox("cd:arrow-down", "Move down", enabled = index < order.size - 1) { change { movedSection(it, order, id, 1) } }
                     if (mine != null) IconBox("cd:bin", "Delete ${mine.title}") { change { l -> l.copy(own = l.own.filterNot { it.id == mine.id }, order = l.order - id) } }
-                    else Switch(checked = shown, onCheckedChange = { change { l -> toggledSection(l, id) } })
+                    else AppSwitch(checked = shown, onCheckedChange = { change { l -> toggledSection(l, id) } })
                 }
                 if (isOpen && panel != null) {
                     val cards = visibleCards(panel.cards, admin)

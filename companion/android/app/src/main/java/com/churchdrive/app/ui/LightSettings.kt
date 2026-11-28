@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -435,47 +434,6 @@ private fun BrightnessBar(light: EntityState, call: CallService) {
     )
 }
 
-/**
- * A wide bar you drag across (or tap) to set a level; it calls [onSet] when you let go. The slider is part of the bar: the fill is the
- * level and a white handle sits at its end. [snap] moves the level to its nearest step and [valueOf] words the level while you drag.
- */
-@Composable
-internal fun BarSlider(
-    label: String, value: String, fraction: Float, fill: Brush, thumbOnly: Boolean, onSet: (Float) -> Unit,
-    snap: ((Float) -> Float)? = null, valueOf: ((Float) -> String)? = null,
-) {
-    var drag by remember(fraction) { mutableStateOf<Float?>(null) }
-    val asked = rememberPending<Float>(fraction)
-    var width by remember { mutableStateOf(1) }
-    val shown = drag ?: asked.asked ?: fraction
-    fun at(x: Float): Float = (x / width).coerceIn(0f, 1f).let { snap?.invoke(it) ?: it }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(if (drag != null && valueOf != null) valueOf(shown) else value, style = MaterialTheme.typography.bodyMedium)
-        }
-        Box(
-            modifier = Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(18.dp))
-                .background(if (thumbOnly) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh)
-                .onSizeChanged { width = it.width.coerceAtLeast(1) }
-                .pointerInput(Unit) { detectTapGestures { asked.ask(at(it.x)); onSet(at(it.x)) } }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { drag = at(it.x) },
-                        onDragEnd = { drag?.let { asked.ask(it); onSet(it) }; drag = null },
-                        onDragCancel = { drag = null },
-                    ) { change, _ -> drag = at(change.position.x) }
-                },
-        ) {
-            if (thumbOnly) Box(Modifier.fillMaxSize().background(fill))
-            else Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(fill))
-            Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(shown.coerceAtLeast(0.04f)), contentAlignment = Alignment.CenterEnd) {
-                Box(Modifier.padding(end = 8.dp).size(width = 4.dp, height = 36.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
-            }
-        }
-    }
-}
-
 /** One colour as a round swatch: ringed when it is the light's colour, with a dashed edge when it is one of the saved ones. */
 @Composable
 private fun Swatch(colour: Pair<Double, Double>, current: Pair<Double, Double>?, saved: Boolean, onClick: () -> Unit) {
@@ -598,7 +556,7 @@ private fun MemberRow(light: EntityState, call: CallService, tone: ToneColors, s
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Switch(checked = on, enabled = light.available, onCheckedChange = { call("light", if (on) "turn_off" else "turn_on", light.entityId, data()) })
+        AppSwitch(checked = on, enabled = light.available, onCheckedChange = { call("light", if (on) "turn_off" else "turn_on", light.entityId, data()) })
         if (opens) HaIcon("cd:sliders", CdVectors.Info, if (selected) tone.accent else MaterialTheme.colorScheme.onSurfaceVariant, 22.dp)
     }
 }

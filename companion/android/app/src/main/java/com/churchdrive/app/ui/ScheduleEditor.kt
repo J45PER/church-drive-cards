@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -118,7 +117,7 @@ fun ScheduleEditor(
         } else {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Schedule on", style = MaterialTheme.typography.titleSmall, color = ink, modifier = Modifier.weight(1f))
-                Switch(checked = enabled, onCheckedChange = { enabled = it; message = null })
+                AppSwitch(checked = enabled, onCheckedChange = { enabled = it; message = null })
             }
             schedules.forEachIndexed { i, sch ->
                 Row(

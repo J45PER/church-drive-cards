@@ -22,7 +22,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -99,7 +98,7 @@ fun NoticeStylesPage(isAdmin: Boolean, onBack: () -> Unit) {
                             Text(if (isAdmin) "The house isn't sending anything to this phone. Turn it on to get them here." else "The house isn't sending anything to this phone. Ask an administrator to turn it on.")
                         },
                         trailingContent = {
-                            if (isAdmin) Switch(checked = false, onCheckedChange = {
+                            if (isAdmin) AppSwitch(checked = false, onCheckedChange = {
                                 view.send("church_drive/people/phone", data("person" to me, "service" to phone.optString("service"), "on" to true))
                             })
                         },
@@ -130,7 +129,7 @@ fun NoticeStylesPage(isAdmin: Boolean, onBack: () -> Unit) {
                         leadingContent = { HaIcon(groupIcon(group), CdVectors.Chat, if (gets) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
                         trailingContent = {
                             if (me.isNotBlank()) {
-                                Switch(checked = gets, onCheckedChange = { on ->
+                                AppSwitch(checked = gets, onCheckedChange = { on ->
                                     if (!on && kind.optBoolean("critical")) confirmOff = kind
                                     else view.send("church_drive/people/mine", data("kind" to key, "on" to on))
                                 })

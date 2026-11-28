@@ -395,14 +395,13 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
     GridCard(tone.container, ink, tilesY + (if (hint.isNotEmpty()) 2.5f else 2f), name, deviceEntity = id, fold = fold) {
         Text(info, style = MaterialTheme.typography.bodyMedium, color = ink, modifier = Modifier.at(0.5f, 1f, 7f, 1f).wrapContentHeight(Alignment.CenterVertically))
         if (position != null) {
-            Slider(
-                value = slider0,
-                onValueChange = { slider0 = it },
-                onValueChangeFinished = { call("cover", "set_cover_position", id, data("position" to slider0.roundToInt())) },
-                valueRange = 0f..100f,
-                enabled = enabled,
-                modifier = Modifier.at(0.5f, 2.25f, 7f, 1f),
-            )
+            Box(Modifier.at(0.5f, 2.25f, 7f, 1f)) {
+                BarSlider(
+                    "", "", slider0 / 100f, androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(tone.accent.copy(alpha = 0.35f), tone.accent.copy(alpha = 0.8f))),
+                    thumbOnly = false, height = 48.dp, header = false, enabled = enabled,
+                    onSet = { f -> slider0 = f * 100f; call("cover", "set_cover_position", id, data("position" to slider0.roundToInt())) },
+                )
+            }
         }
         GridTiles(items, tilesY, 1.5f, tone, ink, enabled, stacked = true)
         if (hint.isNotEmpty()) Text(hint, style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f), modifier = Modifier.at(0.5f, tilesY + 1.55f, 7f, 0.5f))

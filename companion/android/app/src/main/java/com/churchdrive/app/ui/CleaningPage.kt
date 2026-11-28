@@ -20,8 +20,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -213,9 +211,8 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
                     val on = entities[id]?.state == "on"
                     Row(Modifier.at(0.5f, 1f + 1.25f * k, 7f, 1f), verticalAlignment = Alignment.CenterVertically) {
                         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Switch(
-                            checked = on, onCheckedChange = { call("switch", if (it) "turn_on" else "turn_off", id, data()) },
-                            colors = SwitchDefaults.colors(checkedTrackColor = blue.accent, checkedThumbColor = blue.onAccent),
+                        AppSwitch(
+                            checked = on, onCheckedChange = { call("switch", if (it) "turn_on" else "turn_off", id, data()) }, tone = blue,
                         )
                     }
                 }

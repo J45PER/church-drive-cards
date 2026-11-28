@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,7 +56,7 @@ fun PanelSwitchRow(
     onChange: (Boolean) -> Unit,
     leading: (@Composable () -> Unit)? = null,
 ) {
-    PanelRow(icon, text, supporting, leading = leading, trailing = { Switch(checked = checked, onCheckedChange = onChange) })
+    PanelRow(icon, text, supporting, leading = leading, trailing = { AppSwitch(checked = checked, onCheckedChange = onChange) })
 }
 
 /**

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -96,7 +95,7 @@ fun AlarmTestRow(test: AlarmTest, tests: MutableState<Map<String, AlarmTest>?>) 
         if (open) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Test each month", style = MaterialTheme.typography.titleSmall, color = ink, modifier = Modifier.weight(1f))
-                Switch(checked = enabled, onCheckedChange = { enabled = it; message = null })
+                AppSwitch(checked = enabled, onCheckedChange = { enabled = it; message = null })
             }
             Text("On the ${ordinalDay(day)} of each month${if (day > 28) " (or the month's last day)" else ""}", style = MaterialTheme.typography.bodyMedium, color = ink)
             TileRow(
