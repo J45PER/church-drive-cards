@@ -2,7 +2,7 @@
 
 ## 0.198.6
 
-- No change in this app (the review-only Reference app got a Clive-themed icon).
+- No change in this app (the review-only Reference app got a card-fan icon in the Clive gradient).
 
 ## 0.198.5
 

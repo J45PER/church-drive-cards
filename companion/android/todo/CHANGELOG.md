@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.198.6
 
-- No change in this app (the review-only Reference app got a Clive-themed icon).
+- No change in this app (the review-only Reference app got a card-fan icon in the Clive gradient).
 
 ## 0.198.5
 
